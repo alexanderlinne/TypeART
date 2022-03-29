@@ -10,27 +10,25 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#ifndef TYPEART_MEMOPARGCOLLECTOR_H
-#define TYPEART_MEMOPARGCOLLECTOR_H
+#pragma once
 
-#include "Instrumentation.h"
+#include "../TypeARTInstrumentation.h"
+#include "../common/InstrumentationHelper.h"
 #include "analysis/MemOpData.h"
+#include "typegen/TypeGenerator.h"
 
-namespace typeart {
-class TypeGenerator;
-class InstrumentationHelper;
+namespace typeart::instrumentation::tracker {
 
-class MemOpArgCollector final : public ArgumentCollector {
+class ArgumentParser final : public instrumentation::ArgumentParser {
   TypeGenerator* type_m;
-  InstrumentationHelper* instr_helper;
+  llvm::Module* module;
+  common::InstrumentationHelper instr_helper;
 
  public:
-  MemOpArgCollector(TypeGenerator*, InstrumentationHelper&);
+  ArgumentParser(llvm::Module& m, TypeGenerator*);
   HeapArgList collectHeap(const MallocDataList& mallocs) override;
   FreeArgList collectFree(const FreeDataList& frees) override;
   StackArgList collectStack(const AllocaDataList& allocs) override;
   GlobalArgList collectGlobal(const GlobalDataList& globals) override;
 };
-}  // namespace typeart
-
-#endif  // TYPEART_MEMOPARGCOLLECTOR_H
+}  // namespace typeart::instrumentation::tracker

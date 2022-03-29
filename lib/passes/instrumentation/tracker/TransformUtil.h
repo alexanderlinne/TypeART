@@ -13,8 +13,8 @@
 #ifndef TYPEART_TRANSFORMUTIL_H
 #define TYPEART_TRANSFORMUTIL_H
 
-#include "InstrumentationHelper.h"
-#include "TypeARTFunctions.h"
+#include "../common/InstrumentationHelper.h"
+#include "../common/TypeARTFunctions.h"
 #include "support/OmpUtil.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -22,16 +22,16 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 
-namespace typeart::transform {
+namespace typeart::instrumentation {
 
 struct StackCounter {
   using StackOpCounter = llvm::SmallDenseMap<llvm::BasicBlock*, size_t>;
   llvm::Function* f;
-  InstrumentationHelper* instr_helper;
-  TAFunctionQuery* fquery;
+  common::InstrumentationHelper* instr_helper;
+  common::TypeArtFunctions type_art_functions;
 
-  StackCounter(llvm::Function* f, InstrumentationHelper* instr, TAFunctionQuery* query)
-      : f(f), instr_helper(instr), fquery(query) {
+  StackCounter(llvm::Function* f, common::InstrumentationHelper* instr, common::TypeArtFunctions* type_art_functions)
+      : f(f), instr_helper(instr), type_art_functions(*type_art_functions) {
   }
 
   void addStackHandling(StackOpCounter& allocCounts) const {
@@ -53,7 +53,8 @@ struct StackCounter {
 
     // Find return instructions:
     // if(counter > 0) call runtime for stack cleanup
-    const auto callback_id = util::omp::isOmpContext(f) ? IFunc::scope_omp : IFunc::scope;
+    const auto callback = util::omp::isOmpContext(f) ? type_art_functions.tracker_leave_scope_omp
+                                                     : type_art_functions.tracker_leave_scope;
 
     EscapeEnumerator ee(*f);
     while (IRBuilder<>* irb = ee.Next()) {
@@ -64,11 +65,11 @@ struct StackCounter {
       auto* then_term = SplitBlockAndInsertIfThen(cond, I, false);
       irb->SetInsertPoint(then_term);
 
-      irb->CreateCall(fquery->getFunctionFor(callback_id), ArrayRef<Value*>{counter_load});
+      irb->CreateCall(callback, ArrayRef<Value*>{counter_load});
     }
   }
 };
 
-}  // namespace typeart::transform
+}  // namespace typeart::instrumentation
 
 #endif  // TYPEART_TRANSFORMUTIL_H

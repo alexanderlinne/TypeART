@@ -25,33 +25,22 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 
-namespace typeart {
+namespace typeart::instrumentation::common {
 
 using namespace llvm;
 
-InstrumentationHelper::InstrumentationHelper()  = default;
-InstrumentationHelper::~InstrumentationHelper() = default;
-
-llvm::SmallVector<llvm::Type*, 8> InstrumentationHelper::make_signature(const llvm::ArrayRef<llvm::Value*>& args) {
-  llvm::SmallVector<llvm::Type*, 8> types;
-  for (auto* val : args) {
-    types.push_back(val->getType());
-  }
-  return types;
+InstrumentationHelper::InstrumentationHelper(llvm::Module& m) : module(&m) {
 }
+InstrumentationHelper::~InstrumentationHelper() = default;
 
 llvm::Type* InstrumentationHelper::getTypeFor(IType id) {
   auto& c = module->getContext();
   switch (id) {
     case IType::ptr:
       return Type::getInt8PtrTy(c);
-    case IType::function_id:
-      return Type::getInt32Ty(c);
     case IType::extent:
       return Type::getInt64Ty(c);
     case IType::type_id:
-      [[fallthrough]];
-    case IType::alloca_id:
       return Type::getInt32Ty(c);
     case IType::stack_count:
       return Type::getInt32Ty(c);
@@ -73,12 +62,4 @@ llvm::ConstantInt* InstrumentationHelper::getConstantFor(IType id, size_t value)
   return make_int().getValue();
 }
 
-void InstrumentationHelper::setModule(llvm::Module& m) {
-  module = &m;
-}
-
-llvm::Module* InstrumentationHelper::getModule() const {
-  return module;
-}
-
-}  // namespace typeart
+}  // namespace typeart::instrumentation::common

@@ -10,8 +10,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#ifndef LIB_INSTRUMENTATIONHELPER_H_
-#define LIB_INSTRUMENTATIONHELPER_H_
+#pragma once
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -25,22 +24,12 @@
 #include <map>
 #include <string>
 
-namespace llvm {
-class Function;
-class Module;
-class Value;
-class Type;
-class ConstantInt;
-}  // namespace llvm
-
-namespace typeart {
+namespace typeart::instrumentation::common {
 
 enum class IType {
   ptr,          // Type for passing a pointer to the runtime
-  function_id,  // Type for identifying a function
   type_id,      // Type for identifying a type
   extent,       // Type for identifying an array length
-  alloca_id,    // Type for identifying a memory allocation
   stack_count,  // Type for identifying a count of stack alloca instructions
 };
 
@@ -49,9 +38,7 @@ class InstrumentationHelper {
 
  public:
   InstrumentationHelper();
-  void setModule(llvm::Module& m);
-  llvm::Module* getModule() const;
-  static llvm::SmallVector<llvm::Type*, 8> make_signature(const llvm::ArrayRef<llvm::Value*>& args);
+  InstrumentationHelper(llvm::Module& m);
 
   template <typename... Types>
   llvm::SmallVector<llvm::Type*, 8> make_parameters(Types... args) {
@@ -66,6 +53,8 @@ class InstrumentationHelper {
   virtual ~InstrumentationHelper();
 };
 
-}  // namespace typeart
+}  // namespace typeart::instrumentation::common
 
-#endif /* LIB_INSTRUMENTATIONHELPER_H_ */
+namespace typeart::instrumentation {
+using IType = common::IType;
+}

@@ -223,8 +223,8 @@ void Logger::log(const char* name, const void* called_from, bool is_send, const 
 void Logger::log(const char* name, const void* called_from, bool is_send, const void* ptr, const Error& error) {
   auto error_prefix = error.is<TypeError>() ? "error " : "internal error ";
   log(called_from,
-      fmt::format("{}while checking the {}-buffer {} in a call to {}: ", error_prefix, called_from,
-                  is_send ? "send" : "recv", ptr, name),
+      fmt::format("{}while checking the {}-buffer {} in a call to {}: ", error_prefix, is_send ? "send" : "recv", ptr,
+                  name),
       error);
 }
 

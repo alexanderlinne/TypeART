@@ -10,12 +10,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "MemOpInstrumentation.h"
+#include "InstrumentationStrategy.h"
 
-#include "Instrumentation.h"
-#include "InstrumentationHelper.h"
 #include "TransformUtil.h"
-#include "TypeARTFunctions.h"
 #include "analysis/MemOpData.h"
 #include "support/Logger.h"
 #include "support/OmpUtil.h"
@@ -37,20 +34,16 @@
 
 #include <string>
 
-namespace llvm {
-class Value;
-}  // namespace llvm
-
 using namespace llvm;
 
-namespace typeart {
+namespace typeart::instrumentation::tracker {
 
-MemOpInstrumentation::MemOpInstrumentation(TAFunctionQuery& fquery, InstrumentationHelper& instr)
-    : MemoryInstrument(), fquery(&fquery), instr_helper(&instr) {
+InstrumentationStrategy::InstrumentationStrategy(llvm::Module& m)
+    : instrumentation::InstrumentationStrategy(), module(&m), type_art_functions(m), instr_helper(m) {
 }
 
-InstrCount MemOpInstrumentation::instrumentHeap(const HeapArgList& heap) {
-  InstrCount counter{0};
+size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
+  size_t counter{0};
   for (const auto& [malloc, args] : heap) {
     auto kind                = malloc.kind;
     Instruction* malloc_call = args.get_as<Instruction>(ArgMap::ID::pointer);
@@ -109,8 +102,8 @@ InstrCount MemOpInstrumentation::instrumentHeap(const HeapArgList& heap) {
 
         elementCount = single_byte_type ? mArg : IRB.CreateUDiv(mArg, typeSizeConst);
         IRBuilder<> FreeB(malloc_call);
-        const auto callback_id = omp ? IFunc::free_omp : IFunc::free;
-        FreeB.CreateCall(fquery->getFunctionFor(callback_id), ArrayRef<Value*>{addrOp});
+        const auto callback = omp ? type_art_functions.tracker_free_omp : type_art_functions.tracker_free;
+        FreeB.CreateCall(callback, ArrayRef<Value*>{addrOp});
         break;
       }
       default:
@@ -118,16 +111,16 @@ InstrCount MemOpInstrumentation::instrumentHeap(const HeapArgList& heap) {
         continue;
     }
 
-    const auto callback_id = omp ? IFunc::heap_omp : IFunc::heap;
-    IRB.CreateCall(fquery->getFunctionFor(callback_id), ArrayRef<Value*>{malloc_call, typeIdConst, elementCount});
+    const auto callback = omp ? type_art_functions.tracker_alloc_omp : type_art_functions.tracker_alloc;
+    IRB.CreateCall(callback, ArrayRef<Value*>{malloc_call, typeIdConst, elementCount});
     ++counter;
   }
 
   return counter;
 }
 
-InstrCount MemOpInstrumentation::instrumentFree(const FreeArgList& frees) {
-  InstrCount counter{0};
+size_t InstrumentationStrategy::instrumentFree(const FreeArgList& frees) {
+  size_t counter{0};
   for (const auto& [fdata, args] : frees) {
     auto free_call       = fdata.call;
     const bool is_invoke = fdata.is_invoke;
@@ -152,19 +145,19 @@ InstrCount MemOpInstrumentation::instrumentFree(const FreeArgList& frees) {
 
     IRBuilder<> IRB(insertBefore);
 
-    auto parent_f          = fdata.call->getFunction();
-    const auto callback_id = util::omp::isOmpContext(parent_f) ? IFunc::free_omp : IFunc::free;
+    auto parent_f = fdata.call->getFunction();
+    const auto callback =
+        util::omp::isOmpContext(parent_f) ? type_art_functions.tracker_free_omp : type_art_functions.tracker_free;
 
-    IRB.CreateCall(fquery->getFunctionFor(callback_id), ArrayRef<Value*>{free_arg});
+    IRB.CreateCall(callback, ArrayRef<Value*>{free_arg});
     ++counter;
   }
 
   return counter;
 }
 
-InstrCount MemOpInstrumentation::instrumentStack(const StackArgList& stack) {
-  using namespace transform;
-  InstrCount counter{0};
+size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
+  size_t counter{0};
   StackCounter::StackOpCounter allocCounts;
   Function* f{nullptr};
   for (const auto& [sdata, args] : stack) {
@@ -175,12 +168,13 @@ InstrCount MemOpInstrumentation::instrumentStack(const StackArgList& stack) {
 
     auto typeIdConst    = args.get_value(ArgMap::ID::type_id);
     auto numElementsVal = args.get_value(ArgMap::ID::element_count);
-    auto arrayPtr       = IRB.CreateBitOrPointerCast(alloca, instr_helper->getTypeFor(IType::ptr));
+    auto arrayPtr       = IRB.CreateBitOrPointerCast(alloca, instr_helper.getTypeFor(IType::ptr));
 
-    auto parent_f          = sdata.alloca->getFunction();
-    const auto callback_id = util::omp::isOmpContext(parent_f) ? IFunc::stack_omp : IFunc::stack;
+    auto parent_f       = sdata.alloca->getFunction();
+    const auto callback = util::omp::isOmpContext(parent_f) ? type_art_functions.tracker_alloc_stacks_omp
+                                                            : type_art_functions.tracker_alloc_stack;
 
-    IRB.CreateCall(fquery->getFunctionFor(callback_id), ArrayRef<Value*>{arrayPtr, typeIdConst, numElementsVal});
+    IRB.CreateCall(callback, ArrayRef<Value*>{arrayPtr, typeIdConst, numElementsVal});
     ++counter;
 
     auto bb = alloca->getParent();
@@ -191,15 +185,15 @@ InstrCount MemOpInstrumentation::instrumentStack(const StackArgList& stack) {
   }
 
   if (f) {
-    StackCounter scount(f, instr_helper, fquery);
+    StackCounter scount(f, &instr_helper, &type_art_functions);
     scount.addStackHandling(allocCounts);
   }
 
   return counter;
 }
 
-InstrCount MemOpInstrumentation::instrumentGlobal(const GlobalArgList& globals) {
-  InstrCount counter{0};
+size_t InstrumentationStrategy::instrumentGlobal(const GlobalArgList& globals) {
+  size_t counter{0};
 
   const auto instrumentGlobalsInCtor = [&](auto& IRB) {
     for (const auto& [gdata, args] : globals) {
@@ -207,24 +201,23 @@ InstrCount MemOpInstrumentation::instrumentGlobal(const GlobalArgList& globals) 
       auto global         = gdata.global;
       auto typeIdConst    = args.get_value(ArgMap::ID::type_id);
       auto numElementsVal = args.get_value(ArgMap::ID::element_count);
-      auto globalPtr      = IRB.CreateBitOrPointerCast(global, instr_helper->getTypeFor(IType::ptr));
-      IRB.CreateCall(fquery->getFunctionFor(IFunc::global), ArrayRef<Value*>{globalPtr, typeIdConst, numElementsVal});
+      auto globalPtr      = IRB.CreateBitOrPointerCast(global, instr_helper.getTypeFor(IType::ptr));
+      IRB.CreateCall(type_art_functions.tracker_alloc_global, ArrayRef<Value*>{globalPtr, typeIdConst, numElementsVal});
       ++counter;
     }
   };
 
   const auto makeCtorFuncBody = [&]() -> BasicBlock* {
-    auto m  = instr_helper->getModule();
-    auto& c = m->getContext();
+    auto& c = module->getContext();
     auto ctorFunctionName =
-        "__typeart_init_module_globals";  // + m->getSourceFileName();  // needed -- will not work with piping?
+        "typeart_init_module_globals";  // + m->getSourceFileName();  // needed -- will not work with piping?
 
     FunctionType* ctorType = FunctionType::get(llvm::Type::getVoidTy(c), false);
-    Function* ctorFunction = Function::Create(ctorType, Function::InternalLinkage, ctorFunctionName, m);
+    Function* ctorFunction = Function::Create(ctorType, Function::InternalLinkage, ctorFunctionName, module);
 
     BasicBlock* entry = BasicBlock::Create(c, "entry", ctorFunction);
 
-    llvm::appendToGlobalCtors(*m, ctorFunction, 0, nullptr);
+    llvm::appendToGlobalCtors(*module, ctorFunction, 0, nullptr);
 
     return entry;
   };
@@ -237,4 +230,4 @@ InstrCount MemOpInstrumentation::instrumentGlobal(const GlobalArgList& globals) 
   return counter;
 }
 
-}  // namespace typeart
+}  // namespace typeart::instrumentation::tracker

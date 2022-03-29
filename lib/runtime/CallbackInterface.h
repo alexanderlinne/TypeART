@@ -23,19 +23,25 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void __typeart_alloc(const void* addr, int type_id, size_t count);
 
-void __typeart_alloc_global(const void* addr, int type_id, size_t count);
-void __typeart_free(const void* addr);
+void* typeart_allocator_malloc(int type_id, size_t count, size_t size);
+void* typeart_allocator__Znwm(int type_id, size_t count, size_t size);
+void* typeart_allocator__Znam(int type_id, size_t count, size_t size);
+int typeart_allocator_free(void*);
 
-void __typeart_alloc_stack(const void* addr, int type_id, size_t count);
-void __typeart_leave_scope(int alloca_count);
+void typeart_tracker_alloc(const void* addr, int type_id, size_t count);
+void typeart_tracker_alloc_global(const void* addr, int type_id, size_t count);
+void typeart_tracker_free(const void* addr);
+
+void typeart_tracker_alloc_stack(const void* addr, int type_id, size_t count);
+void typeart_tracker_leave_scope(int alloca_count);
 
 // Called from OpenMP context
-void __typeart_alloc_omp(const void* addr, int type_id, size_t count);
-void __typeart_free_omp(const void* addr);
-void __typeart_alloc_stack_omp(const void* addr, int type_id, size_t count);
-void __typeart_leave_scope_omp(int alloca_count);
+void typeart_tracker_alloc_omp(const void* addr, int type_id, size_t count);
+void typeart_tracker_free_omp(const void* addr);
+void typeart_tracker_alloc_stack_omp(const void* addr, int type_id, size_t count);
+void typeart_tracker_leave_scope_omp(int alloca_count);
+
 #ifdef __cplusplus
 }
 #endif

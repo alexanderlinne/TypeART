@@ -13,9 +13,11 @@
 #include "TypeResolution.h"
 
 #include "AllocationTracking.h"
+#include "CallbackInterface.h"
 #include "Runtime.h"
 #include "RuntimeData.h"
 #include "RuntimeInterface.h"
+#include "allocator/Allocator.h"
 #include "support/Logger.h"
 #include "support/System.h"
 
@@ -256,8 +258,17 @@ const TypeDB& TypeResolution::db() const {
 
 namespace detail {
 inline typeart_status query_type(const void* addr, int* type, size_t* count) {
-  auto alloc = typeart::RuntimeSystem::get().allocTracker.findBaseAlloc(addr);
   typeart::RuntimeSystem::get().recorder.incUsedInRequest(addr);
+
+#if TYPEART_USE_ALLOCATOR
+  auto allocation_info = allocator::getAllocationInfo(addr);
+  if (allocation_info.has_value()) {
+    return typeart::RuntimeSystem::get().typeResolution.getTypeInfo(addr, allocation_info->base_addr,
+                                                                    allocation_info->pointer_info, type, count);
+  }
+#endif
+
+  auto alloc = typeart::RuntimeSystem::get().allocTracker.findBaseAlloc(addr);
   if (alloc) {
     return typeart::RuntimeSystem::get().typeResolution.getTypeInfo(addr, alloc->first, alloc->second, type, count);
   }
@@ -280,18 +291,21 @@ inline typeart_status query_struct_layout(int id, typeart_struct_layout* struct_
 }
 
 char* string2char(std::string_view src) {
-  const void* ret_addr       = __builtin_return_address(0);
   const size_t source_length = src.size() + 1;  // +1 for '\0'
-  char* string_copy          = (char*)malloc(sizeof(char) * source_length);
+  char* string_copy          = nullptr;
 
+#if TYPEART_USE_ALLOCATOR
+  string_copy = (char*)typeart_allocator_malloc(TYPEART_INT8, source_length, sizeof(char) * source_length);
+#else
+  string_copy = (char*)malloc(sizeof(char) * source_length);
   if (string_copy == nullptr) {
     return nullptr;
   }
-
+  const void* ret_addr = __builtin_return_address(0);
   typeart::RuntimeSystem::get().allocTracker.onAlloc(string_copy, TYPEART_INT8, source_length, ret_addr);
+#endif
 
   memcpy(string_copy, src.data(), source_length);
-
   return string_copy;
 };
 
@@ -305,9 +319,9 @@ char* string2char(std::string_view src) {
 
 typeart_status typeart_get_builtin_type(const void* addr, typeart::BuiltinType* type) {
   typeart::RTGuard guard;
-  auto alloc = typeart::RuntimeSystem::get().allocTracker.findBaseAlloc(addr);
-  if (alloc) {
-    return typeart::RuntimeSystem::get().typeResolution.getBuiltinInfo(addr, alloc->second, type);
+  auto alloc = typeart::allocator::getAllocationInfo(addr);
+  if (alloc.has_value()) {
+    return typeart::RuntimeSystem::get().typeResolution.getBuiltinInfo(addr, alloc->pointer_info, type);
   }
   return TYPEART_UNKNOWN_ADDRESS;
 }
@@ -332,13 +346,23 @@ typeart_status typeart_get_type_id(const void* addr, int* type_id) {
 typeart_status typeart_get_containing_type(const void* addr, int* type, size_t* count, const void** base_address,
                                            size_t* offset) {
   typeart::RTGuard guard;
-  auto alloc = typeart::RuntimeSystem::get().allocTracker.findBaseAlloc(addr);
-  if (alloc) {
-    //    auto& allocVal = alloc.getValue();
-    *type         = alloc->second.typeId;
-    *base_address = alloc->first;
-    return typeart::RuntimeSystem::get().typeResolution.getContainingTypeInfo(addr, alloc->first, alloc->second, count,
-                                                                              offset);
+
+#if TYPEART_USE_ALLOCATOR
+  auto alloc = typeart::allocator::getAllocationInfo(addr);
+  if (alloc.has_value()) {
+    *type         = alloc->pointer_info.typeId;
+    *base_address = alloc->base_addr;
+    return typeart::RuntimeSystem::get().typeResolution.getContainingTypeInfo(addr, alloc->base_addr,
+                                                                              alloc->pointer_info, count, offset);
+  }
+#endif
+
+  auto alloc2 = typeart::RuntimeSystem::get().allocTracker.findBaseAlloc(addr);
+  if (alloc2) {
+    *type         = alloc2->second.typeId;
+    *base_address = alloc2->first;
+    return typeart::RuntimeSystem::get().typeResolution.getContainingTypeInfo(addr, alloc2->first, alloc2->second,
+                                                                              count, offset);
   }
   return TYPEART_UNKNOWN_ADDRESS;
 }
@@ -369,10 +393,18 @@ typeart_status typeart_resolve_type_id(int type_id, typeart_struct_layout* struc
 
 typeart_status typeart_get_return_address(const void* addr, const void** return_addr) {
   typeart::RTGuard guard;
-  auto alloc = typeart::RuntimeSystem::get().allocTracker.findBaseAlloc(addr);
 
-  if (alloc) {
-    *return_addr = alloc.getValue().second.debug;
+#if TYPEART_USE_ALLOCATOR
+  auto alloc = typeart::allocator::getAllocationInfo(addr);
+  if (alloc.has_value()) {
+    *return_addr = alloc->pointer_info.debug;
+    return TYPEART_OK;
+  }
+#endif
+
+  auto alloc2 = typeart::RuntimeSystem::get().allocTracker.findBaseAlloc(addr);
+  if (alloc2) {
+    *return_addr = alloc2.getValue().second.debug;
     return TYPEART_OK;
   }
   *return_addr = nullptr;
