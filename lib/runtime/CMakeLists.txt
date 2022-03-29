@@ -21,11 +21,15 @@ set(RUNTIME_LIB_SOURCES
     RuntimeData.h
     RuntimeInterface.h
     TypeResolution.cpp
-    AllocationTracking.cpp
-    AllocationTracking.h
     TypeResolution.h
     Runtime.cpp
     Runtime.h
+    AllocationTracking.cpp
+    AllocationTracking.h
+    allocator/Allocator.cpp
+    allocator/Allocator.h
+    allocator/Config.h
+    allocator/Malloc.cpp
     ${TYPEART_META_SOURCE}
     $<$<BOOL:${MPI_LOGGER}>:../support/MPILogger.cpp>
 )
@@ -50,6 +54,7 @@ target_link_libraries(
           $<$<BOOL:${TYPEART_ABSEIL}>:absl::btree>
           $<$<BOOL:${TYPEART_SAFEPTR}>:sf::pointer>
           $<$<NOT:$<BOOL:${TYPEART_DISABLE_THREAD_SAFETY}>>:Threads::Threads>
+          fmt::fmt
 )
 
 target_include_directories(
@@ -66,6 +71,7 @@ target_include_directories(${TYPEART_PREFIX}_Runtime SYSTEM PRIVATE ${LLVM_INCLU
 target_compile_definitions(
   ${TYPEART_PREFIX}_Runtime
   PRIVATE TYPEART_LOG_LEVEL=${TYPEART_LOG_LEVEL_RT}
+          $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:TYPEART_USE_ALLOCATOR=1>
           $<$<BOOL:${MPI_LOGGER}>:MPI_LOGGER=1>
           $<$<BOOL:${TYPEART_SOFTCOUNTERS}>:ENABLE_SOFTCOUNTER=1>
           $<$<BOOL:${TYPEART_BTREE}>:TYPEART_BTREE>

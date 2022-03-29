@@ -13,9 +13,7 @@
 #ifndef _LIB_MUSTSUPPORTPASS_H
 #define _LIB_MUSTSUPPORTPASS_H
 
-#include "instrumentation/Instrumentation.h"
-#include "instrumentation/InstrumentationHelper.h"
-#include "instrumentation/TypeARTFunctions.h"
+#include "instrumentation/TypeARTInstrumentation.h"
 
 #include "llvm/Pass.h"
 
@@ -43,27 +41,10 @@ namespace typeart::pass {
 
 class TypeArtPass : public llvm::ModulePass {
  private:
-  struct TypeArtFunc {
-    const std::string name;
-    llvm::Value* f{nullptr};
-  };
-
-  TypeArtFunc typeart_alloc{"__typeart_alloc"};
-  TypeArtFunc typeart_alloc_global{"__typeart_alloc_global"};
-  TypeArtFunc typeart_alloc_stack{"__typeart_alloc_stack"};
-  TypeArtFunc typeart_free{"__typeart_free"};
-  TypeArtFunc typeart_leave_scope{"__typeart_leave_scope"};
-
-  TypeArtFunc typeart_alloc_omp        = typeart_alloc;
-  TypeArtFunc typeart_alloc_stacks_omp = typeart_alloc_stack;
-  TypeArtFunc typeart_free_omp         = typeart_free;
-  TypeArtFunc typeart_leave_scope_omp  = typeart_leave_scope;
-
   std::unique_ptr<analysis::MemInstFinder> meminst_finder;
+
   std::unique_ptr<TypeGenerator> typeManager;
-  InstrumentationHelper instrumentation_helper;
-  TAFunctions functions;
-  std::unique_ptr<InstrumentationContext> instrumentation_context;
+  std::unique_ptr<instrumentation::TypeArtInstrumentation> instrumentation;
 
  public:
   static char ID;  // used to identify pass
@@ -76,7 +57,7 @@ class TypeArtPass : public llvm::ModulePass {
   void getAnalysisUsage(llvm::AnalysisUsage&) const override;
 
  private:
-  void declareInstrumentationFunctions(llvm::Module&);
+  void addPreinitCall(llvm::Module&);
   void printStats(llvm::raw_ostream&);
 };
 

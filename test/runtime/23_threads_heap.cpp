@@ -1,5 +1,5 @@
 // clang-format off
-// RUN: %run %s --thread 2>&1 | %filecheck %s --check-prefix=CHECK-TSAN
+// RUN: %run %s --thread --compile_flags "-g" 2>&1 | %filecheck %s --check-prefix=CHECK-TSAN
 // RUN: %run %s --thread 2>&1 | %filecheck %s
 // REQUIRES: thread && softcounter
 // clang-format on

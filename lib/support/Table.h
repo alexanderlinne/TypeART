@@ -213,5 +213,6 @@ struct Table {
     s.flush();
   }
 };
+
 }  // namespace typeart
 #endif  // TYPEART_TABLE_H

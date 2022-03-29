@@ -26,6 +26,16 @@ set_package_properties(OpenMP PROPERTIES
   "OpenMP is optionally used by the test suite to verify that the LLVM passes handle OpenMPk codes."
 )
 
+set(TYPEART_INSTRUMENTATION "Allocator" CACHE STRING "The instrumentation implementation used for type tracking. ('Allocator' or 'Tracker')")
+if (NOT ("${TYPEART_INSTRUMENTATION}" STREQUAL "Allocator") AND NOT ("${TYPEART_INSTRUMENTATION}" STREQUAL "Tracker"))
+  message(FATAL_ERROR "Unknown instrumentation implementation '${TYPEART_INSTRUMENTATION}'")
+endif()
+if ("${TYPEART_INSTRUMENTATION}" STREQUAL "Allocator")
+  set(TYPEART_USE_ALLOCATOR ON)
+else()
+  set(TYPEART_USE_ALLOCATOR OFF)
+endif()
+
 set(TYPEART_LOG_LEVEL 0 CACHE STRING "Granularity of LLVM pass logger. 3 ist most verbose, 0 is least.")
 set(TYPEART_LOG_LEVEL_RT 0 CACHE STRING "Granularity of runtime logger. 3 ist most verbose, 0 is least.")
 

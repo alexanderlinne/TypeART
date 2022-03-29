@@ -10,14 +10,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "MemOpArgCollector.h"
+#include "ArgumentParser.h"
 
-#include "Instrumentation.h"
-#include "InstrumentationHelper.h"
 #include "support/Logger.h"
 #include "support/TypeUtil.h"
 #include "support/Util.h"
-#include "typegen/TypeGenerator.h"
 #include "typelib/TypeInterface.h"
 
 #include "llvm/IR/Constants.h"
@@ -37,16 +34,16 @@ class Value;
 namespace tu = typeart::util::type;
 using namespace llvm;
 
-namespace typeart {
+namespace typeart::instrumentation::tracker {
 
-MemOpArgCollector::MemOpArgCollector(TypeGenerator* tm, InstrumentationHelper& instr)
-    : ArgumentCollector(), type_m(tm), instr_helper(&instr) {
+ArgumentParser::ArgumentParser(llvm::Module& m, TypeGenerator* tm)
+    : instrumentation::ArgumentParser(), type_m(tm), module(&m), instr_helper(m) {
 }
 
-HeapArgList MemOpArgCollector::collectHeap(const MallocDataList& mallocs) {
+HeapArgList ArgumentParser::collectHeap(const MallocDataList& mallocs) {
   HeapArgList list;
   list.reserve(mallocs.size());
-  const llvm::DataLayout& dl = instr_helper->getModule()->getDataLayout();
+  const llvm::DataLayout& dl = module->getDataLayout();
   for (const MallocData& mdata : mallocs) {
     ArgMap arg_map;
     const auto malloc_call      = mdata.call;
@@ -57,7 +54,7 @@ HeapArgList MemOpArgCollector::collectHeap(const MallocDataList& mallocs) {
     // Number of bytes allocated
     auto mallocArg = malloc_call->getOperand(0);
     int typeId     = type_m->getOrRegisterType(malloc_call->getType()->getPointerElementType(),
-                                           dl);  // retrieveTypeID(tu::getVoidType(c));
+                                               dl);  // retrieveTypeID(tu::getVoidType(c));
     if (typeId == TYPEART_UNKNOWN_TYPE) {
       LOG_ERROR("Unknown heap type. Not instrumenting. " << util::dump(*malloc_call));
       // TODO notify caller that we skipped: via lambda callback function
@@ -91,8 +88,8 @@ HeapArgList MemOpArgCollector::collectHeap(const MallocDataList& mallocs) {
       LOG_WARNING("Primary bitcast is null. malloc: " << util::dump(*malloc_call))
     }
 
-    auto* typeIdConst    = instr_helper->getConstantFor(IType::type_id, typeId);
-    Value* typeSizeConst = instr_helper->getConstantFor(IType::extent, typeSize);
+    auto* typeIdConst    = instr_helper.getConstantFor(IType::type_id, typeId);
+    Value* typeSizeConst = instr_helper.getConstantFor(IType::extent, typeSize);
 
     Value* elementCount{nullptr};
     Value* byte_count{nullptr};
@@ -142,7 +139,7 @@ HeapArgList MemOpArgCollector::collectHeap(const MallocDataList& mallocs) {
   return list;
 }
 
-FreeArgList MemOpArgCollector::collectFree(const FreeDataList& frees) {
+FreeArgList ArgumentParser::collectFree(const FreeDataList& frees) {
   FreeArgList list;
   list.reserve(frees.size());
   for (const FreeData& fdata : frees) {
@@ -169,11 +166,11 @@ FreeArgList MemOpArgCollector::collectFree(const FreeDataList& frees) {
   return list;
 }
 
-StackArgList MemOpArgCollector::collectStack(const AllocaDataList& allocs) {
+StackArgList ArgumentParser::collectStack(const AllocaDataList& allocs) {
   using namespace llvm;
   StackArgList list;
   list.reserve(allocs.size());
-  const llvm::DataLayout& dl = instr_helper->getModule()->getDataLayout();
+  const llvm::DataLayout& dl = module->getDataLayout();
 
   for (const AllocaData& adata : allocs) {
     ArgMap arg_map;
@@ -192,7 +189,7 @@ StackArgList MemOpArgCollector::collectStack(const AllocaDataList& allocs) {
         arraySize   = arraySize * tu::getArrayLengthFlattened(elementType);
         elementType = tu::getArrayElementType(elementType);
       }
-      numElementsVal = instr_helper->getConstantFor(IType::extent, arraySize);
+      numElementsVal = instr_helper.getConstantFor(IType::extent, arraySize);
     }
 
     // unsigned typeSize = tu::getTypeSizeInBytes(elementType, dl);
@@ -203,7 +200,7 @@ StackArgList MemOpArgCollector::collectStack(const AllocaDataList& allocs) {
       continue;
     }
 
-    auto* typeIdConst = instr_helper->getConstantFor(IType::type_id, typeId);
+    auto* typeIdConst = instr_helper.getConstantFor(IType::type_id, typeId);
 
     arg_map[ArgMap::ID::pointer]       = alloca;
     arg_map[ArgMap::ID::type_id]       = typeIdConst;
@@ -215,10 +212,10 @@ StackArgList MemOpArgCollector::collectStack(const AllocaDataList& allocs) {
   return list;
 }
 
-GlobalArgList MemOpArgCollector::collectGlobal(const GlobalDataList& globals) {
+GlobalArgList ArgumentParser::collectGlobal(const GlobalDataList& globals) {
   GlobalArgList list;
   list.reserve(globals.size());
-  const llvm::DataLayout& dl = instr_helper->getModule()->getDataLayout();
+  const llvm::DataLayout& dl = module->getDataLayout();
 
   for (const GlobalData& gdata : globals) {
     ArgMap arg_map;
@@ -238,8 +235,8 @@ GlobalArgList MemOpArgCollector::collectGlobal(const GlobalDataList& globals) {
       continue;
     }
 
-    auto* typeIdConst      = instr_helper->getConstantFor(IType::type_id, typeId);
-    auto* numElementsConst = instr_helper->getConstantFor(IType::extent, numElements);
+    auto* typeIdConst      = instr_helper.getConstantFor(IType::type_id, typeId);
+    auto* numElementsConst = instr_helper.getConstantFor(IType::extent, numElements);
     // auto globalPtr         = IRB.CreateBitOrPointerCast(global, instr.getTypeFor(IType::ptr));
 
     arg_map[ArgMap::ID::pointer]       = global;

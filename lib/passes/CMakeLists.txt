@@ -3,13 +3,15 @@ add_subdirectory(filter)
 add_subdirectory(analysis)
 
 set(PASS_SOURCES
+  CommandLine.cpp
   TypeARTPass.cpp
   support/TypeUtil.cpp
-  instrumentation/InstrumentationHelper.cpp
-  instrumentation/TypeARTFunctions.cpp
-  instrumentation/MemOpArgCollector.cpp
-  instrumentation/MemOpInstrumentation.cpp
-  instrumentation/Instrumentation.cpp
+  instrumentation/allocator/InstrumentationStrategy.cpp
+  instrumentation/common/InstrumentationHelper.cpp
+  instrumentation/common/TypeARTFunctions.cpp
+  instrumentation/tracker/ArgumentParser.cpp
+  instrumentation/tracker/InstrumentationStrategy.cpp
+  instrumentation/TypeARTInstrumentation.cpp
 )
 
 typeart_make_llvm_module(
@@ -32,8 +34,14 @@ set_target_properties(
 )
 add_library(typeart::TransformPass ALIAS ${TYPEART_PREFIX}_TransformPass)
 
+target_link_libraries(
+  ${TYPEART_PREFIX}_TransformPass
+  PRIVATE fmt::fmt
+)
+
 target_compile_definitions(
   ${TYPEART_PREFIX}_TransformPass PRIVATE TYPEART_LOG_LEVEL=${TYPEART_LOG_LEVEL}
+                        $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:TYPEART_USE_ALLOCATOR=1>
                         $<$<BOOL:${TYPEART_SHOW_STATS}>:LLVM_FORCE_ENABLE_STATS=1>
 )
 

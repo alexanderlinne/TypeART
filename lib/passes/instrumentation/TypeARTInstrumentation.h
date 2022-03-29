@@ -10,8 +10,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#ifndef TYPEART_INSTRUMENTATION_H
-#define TYPEART_INSTRUMENTATION_H
+#pragma once
 
 #include "analysis/MemOpData.h"
 
@@ -27,7 +26,7 @@ namespace llvm {
 class Value;
 }  // namespace llvm
 
-namespace typeart {
+namespace typeart::instrumentation {
 
 struct ArgStrId {
   static constexpr char pointer[]       = "pointer";
@@ -47,15 +46,6 @@ struct ArgMap {
   ArgsContainer::mapped_type& operator[](Key key) {
     return args[key];
   }
-
-  /*
-  const llvm::Optional<ArgsContainer::mapped_type> operator[](ArgsContainer::key_type key) const {
-    auto it = args.find(key);
-    if (it != args.end()) {
-      return {it->second};
-    }
-    return llvm::None;
-  }*/
 
   auto lookup(Key key) const -> llvm::Value* {
     return args.lookup(key);
@@ -93,40 +83,36 @@ using FreeArgList   = llvm::SmallVector<FreeContainer, 16>;
 using StackArgList  = llvm::SmallVector<StackContainer, 16>;
 using GlobalArgList = llvm::SmallVector<GlobalContainer, 8>;
 
-using InstrCount = size_t;
-
-class ArgumentCollector {
+class ArgumentParser {
  public:
   virtual HeapArgList collectHeap(const MallocDataList& mallocs)     = 0;
   virtual FreeArgList collectFree(const FreeDataList& frees)         = 0;
   virtual StackArgList collectStack(const AllocaDataList& frees)     = 0;
   virtual GlobalArgList collectGlobal(const GlobalDataList& globals) = 0;
-  virtual ~ArgumentCollector()                                       = default;
+  virtual ~ArgumentParser()                                          = default;
 };
 
-class MemoryInstrument {
+class InstrumentationStrategy {
  public:
-  virtual InstrCount instrumentHeap(const HeapArgList& heap)        = 0;
-  virtual InstrCount instrumentFree(const FreeArgList& frees)       = 0;
-  virtual InstrCount instrumentStack(const StackArgList& frees)     = 0;
-  virtual InstrCount instrumentGlobal(const GlobalArgList& globals) = 0;
-  virtual ~MemoryInstrument()                                       = default;
+  virtual size_t instrumentHeap(const HeapArgList& heap)        = 0;
+  virtual size_t instrumentFree(const FreeArgList& frees)       = 0;
+  virtual size_t instrumentStack(const StackArgList& frees)     = 0;
+  virtual size_t instrumentGlobal(const GlobalArgList& globals) = 0;
+  virtual ~InstrumentationStrategy()                            = default;
 };
 
-class InstrumentationContext {
+class TypeArtInstrumentation {
  private:
-  std::unique_ptr<ArgumentCollector> collector;
-  std::unique_ptr<MemoryInstrument> instrumenter;
+  std::unique_ptr<ArgumentParser> parser;
+  std::unique_ptr<InstrumentationStrategy> strategy;
 
  public:
-  InstrumentationContext(std::unique_ptr<ArgumentCollector> col, std::unique_ptr<MemoryInstrument> instr);
+  TypeArtInstrumentation(std::unique_ptr<ArgumentParser> parser, std::unique_ptr<InstrumentationStrategy> strategy);
 
-  InstrCount handleHeap(const MallocDataList& mallocs);
-  InstrCount handleFree(const FreeDataList& frees);
-  InstrCount handleStack(const AllocaDataList& frees);
-  InstrCount handleGlobal(const GlobalDataList& globals);
+  size_t handleHeap(const MallocDataList& mallocs);
+  size_t handleFree(const FreeDataList& frees);
+  size_t handleStack(const AllocaDataList& frees);
+  size_t handleGlobal(const GlobalDataList& globals);
 };
 
-}  // namespace typeart
-
-#endif  // TYPEART_INSTRUMENTATION_H
+}  // namespace typeart::instrumentation

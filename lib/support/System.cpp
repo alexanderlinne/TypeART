@@ -132,6 +132,10 @@ class SourceLocHelper {
 }  // namespace system
 
 std::optional<BinaryLocation> BinaryLocation::create(const void* addr) {
+  if (addr == nullptr) {
+    return {};
+  }
+
   const auto demangle = [](auto symbol_name) {
     using demangle_result = std::unique_ptr<char, decltype(&std::free)>;
     int status{0};
@@ -150,6 +154,10 @@ std::optional<BinaryLocation> BinaryLocation::create(const void* addr) {
 }
 
 std::optional<SourceLocation> SourceLocation::create(const void* addr) {
+  if (addr == nullptr) {
+    return {};
+  }
+
   const auto pipe = [](const void* addr) -> std::optional<system::CommandPipe> {
     using namespace system;
     const auto& sloc_helper = SourceLocHelper::get();
@@ -157,7 +165,8 @@ std::optional<SourceLocation> SourceLocation::create(const void* addr) {
 
     if (sloc_helper.hasLLVMSymbolizer()) {
       std::ostringstream command;
-      command << "llvm-symbolizer --demangle --output-style=GNU -f -e " << proc.exe() << " " << addr;
+      command << "unset LD_PRELOAD && llvm-symbolizer --demangle --output-style=GNU -f -e " << proc.exe() << " "
+              << addr;
       auto llvm_symbolizer = system::CommandPipe::create(command.str());
       if (llvm_symbolizer) {
         return llvm_symbolizer;
@@ -166,7 +175,7 @@ std::optional<SourceLocation> SourceLocation::create(const void* addr) {
 
     if (sloc_helper.hasAddr2line()) {
       std::ostringstream command;
-      command << "addr2line --demangle=auto -f -e " << proc.exe() << " " << addr;
+      command << "unset LD_PRELOAD && addr2line --demangle=auto -f -e " << proc.exe() << " " << addr;
       auto addr2line = system::CommandPipe::create(command.str());
       if (addr2line) {
         return addr2line;

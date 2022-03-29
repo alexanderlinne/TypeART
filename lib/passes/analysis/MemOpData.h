@@ -10,8 +10,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#ifndef TYPEART_MEMOPDATA_H
-#define TYPEART_MEMOPDATA_H
+#pragma once
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -157,4 +156,3 @@ using FreeDataList   = llvm::SmallVector<FreeData, 8>;
 using AllocaDataList = llvm::SmallVector<AllocaData, 8>;
 
 }  // namespace typeart
-#endif  // TYPEART_MEMOPDATA_H
