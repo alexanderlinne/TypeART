@@ -31,6 +31,7 @@ enum class IType {
   type_id,      // Type for identifying a type
   extent,       // Type for identifying an array length
   stack_count,  // Type for identifying a count of stack alloca instructions
+  allocation_id,
 };
 
 class InstrumentationHelper {

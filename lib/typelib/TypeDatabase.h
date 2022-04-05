@@ -14,6 +14,7 @@
 #define TYPEART_TYPEDATABASE_H
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -34,9 +35,31 @@ struct StructTypeInfo {
   StructTypeFlag flag;
 };
 
+using allocation_id_t = int;
+
+struct AllocationInfo {
+  allocation_id_t allocation_id;
+  int type_id;
+
+  std::optional<size_t> count;
+
+  // Offset from the pointer to the memory used by this allocation to the
+  // pointer returned to the user.
+  // Note: for heap allocations, the actual value is ignored and only
+  // used as a hint, that the allocation has a non-standard offset.
+  // As the actual offset may not be statically known it is stored
+  // within the actual allocation.
+  std::optional<ptrdiff_t> base_ptr_offset;
+};
+
 class TypeDatabase {
  public:
   virtual void registerStruct(const StructTypeInfo& struct_info) = 0;
+
+  virtual allocation_id_t getOrCreateAllocationId(int type_id, std::optional<size_t> count,
+                                                  std::optional<ptrdiff_t> base_ptr_offset) = 0;
+
+  virtual void registerAllocations(std::vector<AllocationInfo> allocation_info) = 0;
 
   [[nodiscard]] virtual bool isUnknown(int type_id) const = 0;
 
@@ -56,9 +79,13 @@ class TypeDatabase {
 
   [[nodiscard]] virtual const StructTypeInfo* getStructInfo(int type_id) const = 0;
 
+  [[nodiscard]] virtual const AllocationInfo* getAllocationInfo(allocation_id_t allocation_id) const = 0;
+
   [[nodiscard]] virtual size_t getTypeSize(int type_id) const = 0;
 
   [[nodiscard]] virtual const std::vector<StructTypeInfo>& getStructList() const = 0;
+
+  [[nodiscard]] virtual const std::vector<AllocationInfo>& getAllocationInfo() const = 0;
 
   virtual ~TypeDatabase() = default;
 };

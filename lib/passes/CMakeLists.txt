@@ -6,6 +6,7 @@ set(PASS_SOURCES
   CommandLine.cpp
   TypeARTPass.cpp
   support/TypeUtil.cpp
+  instrumentation/allocator/ArgumentParser.cpp
   instrumentation/allocator/InstrumentationStrategy.cpp
   instrumentation/common/InstrumentationHelper.cpp
   instrumentation/common/TypeARTFunctions.cpp

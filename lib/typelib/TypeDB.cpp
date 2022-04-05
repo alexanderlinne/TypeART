@@ -100,6 +100,30 @@ void TypeDB::registerStruct(const StructTypeInfo& struct_type) {
   typeid_to_list_index.insert({struct_type.type_id, struct_info_vec.size() - 1});
 }
 
+allocation_id_t TypeDB::getOrCreateAllocationId(int type_id, std::optional<size_t> count,
+                                                std::optional<ptrdiff_t> base_ptr_offset) {
+  auto it = std::find_if(allocation_info.begin(), allocation_info.end(), [&](auto& info) {
+    return info.type_id == type_id && info.count == count && info.base_ptr_offset == base_ptr_offset;
+  });
+  if (it != allocation_info.end()) {
+    return it->allocation_id;
+  }
+  AllocationInfo info;
+  info.allocation_id   = static_cast<allocation_id_t>(allocation_info.size() + 1);
+  info.type_id         = type_id;
+  info.count           = count;
+  info.base_ptr_offset = base_ptr_offset;
+  allocation_info.push_back(std::move(info));
+  return allocation_info.back().allocation_id;
+}
+
+void TypeDB::registerAllocations(std::vector<AllocationInfo> allocations) {
+  allocation_info = std::move(allocations);
+  for (size_t i = 0; i < allocation_info.size(); ++i) {
+    assert(allocation_info[i].allocation_id - 1 == static_cast<allocation_id_t>(i));
+  }
+}
+
 const std::string& TypeDB::getTypeName(int type_id) const {
   if (isBuiltinType(type_id)) {
     return BuiltinNames[type_id];
@@ -136,8 +160,19 @@ const StructTypeInfo* TypeDB::getStructInfo(int type_id) const {
   return nullptr;
 }
 
+const AllocationInfo* TypeDB::getAllocationInfo(allocation_id_t allocation_id) const {
+  if (allocation_id == 0 || allocation_id > static_cast<allocation_id_t>(allocation_info.size())) {
+    return nullptr;
+  }
+  return &allocation_info[allocation_id - 1];
+}
+
 const std::vector<StructTypeInfo>& TypeDB::getStructList() const {
   return struct_info_vec;
+}
+
+const std::vector<AllocationInfo>& TypeDB::getAllocationInfo() const {
+  return allocation_info;
 }
 
 bool TypeDB::isUnknown(int type_id) const {

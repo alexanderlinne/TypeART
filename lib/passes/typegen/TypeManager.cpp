@@ -134,6 +134,11 @@ const TypeDatabase& TypeManager::getTypeDatabase() const {
   return typeDB;
 }
 
+int TypeManager::registerAllocation(int type_id, std::optional<size_t> count,
+                                    std::optional<ptrdiff_t> base_ptr_offset) {
+  return typeDB.getOrCreateAllocationId(type_id, count, base_ptr_offset);
+}
+
 std::pair<bool, std::error_code> TypeManager::load() {
   //  TypeIO cio(&typeDB);
   // std::error_code error;

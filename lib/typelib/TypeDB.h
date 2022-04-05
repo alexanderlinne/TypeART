@@ -29,6 +29,11 @@ class TypeDB final : public TypeDatabase {
 
   void registerStruct(const StructTypeInfo& struct_type) override;
 
+  int getOrCreateAllocationId(int type_id, std::optional<size_t> count,
+                              std::optional<ptrdiff_t> base_ptr_offset) override;
+
+  void registerAllocations(std::vector<AllocationInfo> allocations) override;
+
   bool isUnknown(int type_id) const override;
 
   bool isValid(int type_id) const override;
@@ -47,15 +52,20 @@ class TypeDB final : public TypeDatabase {
 
   const StructTypeInfo* getStructInfo(int type_id) const override;
 
+  const AllocationInfo* getAllocationInfo(int allocation_id) const override;
+
   size_t getTypeSize(int type_id) const override;
 
   const std::vector<StructTypeInfo>& getStructList() const override;
+
+  const std::vector<AllocationInfo>& getAllocationInfo() const override;
 
   static const std::array<std::string, 11> BuiltinNames;
   static const std::array<size_t, 11> BuiltinSizes;
   static const std::string UnknownStructName;
 
  private:
+  std::vector<AllocationInfo> allocation_info;
   std::vector<StructTypeInfo> struct_info_vec;
   std::unordered_map<int, int> typeid_to_list_index;
 };

@@ -23,7 +23,7 @@ int typeart_allocator_free(void* addr);
 static void (*actual_free)(void*) = NULL;
 void free(void* ptr) {
   if (!actual_free) {
-    actual_free = typeart_find_next_symbol("free");
+    actual_free = (void (*)(void*))typeart_find_next_symbol("free");
   }
   if (!typeart_allocator_free(ptr)) {
     actual_free(ptr);

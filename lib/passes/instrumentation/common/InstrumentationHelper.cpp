@@ -44,6 +44,8 @@ llvm::Type* InstrumentationHelper::getTypeFor(IType id) {
       return Type::getInt32Ty(c);
     case IType::stack_count:
       return Type::getInt32Ty(c);
+    case IType::allocation_id:
+      return Type::getInt32Ty(c);
     default:
       LOG_WARNING("Unknown IType selected.");
       return nullptr;

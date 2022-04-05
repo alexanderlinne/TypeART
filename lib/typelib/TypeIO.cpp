@@ -39,6 +39,60 @@ auto open_flag() {
 }
 }  // namespace compat
 
+struct AllocationInfoIO {
+  typeart::allocation_id_t allocation_id;
+  int type_id;
+
+  llvm::Optional<size_t> count;
+
+  // Offset from the pointer to the memory used by this allocation to the
+  // pointer returned to the user.
+  llvm::Optional<ptrdiff_t> base_ptr_offset;
+
+  static AllocationInfoIO from(const typeart::AllocationInfo& info) {
+    return {
+        info.allocation_id,                                                                           //
+        info.type_id,                                                                                 //
+        info.count.has_value() ? llvm::Optional{info.count.value()} : llvm::None,                     //
+        info.base_ptr_offset.has_value() ? llvm::Optional{info.base_ptr_offset.value()} : llvm::None  //
+    };
+  }
+
+  typeart::AllocationInfo as_allocation_info() {
+    return {
+        allocation_id,                                                                         //
+        type_id,                                                                               //
+        count.hasValue() ? std::optional{count.getValue()} : std::nullopt,                     //
+        base_ptr_offset.hasValue() ? std::optional{base_ptr_offset.getValue()} : std::nullopt  //
+    };
+  }
+};
+
+struct TypeFile {
+  std::vector<AllocationInfoIO> allocation_info;
+  std::vector<typeart::StructTypeInfo> struct_info;
+};
+
+template <>
+struct llvm::yaml::MappingTraits<TypeFile> {
+  static void mapping(IO& io, TypeFile& info) {
+    io.mapRequired("allocations", info.allocation_info);
+    io.mapRequired("types", info.struct_info);
+  }
+};
+
+template <>
+struct llvm::yaml::MappingTraits<AllocationInfoIO> {
+  static void mapping(IO& io, AllocationInfoIO& info) {
+    io.mapRequired("id", info.allocation_id);
+    io.mapRequired("type_id", info.type_id);
+    io.mapOptional("count", info.count);
+    io.mapOptional("base_ptr_offset", info.base_ptr_offset);
+  }
+};
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(AllocationInfoIO)
+
 template <>
 struct llvm::yaml::ScalarTraits<typeart::StructTypeFlag> {
   static void output(const typeart::StructTypeFlag& value, void*, llvm::raw_ostream& out) {
@@ -94,12 +148,17 @@ llvm::ErrorOr<bool> load(TypeDB* typeDB, const std::string& file) {
   typeDB->clear();
 
   yaml::Input in(memBuffer.get()->getMemBufferRef());
-  std::vector<StructTypeInfo> structures;
-  in >> structures;
+  TypeFile type_file;
+  in >> type_file;
 
-  for (auto& typeInfo : structures) {
+  for (auto& typeInfo : type_file.struct_info) {
     typeDB->registerStruct(typeInfo);
   }
+  auto allocation_info = std::vector<AllocationInfo>{};
+  allocation_info.reserve(type_file.allocation_info.size());
+  std::transform(type_file.allocation_info.begin(), type_file.allocation_info.end(),
+                 std::back_inserter(allocation_info), [](auto& info) { return info.as_allocation_info(); });
+  typeDB->registerAllocations(std::move(allocation_info));
 
   return !in.error();
 }
@@ -115,15 +174,17 @@ llvm::ErrorOr<bool> store(const TypeDB* typeDB, const std::string& file) {
     return error;
   }
 
-  auto types = typeDB->getStructList();
-  yaml::Output out(oss);
-  if (!types.empty()) {
-    out << types;
-  } else {
-    out.beginDocuments();
-    out.endDocuments();
-  }
+  auto types            = typeDB->getStructList();
+  auto type_file        = TypeFile{};
+  type_file.struct_info = typeDB->getStructList();
 
+  auto allocation_info = typeDB->getAllocationInfo();
+  type_file.allocation_info.reserve(allocation_info.size());
+  std::transform(allocation_info.begin(), allocation_info.end(), std::back_inserter(type_file.allocation_info),
+                 [](auto& info) { return AllocationInfoIO::from(info); });
+
+  yaml::Output out(oss);
+  out << type_file;
   return true;
 }
 

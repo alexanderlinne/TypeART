@@ -1,5 +1,6 @@
 #include "Allocator.h"
 
+#include "../Runtime.h"
 #include "Config.h"
 
 #include <fmt/core.h>
@@ -24,6 +25,18 @@ void* remap_virtual_memory(void* addr, size_t size, int fd) {
   return mmap64(addr, size, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, fd, 0);
 }
 
+namespace heap {
+
+constexpr size_t region_size         = config::heap::region_size;
+constexpr size_t region_count        = config::heap::region_count;
+constexpr size_t min_allocation_size = config::heap::min_allocation_size;
+constexpr size_t max_allocation_size = config::heap::max_allocation_size;
+constexpr size_t regions_begin       = config::heap::regions_begin;
+constexpr size_t regions_end         = config::heap::regions_end;
+constexpr size_t min_alignment       = config::heap::min_alignment;
+
+constexpr size_t virtual_memory_size = region_count * region_size + max_allocation_size;
+
 struct Region {
   void* begin;
   void* free_begin;
@@ -31,9 +44,6 @@ struct Region {
   size_t allocation_size;
   std::set<void*> free_list;
   std::mutex mutex;
-
-  Region() {
-  }
 
   void initialize(void* new_begin, void* new_end, size_t new_allocation_size) {
     begin           = new_begin;
@@ -60,7 +70,7 @@ struct Region {
   }
 
   void free(void* addr) {
-    addr = (char*)addr - config::heap::allocation_offset;
+    addr = (char*)addr - min_alignment;
     std::lock_guard _lock(mutex);
     if (((uintptr_t)addr & (allocation_size - 1)) != 0 || addr >= free_begin) {
       fmt::print(stderr, "TypeART: free on invalid pointer");
@@ -75,25 +85,21 @@ struct Region {
 
   std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
     if (addr >= begin && addr < end) {
-      auto pointer_info = (PointerInfo*)((uintptr_t)addr & ~(allocation_size - 1));
-      return AllocationInfo{PointerInfo{pointer_info->typeId, pointer_info->count, nullptr},
-                            (void*)((char*)pointer_info + 16)};
+      auto bucket_ptr      = (void*)((uintptr_t)addr & ~(allocation_size - 1));
+      auto allocation_id   = *(allocation_id_t*)bucket_ptr;
+      auto allocation_info = RuntimeSystem::get().typeResolution.db().getAllocationInfo(allocation_id);
+      if (allocation_info == nullptr) {
+        fmt::print(stderr, "Found invalid allocaton_id {}!", allocation_id);
+        return {};
+      }
+      auto base_ptr = (void*)((char*)bucket_ptr + allocation_info->base_ptr_offset.value_or(heap::min_alignment));
+      auto count    = *(size_t*)((char*)bucket_ptr + config::count_offset);
+      return AllocationInfo{PointerInfo{allocation_info->type_id, count, nullptr}, base_ptr};
     } else {
       return {};
     }
   }
 };
-
-namespace heap {
-
-constexpr size_t region_size         = config::heap::region_size;
-constexpr size_t region_count        = config::heap::region_count;
-constexpr size_t min_allocation_size = config::heap::min_allocation_size;
-constexpr size_t max_allocation_size = config::heap::max_allocation_size;
-constexpr size_t regions_begin       = config::heap::regions_begin;
-constexpr size_t regions_end         = config::heap::regions_end;
-
-constexpr size_t virtual_memory_size = region_count * region_size + max_allocation_size;
 
 void* begin = nullptr;
 void* end   = nullptr;
@@ -101,7 +107,7 @@ static Region regions[region_count];
 
 bool initialized = false;
 
-__attribute__((constructor(99999))) void ctor() {
+__attribute__((constructor)) void ctor() {
   begin = reserve_virtual_memory(virtual_memory_size);
   end   = (char*)begin + virtual_memory_size;
 
@@ -119,7 +125,7 @@ __attribute__((constructor(99999))) void ctor() {
   initialized = true;
 }
 
-__attribute__((destructor(99999))) void dtor() {
+__attribute__((destructor)) void dtor() {
   initialized = false;
 }
 
@@ -132,7 +138,7 @@ constexpr static size_t index_for(size_t size) {
   }
 }
 
-size_t index_for(void* addr) {
+size_t index_for(const void* addr) {
   return ((uintptr_t)addr - (uintptr_t)begin) / region_size;
 }
 
@@ -145,39 +151,33 @@ Region* region_for(size_t size) {
   }
 }
 
-Region* region_for(void* addr) {
+Region* region_for(const void* addr) {
   return &regions[index_for(addr)];
 }
 
 std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
   if (addr >= begin && addr < end) {
-    for (auto& region : regions) {
-      auto result = region.getAllocationInfo(addr);
-      if (result.has_value()) {
-        return result;
-      }
-    }
+    return region_for(addr)->getAllocationInfo(addr);
   }
   return {};
 }
 
 }  // namespace heap
 
-void* malloc(int type_id, size_t count, size_t size) {
+void* malloc(int allocation_id, size_t count, size_t size) {
   if (!heap::initialized) {
     return ::malloc(size);
   }
-  auto required_size = size + config::heap::allocation_offset;
+  auto required_size = size + heap::min_alignment;
   auto region        = heap::region_for(required_size);
   if (!region) {
     return ::malloc(size);
   }
   assert(required_size <= region->allocation_size);
-  auto result = (size_t*)region->allocate();
-  result[0]   = type_id;
-  result[1]   = count;
-  auto ret    = (void*)((char*)result + config::heap::allocation_offset);
-  return ret;
+  auto allocation                                      = (size_t*)region->allocate();
+  *(int*)allocation                                    = allocation_id;
+  *(size_t*)((char*)allocation + config::count_offset) = count;
+  return (char*)allocation + heap::min_alignment;
 }
 
 bool free(void* addr) {
@@ -216,7 +216,7 @@ void setup() {
   end   = (char*)begin + virtual_memory_size;
 
   // Set up the main stack memory.
-  fd = memfd_create("__typeart_stack", MFD_CLOEXEC);
+  fd = memfd_create("typeart_stack", MFD_CLOEXEC);
   ftruncate64(fd, region_size);
   remap_virtual_memory(begin, region_size, fd);
   mprotect((char*)begin + region_size, guard_size, PROT_NONE);
@@ -243,9 +243,26 @@ size_t allocation_size_for(const void* addr) {
 std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
   if (addr >= mapped_begin && addr < mapped_end) {
     const auto allocation_size = allocation_size_for(addr);
-    auto pointer_info          = (PointerInfo*)((uintptr_t)addr & ~(allocation_size - 1));
-    return AllocationInfo{PointerInfo{pointer_info->typeId, pointer_info->count, nullptr},
-                          (void*)((char*)pointer_info + 16)};
+    auto bucket_ptr            = (void*)((uintptr_t)addr & ~(allocation_size - 1));
+    auto allocation_id         = *(allocation_id_t*)bucket_ptr;
+    auto allocation_info       = RuntimeSystem::get().typeResolution.db().getAllocationInfo(allocation_id);
+    if (allocation_info == nullptr) {
+      fmt::print(stderr, "Found invalid allocaton_id {}!", allocation_id);
+      return {};
+    }
+    if (!allocation_info->base_ptr_offset.has_value()) {
+      fmt::print(stderr, "Missing base pointer offset for stack allocation at {} with allocation id {}!", addr,
+                 allocation_id);
+      return {};
+    }
+    auto base_ptr = (void*)((char*)bucket_ptr + allocation_info->base_ptr_offset.value());
+    auto count    = size_t{0};
+    if (allocation_info->count.has_value()) {
+      count = allocation_info->count.value();
+    } else {
+      count = *(size_t*)((char*)bucket_ptr + config::count_offset);
+    }
+    return AllocationInfo{PointerInfo{allocation_info->type_id, count, nullptr}, base_ptr};
   } else {
     return {};
   }
@@ -254,8 +271,7 @@ std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
 }  // namespace stack
 
 std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
-  const auto result = heap::getAllocationInfo(addr);
-  if (result.has_value()) {
+  if (auto result = heap::getAllocationInfo(addr); result.has_value()) {
     return result;
   }
   return stack::getAllocationInfo(addr);

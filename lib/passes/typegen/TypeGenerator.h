@@ -39,6 +39,9 @@ class TypeGenerator {
 
   [[nodiscard]] virtual std::pair<bool, std::error_code> store() const = 0;
 
+  [[nodiscard]] virtual int registerAllocation(int type_id, std::optional<size_t> count,
+                                               std::optional<ptrdiff_t> base_ptr_offset) = 0;
+
   virtual ~TypeGenerator() = default;
 };
 

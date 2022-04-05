@@ -46,30 +46,28 @@
 
 namespace typeart {
 
-using MemAddr = const void*;
-
 struct PointerInfo final {
   int typeId{-1};
   size_t count{0};
-  MemAddr debug{nullptr};
+  const void* debug{nullptr};
 };
 
 static_assert(sizeof(PointerInfo) == 24);
 
 struct RuntimeT {
-  using Stack = std::vector<MemAddr>;
+  using Stack = std::vector<const void*>;
   static constexpr auto StackReserve{512U};
   static constexpr char StackName[] = "std::vector";
 #ifdef TYPEART_BTREE
-  using PointerMapBaseT           = btree::btree_map<MemAddr, PointerInfo>;
+  using PointerMapBaseT           = btree::btree_map<const void*, PointerInfo>;
   static constexpr char MapName[] = "btree::btree_map";
 #endif
 #ifdef TYPEART_ABSEIL
-  using PointerMapBaseT           = absl::btree_map<MemAddr, PointerInfo>;
+  using PointerMapBaseT           = absl::btree_map<const void*, PointerInfo>;
   static constexpr char MapName[] = "absl::btree_map";
 #endif
 #if !defined(TYPEART_BTREE) && !defined(TYPEART_ABSEIL)
-  using PointerMapBaseT           = std::map<MemAddr, PointerInfo>;
+  using PointerMapBaseT           = std::map<const void*, PointerInfo>;
   static constexpr char MapName[] = "std::map";
 #endif
 #ifdef USE_SAFEPTR

@@ -13,8 +13,10 @@
 #include "TypeARTPass.h"
 
 #include "CommandLine.h"
+#include "instrumentation/allocator/ArgumentParser.h"
 #include "instrumentation/allocator/InstrumentationStrategy.h"
 #include "instrumentation/tracker/ArgumentParser.h"
+#include "instrumentation/tracker/InstrumentationStrategy.h"
 #include "support/Logger.h"
 #include "support/Table.h"
 #include "typegen/TypeGenerator.h"
@@ -72,10 +74,11 @@ bool TypeArtPass::doInitialization(llvm::Module& m) {
     LOG_DEBUG("No valid existing type configuration found: " << type_filepath << ". Reason: " << error.message());
   }
 
-  auto parser = std::make_unique<instrumentation::tracker::ArgumentParser>(m, typeManager.get());
 #if TYPEART_USE_ALLOCATOR
+  auto parser   = std::make_unique<instrumentation::allocator::ArgumentParser>(m, typeManager.get());
   auto strategy = std::make_unique<instrumentation::allocator::InstrumentationStrategy>(m);
 #else
+  auto parser   = std::make_unique<instrumentation::tracker::ArgumentParser>(m, typeManager.get());
   auto strategy = std::make_unique<instrumentation::tracker::InstrumentationStrategy>(m);
 #endif
 

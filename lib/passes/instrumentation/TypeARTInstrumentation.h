@@ -35,6 +35,7 @@ struct ArgStrId {
   static constexpr char byte_count[]    = "byte_count";
   static constexpr char element_count[] = "element_count";
   static constexpr char realloc_ptr[]   = "realloc_ptr";
+  static constexpr char allocation_id[] = "allocation_id";
 };
 
 struct ArgMap {

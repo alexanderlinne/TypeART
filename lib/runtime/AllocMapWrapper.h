@@ -61,7 +61,7 @@ struct MapOp {
   }
 
   template <typename PointerMap>
-  [[nodiscard]] inline static bool put(PointerMap&& xlocked_map, MemAddr addr, const RuntimeT::MappedType& data) {
+  [[nodiscard]] inline static bool put(PointerMap&& xlocked_map, const void* addr, const RuntimeT::MappedType& data) {
     auto& def             = (*xlocked_map)[addr];
     const bool overridden = (def.typeId != -1);
     def                   = data;
@@ -69,7 +69,7 @@ struct MapOp {
   }
 
   template <typename PointerMap>
-  [[nodiscard]] inline static llvm::Optional<RuntimeT::MapEntry> find(PointerMap&& slocked_map, MemAddr addr) {
+  [[nodiscard]] inline static llvm::Optional<RuntimeT::MapEntry> find(PointerMap&& slocked_map, const void* addr) {
     if (slocked_map->empty() || addr < slocked_map->begin()->first) {
       return llvm::None;
     }
@@ -89,7 +89,7 @@ struct MapOp {
   }
 
   template <typename PointerMap>
-  [[nodiscard]] inline static llvm::Optional<RuntimeT::MappedType> remove(PointerMap&& xlocked_map, MemAddr addr) {
+  [[nodiscard]] inline static llvm::Optional<RuntimeT::MappedType> remove(PointerMap&& xlocked_map, const void* addr) {
     const auto it = xlocked_map->find(addr);
     if (it != xlocked_map->end()) {
       auto removed = it->second;
@@ -102,7 +102,7 @@ struct MapOp {
   template <BulkOperation Operation, typename PointerMap, typename FwdIter, typename Callback>
   inline static void bulk_op(PointerMap&& xlocked_map, FwdIter&& s, FwdIter&& e, Callback&& log) {
     if constexpr (Operation == BulkOperation::remove) {
-      std::for_each(s, e, [&xlocked_map, &log](MemAddr addr) {
+      std::for_each(s, e, [&xlocked_map, &log](const void* addr) {
         auto removed = remove(std::forward<PointerMap>(xlocked_map), addr);
         log(removed, addr);
       });
@@ -114,15 +114,15 @@ struct MapOp {
 
 template <typename BaseOp>
 struct StandardMapBase : protected BaseOp {
-  [[nodiscard]] inline llvm::Optional<RuntimeT::MapEntry> find(MemAddr addr) const {
+  [[nodiscard]] inline llvm::Optional<RuntimeT::MapEntry> find(const void* addr) const {
     return BaseOp::find(detail::as_ptr(this->map()), addr);
   }
 
-  [[nodiscard]] inline bool put(MemAddr addr, const RuntimeT::MappedType& entry) {
+  [[nodiscard]] inline bool put(const void* addr, const RuntimeT::MappedType& entry) {
     return BaseOp::put(detail::as_ptr(this->map()), addr, entry);
   }
 
-  [[nodiscard]] inline llvm::Optional<RuntimeT::MappedType> remove(MemAddr addr) {
+  [[nodiscard]] inline llvm::Optional<RuntimeT::MappedType> remove(const void* addr) {
     return BaseOp::remove(detail::as_ptr(this->map()), addr);
   }
 
@@ -139,17 +139,17 @@ struct SharedMutexMap : public BaseOp {
   mutable std::shared_mutex alloc_m;
 
  public:
-  [[nodiscard]] inline llvm::Optional<RuntimeT::MapEntry> find(MemAddr addr) const {
+  [[nodiscard]] inline llvm::Optional<RuntimeT::MapEntry> find(const void* addr) const {
     std::shared_lock<std::shared_mutex> guard(alloc_m);
     return BaseOp::find(addr);
   }
 
-  [[nodiscard]] inline bool put(MemAddr addr, const RuntimeT::MappedType& entry) {
+  [[nodiscard]] inline bool put(const void* addr, const RuntimeT::MappedType& entry) {
     std::lock_guard<std::shared_mutex> guard(alloc_m);
     return BaseOp::put(addr, entry);
   }
 
-  [[nodiscard]] inline llvm::Optional<RuntimeT::MappedType> remove(MemAddr addr) {
+  [[nodiscard]] inline llvm::Optional<RuntimeT::MappedType> remove(const void* addr) {
     std::lock_guard<std::shared_mutex> guard(alloc_m);
     return BaseOp::remove(addr);
   }
@@ -164,17 +164,17 @@ struct SharedMutexMap : public BaseOp {
 #ifdef USE_SAFEPTR
 template <typename BaseOp>
 struct SafePtrdMap : protected BaseOp {
-  [[nodiscard]] inline llvm::Optional<RuntimeT::MapEntry> find(MemAddr addr) const {
+  [[nodiscard]] inline llvm::Optional<RuntimeT::MapEntry> find(const void* addr) const {
     auto slockedAllocs = sf::slock_safe_ptr(this->map());
     return BaseOp::find(slockedAllocs, addr);
   }
 
-  [[nodiscard]] inline bool put(MemAddr addr, const RuntimeT::MappedType& entry) {
+  [[nodiscard]] inline bool put(const void* addr, const RuntimeT::MappedType& entry) {
     auto guard = sf::xlock_safe_ptr(this->map());
     return BaseOp::put(guard, addr, entry);
   }
 
-  [[nodiscard]] inline llvm::Optional<RuntimeT::MappedType> remove(MemAddr addr) {
+  [[nodiscard]] inline llvm::Optional<RuntimeT::MappedType> remove(const void* addr) {
     auto guard = sf::xlock_safe_ptr(this->map());
     return BaseOp::remove(guard, addr);
   }

@@ -20,8 +20,8 @@ std::vector<std::pair<int, softcounter::Counter>> sorted_v(const std::unordered_
   return sorted_elements;
 }
 
-std::vector<MemAddr> sorted_v(const std::unordered_set<MemAddr>& set) {
-  std::vector<MemAddr> sorted_elements(set.begin(), set.end());
+std::vector<const void*> sorted_v(const std::unordered_set<const void*>& set) {
+  std::vector<const void*> sorted_elements(set.begin(), set.end());
   std::sort(sorted_elements.begin(), sorted_elements.end());
   return sorted_elements;
 }

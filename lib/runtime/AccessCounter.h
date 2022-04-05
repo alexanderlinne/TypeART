@@ -186,7 +186,7 @@ class ThreadRecorder {
 class AccessRecorder {
  public:
   using TypeCountMap      = std::unordered_map<int, Counter>;
-  using AddressSet        = std::unordered_set<MemAddr>;
+  using AddressSet        = std::unordered_set<const void*>;
   using MutexT            = std::shared_mutex;
   using ThreadRecorderMap = std::unordered_map<std::thread::id, thread::ThreadRecorder>;
 
@@ -273,7 +273,7 @@ class AccessRecorder {
     }
   }
 
-  inline void incUsedInRequest(MemAddr addr) {
+  inline void incUsedInRequest(const void* addr) {
     ++addrChecked;
 
     std::lock_guard lock(seenMutex);
@@ -284,7 +284,7 @@ class AccessRecorder {
     ++addrReuses;
   }
 
-  inline void incAddrMissing(MemAddr addr) {
+  inline void incAddrMissing(const void* addr) {
     ++addrMissing;
 
     std::lock_guard lock(missingMutex);
@@ -536,7 +536,7 @@ class NoneRecorder {
   }
   [[maybe_unused]] inline void incGlobalAlloc(int, size_t) {
   }
-  [[maybe_unused]] inline void incUsedInRequest(MemAddr) {
+  [[maybe_unused]] inline void incUsedInRequest(const void*) {
   }
   [[maybe_unused]] inline void decHeapAlloc() {
   }
@@ -544,7 +544,7 @@ class NoneRecorder {
   }
   [[maybe_unused]] inline void incAddrReuse() {
   }
-  [[maybe_unused]] inline void incAddrMissing(MemAddr) {
+  [[maybe_unused]] inline void incAddrMissing(const void*) {
   }
   [[maybe_unused]] inline void incStackFree(int, size_t) {
   }

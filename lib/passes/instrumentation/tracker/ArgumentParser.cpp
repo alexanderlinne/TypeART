@@ -249,4 +249,4 @@ GlobalArgList ArgumentParser::collectGlobal(const GlobalDataList& globals) {
   return list;
 }
 
-}  // namespace typeart
+}  // namespace typeart::instrumentation::tracker
