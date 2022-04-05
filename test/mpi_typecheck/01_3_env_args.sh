@@ -1,0 +1,1 @@
+TEST=test TEST2=test TEST3=test mpirun -n 2 test/mpi_typecheck/01_MPI_Double.cpp.exe

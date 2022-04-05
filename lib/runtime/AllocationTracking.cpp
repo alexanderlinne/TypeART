@@ -244,6 +244,7 @@ void typeart_tracker_alloc_stack(const void* addr, int typeId, size_t count) {
 }
 
 void typeart_tracker_alloc_global(const void* addr, int typeId, size_t count) {
+  fprintf(stderr, "Alloc Global\n");
   TYPEART_RUNTIME_GUARD;
   const void* retAddr = __builtin_return_address(0);
   typeart::RuntimeSystem::get().allocTracker.onAllocGlobal(addr, typeId, count, retAddr);

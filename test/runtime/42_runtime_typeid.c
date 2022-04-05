@@ -1,4 +1,5 @@
-// RUN: %run %s 2>&1 | %filecheck %s
+// RUN: %run %s > %s.log 2>&1
+// RUN: cat %s.log | %filecheck %s
 
 #include "../../lib/runtime/RuntimeInterface.h"
 

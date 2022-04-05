@@ -265,20 +265,47 @@ std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
 
 extern "C" {
 
-__attribute__((noinline)) void* typeart_copy_main_stack(char** envp, void** stack_begin) {
+char** typeart_envp = nullptr;
+
+__attribute__((noinline)) void* typeart_copy_main_stack(void** stack_begin) {
   // From the implementation of _start in glibc we know that the first element
   // at the top of the stack is the terminal nullptr in the envp array. As the
   // _start function does not return, we can safely copy the stack up to this
   // point.
+  printf("test\n");
   size_t envp_it = 0;
-  while (envp[envp_it] != nullptr)
+  auto envp      = typeart_envp;
+  while (envp[envp_it] != nullptr) {
+    printf("%p\t", &envp[envp_it]);
+    printf("%p\t", envp[envp_it]);
+    for (auto it = envp[envp_it]; *it != '\0'; ++it) {
+      printf("%c", *it);
+    }
+    printf("\n");
     ++envp_it;
-  void* stack_end = (void**)&envp[envp_it + 1];
+  }
+  void* stack_end = (void**)&typeart_envp[envp_it + 1];
 
   // Copy the actual stack data.
   auto current_stack_size = (uintptr_t)stack_end - (uintptr_t)stack_begin;
   void** new_stack_end    = (void**)typeart::allocator::stack::main_end;
-  void** new_stack_begin  = (void**)((uintptr_t)((char*)new_stack_end - current_stack_size) & ~(8UL - 1));
+  void** new_stack_begin  = (void**)((char*)new_stack_end - current_stack_size);
+
+  // As stack_begin is the stack pointer taken upon entry to the caller of this
+  // function we expect it to be aligned to a 16 byte boundary. To be sure that
+  // the replacement does not cause any problems, we must ensure that our new
+  // stack begin is also aligned that way.
+
+  // auto alignment_mask = 16UL - 1;
+  // assert(((uintptr_t)stack_begin & alignment_mask) == 0);
+  // if (((uintptr_t)new_stack_begin & alignment_mask) != 0) {
+  //   auto aligned    = (uintptr_t)new_stack_begin & ~alignment_mask;
+  //   auto offset     = (uintptr_t)new_stack_begin - aligned;
+  //   new_stack_begin = (void**)aligned;
+  //   new_stack_end -= offset;
+  // }
+
+  // Copy the data from the old stack onto the new stack.
   memcpy(new_stack_begin, stack_begin, current_stack_size);
 
   // Replace any values on the new stack that look like pointers to the old
@@ -301,7 +328,9 @@ void typeart_replace_main_stack(char** envp);
 void typeart_setup_main_stack(int argc, char** argv, char** envp) {
   assert(typeart::allocator::config::page_size == sysconf(_SC_PAGE_SIZE));
   typeart::allocator::stack::setup();
+  typeart_envp = envp;
   typeart_replace_main_stack(envp);
+  printf("test2\n");
 }
 
 }  // extern "C"
@@ -310,9 +339,10 @@ __asm__(
     "\t.align 16, 0x90\n"
     "\t.type typeart_replace_main_stack,@function\n"
     "typeart_replace_main_stack:\n"
-    // %rdi is the first argument (envp)
-    "\tmovq %rsp, %rsi\n"  // pass the stack pointer as the second argument
+    "\tpushq %rbp\n"
+    "\tmovq %rsp, %rdi\n"  // pass the stack pointer as the first argument
     "\tmovabsq $typeart_copy_main_stack, %rax\n"
     "\tcallq *%rax\n"
     "\tmovq %rax, %rsp\n"  // copy the result of the call into the stack pointer
+    "\tpopq %rbp\n"
     "\tretq\n");

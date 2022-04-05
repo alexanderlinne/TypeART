@@ -63,6 +63,7 @@ struct RuntimeSystem {
   static thread_local bool rtScope;
 
   static RuntimeSystem& get() {
+    fprintf(stderr, "Runtime System Init\n");
     // As opposed to a global variable, a singleton + instantiation during
     // the first callback/query avoids some problems when
     // preloading (especially with MUST).
