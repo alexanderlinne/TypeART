@@ -275,10 +275,24 @@ __attribute__((noinline)) void* typeart_copy_main_stack(char** envp, void** stac
     ++envp_it;
   void* stack_end = (void**)&envp[envp_it + 1];
 
-  // Copy the actual stack data.
   auto current_stack_size = (uintptr_t)stack_end - (uintptr_t)stack_begin;
-  void** new_stack_end    = (void**)typeart::allocator::stack::main_end;
-  void** new_stack_begin  = (void**)((uintptr_t)((char*)new_stack_end - current_stack_size) & ~(8UL - 1));
+  auto new_stack_end      = (void**)typeart::allocator::stack::main_end;
+  auto new_stack_begin    = (void**)((char*)new_stack_end - current_stack_size);
+
+  // As stack_begin is the stack pointer taken upon entry to the caller of this
+  // function we expect it to be aligned to a 16 byte boundary. To be sure that
+  // the replacement does not cause any problems, we must ensure that our new
+  // stack begin is also aligned that way.
+  auto alignment_mask = 16UL - 1;
+  assert(((uintptr_t)stack_begin & alignment_mask) == 0);
+  if (((uintptr_t)new_stack_begin & alignment_mask) != 0) {
+    auto aligned    = (uintptr_t)new_stack_begin & ~alignment_mask;
+    auto offset     = (uintptr_t)new_stack_begin - aligned;
+    new_stack_begin = (void**)aligned;
+    new_stack_end -= offset;
+  }
+
+  // Copy the data from the old stack onto the new stack.
   memcpy(new_stack_begin, stack_begin, current_stack_size);
 
   // Replace any values on the new stack that look like pointers to the old
@@ -310,9 +324,22 @@ __asm__(
     "\t.align 16, 0x90\n"
     "\t.type typeart_replace_main_stack,@function\n"
     "typeart_replace_main_stack:\n"
+
+    // We need to assure that %rsp is propely aligned on a 16 byte boundary.
+    // The System V ABI
+    // https://www.intel.com/content/dam/develop/external/us/en/documents/mpx-linux64-abi.pdf, page 18
+    // specifies, that (%rsp + 8) fulfills this condition whenever at a
+    // function entry point. These are usually used to store the frame pointer:
+    "\tpushq %rbp\n"
+    "\tmovq %rsp, %rbp\n"
+
+    // Call typeart_copy_main_stack:
     // %rdi is the first argument (envp)
     "\tmovq %rsp, %rsi\n"  // pass the stack pointer as the second argument
     "\tmovabsq $typeart_copy_main_stack, %rax\n"
     "\tcallq *%rax\n"
     "\tmovq %rax, %rsp\n"  // copy the result of the call into the stack pointer
+
+    // Restore the stack pointer to it's original position and return.
+    "\tpopq %rbp\n"
     "\tretq\n");
