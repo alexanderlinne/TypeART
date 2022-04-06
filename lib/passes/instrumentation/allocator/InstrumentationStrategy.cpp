@@ -91,8 +91,9 @@ size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
 
     auto function_name = malloc_call->getCalledFunction()->getName();
     if (function_name == "malloc") {
-      auto size           = malloc_call->getArgOperand(0);
-      auto typeart_malloc = builder.CreateCall(type_art_functions.allocator_malloc, {allocation_id, element_count, size});
+      auto size = malloc_call->getArgOperand(0);
+      auto typeart_malloc =
+          builder.CreateCall(type_art_functions.allocator_malloc, {allocation_id, element_count, size});
       malloc_call->replaceAllUsesWith(typeart_malloc);
       malloc_call->eraseFromParent();
     } else if (function_name == "_Znwm") {
@@ -195,8 +196,18 @@ size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
     auto required_alignment = config::alignment_for(allocation_size);
     wrapper_alloca->setAlignment(llvm::MaybeAlign{alignment >= required_alignment ? alignment : required_alignment});
 
+    auto offset_name = fmt::format("typeart_stack_region_offset_for_size_{}", config::allocation_size_for(byte_size));
+    auto offset      = alloca->getModule()->getNamedGlobal(offset_name);
+    if (offset == nullptr) {
+      offset = llvm::dyn_cast<llvm::GlobalVariable>(
+          alloca->getModule()->getOrInsertGlobal(offset_name, llvm::Type::getInt64Ty(ctx)));
+      offset->setLinkage(llvm::GlobalValue::ExternalLinkage);
+      offset->setConstant(true);
+    }
+
     auto offset_wrapper = IRB.CreateBitCast(wrapper_alloca, llvm::Type::getInt8PtrTy(ctx));
-    offset_wrapper      = IRB.CreateConstGEP1_64(offset_wrapper, config::region_offset_for(byte_size));
+    auto offset_value   = IRB.CreateLoad(offset);
+    offset_wrapper      = IRB.CreateGEP(offset_wrapper, offset_value);
     offset_wrapper      = IRB.CreateBitCast(offset_wrapper, wrapper_type->getPointerTo());
 
     const auto allocation_id = IRB.CreateStructGEP(offset_wrapper, 0);
