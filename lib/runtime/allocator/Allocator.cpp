@@ -219,6 +219,9 @@ bool has_owner[thread_count];
 pthread_t owner[thread_count];
 
 void setup() {
+  if (begin != nullptr) {
+    return;
+  }
   begin = reserve_virtual_memory(virtual_memory_size);
   end   = (char*)begin + virtual_memory_size;
 
@@ -247,6 +250,9 @@ void setup() {
 }
 
 void* allocate(pthread_t new_owner) {
+  if (begin == nullptr) {
+    setup();
+  }
   std::lock_guard _lock(owner_mutex);
   for (size_t i = 0; i < thread_count; ++i) {
     if (!has_owner[i]) {
