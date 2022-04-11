@@ -1,7 +1,7 @@
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(PRELOAD_LIB_SOURCES
-    Lib.c
+    Lib.cpp
 )
 
 add_library(${TYPEART_PREFIX}_Preload SHARED ${PRELOAD_LIB_SOURCES})
@@ -15,6 +15,7 @@ add_library(typeart::Preload ALIAS ${TYPEART_PREFIX}_Preload)
 
 target_link_libraries(
   ${TYPEART_PREFIX}_Preload
+  ${TYPEART_PREFIX}_Runtime
   dl
 )
 

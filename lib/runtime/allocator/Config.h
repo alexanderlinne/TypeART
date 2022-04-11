@@ -56,12 +56,12 @@ static_assert(min_allocation_size > sizeof(int));
 namespace stack {
 
 constexpr size_t thread_count        = 16;
-constexpr size_t stack_size          = 1UL << 23;  // 8MB
+constexpr size_t stack_size          = 1UL << 24;  // 16MB
 constexpr size_t region_size         = thread_count * stack_size;
 constexpr size_t guard_size          = 2 * page_size;
 constexpr size_t guarded_region_size = region_size + guard_size;
 constexpr size_t min_allocation_size = 1UL << 3;         // 8B
-constexpr size_t max_allocation_size = stack_size >> 1;  // 4MB
+constexpr size_t max_allocation_size = stack_size >> 1;  // 8MB
 
 constexpr size_t region_count  = __builtin_clzll(min_allocation_size) - __builtin_clzll(max_allocation_size) + 1;
 constexpr size_t regions_begin = 64 - __builtin_clzll(min_allocation_size);

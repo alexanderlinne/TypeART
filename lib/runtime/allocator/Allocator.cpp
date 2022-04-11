@@ -194,6 +194,7 @@ bool free(void* addr) {
 
 namespace stack {
 
+constexpr size_t thread_count        = config::stack::thread_count;
 constexpr size_t region_size         = config::stack::region_size;
 constexpr size_t region_count        = config::stack::region_count;
 constexpr size_t guard_size          = config::stack::guard_size;
@@ -212,6 +213,11 @@ void* mapped_end   = nullptr;
 
 void* main_end = nullptr;
 
+std::mutex owner_mutex;
+void* stack_ptr[thread_count];
+bool has_owner[thread_count];
+pthread_t owner[thread_count];
+
 void setup() {
   begin = reserve_virtual_memory(virtual_memory_size);
   end   = (char*)begin + virtual_memory_size;
@@ -222,15 +228,46 @@ void setup() {
   remap_virtual_memory(begin, region_size, fd);
   mprotect((char*)begin + region_size, guard_size, PROT_NONE);
 
+  // Setup stack pointers.
+  for (size_t i = 0; i < thread_count; ++i) {
+    stack_ptr[i] = (char*)begin + i * stack_size;
+  }
+  // The first stack is owned by the main stack.
+  has_owner[0] = true;
+  main_end     = (char*)stack_ptr[0] + stack_size;
+
   // Set up the mapped regions.
   mapped_begin = (char*)begin + guarded_region_size;
   mapped_end   = end;
-  main_end     = (char*)mapped_begin + stack_size;
   for (size_t i = 0; i < region_count; ++i) {
     void* region_begin = (char*)mapped_begin + i * guarded_region_size;
     remap_virtual_memory(region_begin, region_size, fd);
     mprotect((char*)region_begin + region_size, guard_size, PROT_NONE);
   }
+}
+
+void* allocate(pthread_t new_owner) {
+  std::lock_guard _lock(owner_mutex);
+  for (size_t i = 0; i < thread_count; ++i) {
+    if (!has_owner[i]) {
+      has_owner[i] = true;
+      owner[i]     = new_owner;
+      return stack_ptr[i];
+    }
+  }
+  abort();
+}
+
+void free(pthread_t current_owner) {
+  std::lock_guard _lock(owner_mutex);
+  for (size_t i = 0; i < thread_count; ++i) {
+    if (pthread_equal(owner[i], current_owner)) {
+      has_owner[i] = false;
+      return;
+    }
+  }
+  fmt::print(stderr, "typeart::allocator::stack::free called with unknown thread id!\n");
+  abort();
 }
 
 size_t index_for(const void* addr) {
