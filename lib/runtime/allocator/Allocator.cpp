@@ -62,7 +62,7 @@ struct Region {
     }
 
     const auto result = free_begin;
-    free_begin        = (char*)free_begin + allocation_size;
+    free_begin        = (int8_t*)free_begin + allocation_size;
     if (free_begin >= end) {
       return nullptr;
     }
@@ -70,7 +70,7 @@ struct Region {
   }
 
   void free(void* addr) {
-    addr = (char*)addr - min_alignment;
+    addr = (int8_t*)addr - min_alignment;
     std::lock_guard _lock(mutex);
     if (((uintptr_t)addr & (allocation_size - 1)) != 0 || addr >= free_begin) {
       fmt::print(stderr, "TypeART: free on invalid pointer");
@@ -92,8 +92,8 @@ struct Region {
         fmt::print(stderr, "Found invalid allocaton_id {}!\n", allocation_id);
         return {};
       }
-      auto base_ptr = (void*)((char*)bucket_ptr + allocation_info->base_ptr_offset.value_or(heap::min_alignment));
-      auto count    = *(size_t*)((char*)bucket_ptr + config::count_offset);
+      auto base_ptr = (void*)((int8_t*)bucket_ptr + allocation_info->base_ptr_offset.value_or(heap::min_alignment));
+      auto count    = *(size_t*)((int8_t*)bucket_ptr + config::count_offset);
       return AllocationInfo{PointerInfo{allocation_info->type_id, count, nullptr}, base_ptr};
     } else {
       return {};
@@ -109,17 +109,17 @@ bool initialized = false;
 
 __attribute__((constructor)) void ctor() {
   begin = reserve_virtual_memory(virtual_memory_size);
-  end   = (char*)begin + virtual_memory_size;
+  end   = (int8_t*)begin + virtual_memory_size;
 
   // We potentially need to offset the pointer such that it is properly aligned
   // for the max_allocation_size region.
   void* regions_ptr = begin;
   if (((uintptr_t)regions_ptr & (max_allocation_size - 1)) != 0) {
-    regions_ptr = (char*)((uintptr_t)regions_ptr & ~(max_allocation_size - 1)) + max_allocation_size;
+    regions_ptr = (int8_t*)((uintptr_t)regions_ptr & ~(max_allocation_size - 1)) + max_allocation_size;
   }
 
   for (auto i = size_t{0}; i < region_count; i++) {
-    auto region_begin = (char*)regions_ptr + i * region_size;
+    auto region_begin = (int8_t*)regions_ptr + i * region_size;
     regions[i].initialize(region_begin, region_begin + region_size, min_allocation_size << i);
   }
   initialized = true;
@@ -176,8 +176,8 @@ void* malloc(int allocation_id, size_t count, size_t size) {
   assert(required_size <= region->allocation_size);
   auto allocation                                      = (size_t*)region->allocate();
   *(int*)allocation                                    = allocation_id;
-  *(size_t*)((char*)allocation + config::count_offset) = count;
-  return (char*)allocation + heap::min_alignment;
+  *(size_t*)((int8_t*)allocation + config::count_offset) = count;
+  return (int8_t*)allocation + heap::min_alignment;
 }
 
 bool free(void* addr) {
@@ -200,7 +200,6 @@ constexpr size_t region_count        = config::stack::region_count;
 constexpr size_t guard_size          = config::stack::guard_size;
 constexpr size_t guarded_region_size = config::stack::guarded_region_size;
 constexpr size_t stack_size          = config::stack::stack_size;
-constexpr size_t regions_begin       = config::stack::regions_begin;
 constexpr size_t min_allocation_size = config::stack::min_allocation_size;
 
 constexpr size_t virtual_memory_size = (region_count + 1) * (region_size + 2 * config::page_size);
@@ -223,29 +222,29 @@ void setup() {
     return;
   }
   begin = reserve_virtual_memory(virtual_memory_size);
-  end   = (char*)begin + virtual_memory_size;
+  end   = (int8_t*)begin + virtual_memory_size;
 
   // Set up the main stack memory.
   fd = memfd_create("typeart_stack", MFD_CLOEXEC);
   ftruncate64(fd, region_size);
   remap_virtual_memory(begin, region_size, fd);
-  mprotect((char*)begin + region_size, guard_size, PROT_NONE);
+  mprotect((int8_t*)begin + region_size, guard_size, PROT_NONE);
 
   // Setup stack pointers.
   for (size_t i = 0; i < thread_count; ++i) {
-    stack_ptr[i] = (char*)begin + i * stack_size;
+    stack_ptr[i] = (int8_t*)begin + i * stack_size;
   }
   // The first stack is owned by the main stack.
   has_owner[0] = true;
-  main_end     = (char*)stack_ptr[0] + stack_size;
+  main_end     = (int8_t*)stack_ptr[0] + stack_size;
 
   // Set up the mapped regions.
-  mapped_begin = (char*)begin + guarded_region_size;
+  mapped_begin = (int8_t*)begin + guarded_region_size;
   mapped_end   = end;
   for (size_t i = 0; i < region_count; ++i) {
-    void* region_begin = (char*)mapped_begin + i * guarded_region_size;
+    void* region_begin = (int8_t*)mapped_begin + i * guarded_region_size;
     remap_virtual_memory(region_begin, region_size, fd);
-    mprotect((char*)region_begin + region_size, guard_size, PROT_NONE);
+    mprotect((int8_t*)region_begin + region_size, guard_size, PROT_NONE);
   }
 }
 
@@ -299,12 +298,12 @@ std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
                  allocation_id);
       return {};
     }
-    auto base_ptr = (void*)((char*)bucket_ptr + allocation_info->base_ptr_offset.value());
+    auto base_ptr = (void*)((int8_t*)bucket_ptr + allocation_info->base_ptr_offset.value());
     auto count    = size_t{0};
     if (allocation_info->count.has_value()) {
       count = allocation_info->count.value();
     } else {
-      count = *(size_t*)((char*)bucket_ptr + config::count_offset);
+      count = *(size_t*)((int8_t*)bucket_ptr + config::count_offset);
     }
     return AllocationInfo{PointerInfo{allocation_info->type_id, count, nullptr}, base_ptr};
   } else {
@@ -325,7 +324,7 @@ std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
 
 extern "C" {
 
-__attribute__((noinline)) void* typeart_copy_main_stack(char** envp, void** stack_begin) {
+__attribute__((noinline)) void* typeart_copy_main_stack(char** envp, void* stack_begin) {
   // From the implementation of _start in glibc we know that the first element
   // at the top of the stack is the terminal nullptr in the envp array. As the
   // _start function does not return, we can safely copy the stack up to this
@@ -336,8 +335,8 @@ __attribute__((noinline)) void* typeart_copy_main_stack(char** envp, void** stac
   void* stack_end = (void**)&envp[envp_it + 1];
 
   auto current_stack_size = (uintptr_t)stack_end - (uintptr_t)stack_begin;
-  auto new_stack_end      = (void**)typeart::allocator::stack::main_end;
-  auto new_stack_begin    = (void**)((char*)new_stack_end - current_stack_size);
+  auto new_stack_end      = typeart::allocator::stack::main_end;
+  auto new_stack_begin    = (void*)((int8_t*)new_stack_end - current_stack_size);
 
   // As stack_begin is the stack pointer taken upon entry to the caller of this
   // function we expect it to be aligned to a 16 byte boundary. To be sure that
@@ -348,8 +347,8 @@ __attribute__((noinline)) void* typeart_copy_main_stack(char** envp, void** stac
   if (((uintptr_t)new_stack_begin & alignment_mask) != 0) {
     auto aligned    = (uintptr_t)new_stack_begin & ~alignment_mask;
     auto offset     = (uintptr_t)new_stack_begin - aligned;
-    new_stack_begin = (void**)aligned;
-    new_stack_end -= offset;
+    new_stack_begin = (void*)aligned;
+    new_stack_end = (int8_t*)new_stack_end - offset;
   }
 
   // Copy the data from the old stack onto the new stack.
@@ -361,9 +360,9 @@ __attribute__((noinline)) void* typeart_copy_main_stack(char** envp, void** stac
   // stack again. Just brute-force replacing those values is unsafe as
   // unrelated values may be overwritten, but this is extremely unlikely.
   const auto offset = (intptr_t)new_stack_begin - (intptr_t)stack_begin;
-  for (auto stack_it = new_stack_end - 1; stack_it >= new_stack_begin; --stack_it) {
+  for (auto stack_it = (void**)new_stack_end - 1; stack_it >= new_stack_begin; --stack_it) {
     if (stack_begin <= *stack_it && *stack_it < stack_end) {
-      *stack_it = (char*)*stack_it + offset;
+      *stack_it = (int8_t*)*stack_it + offset;
     }
   }
 
