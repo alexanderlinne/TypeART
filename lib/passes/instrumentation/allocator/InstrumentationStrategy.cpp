@@ -96,6 +96,13 @@ size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
           builder.CreateCall(type_art_functions.allocator_malloc, {allocation_id, element_count, size});
       malloc_call->replaceAllUsesWith(typeart_malloc);
       malloc_call->eraseFromParent();
+    } else if (function_name == "calloc") {
+      auto num  = malloc_call->getArgOperand(0);
+      auto size = malloc_call->getArgOperand(1);
+      auto typeart_calloc =
+          builder.CreateCall(type_art_functions.allocator_calloc, {allocation_id, element_count, num, size});
+      malloc_call->replaceAllUsesWith(typeart_calloc);
+      malloc_call->eraseFromParent();
     } else if (function_name == "_Znwm") {
       auto size          = malloc_call->getArgOperand(0);
       auto typeart__Znwm = builder.CreateCall(type_art_functions.allocator__Znwm, {allocation_id, element_count, size});

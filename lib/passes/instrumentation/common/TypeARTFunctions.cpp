@@ -67,11 +67,14 @@ TypeArtFunctions::TypeArtFunctions(llvm::Module& m) {
   tracker_free_omp         = make_function(m, "typeart_tracker_free_omp", free_arg_types);
   tracker_leave_scope_omp  = make_function(m, "typeart_tracker_leave_scope_omp", leavescope_arg_types);
 
-  auto malloc_arg_types = instrumentation_helper.make_parameters(IType::type_id, IType::extent, IType::extent);
-  auto ptr_type         = instrumentation_helper.getTypeFor(IType::ptr);
-  allocator_malloc      = make_function(m, "typeart_allocator_malloc", ptr_type, malloc_arg_types);
-  allocator__Znwm       = make_function(m, "typeart_allocator__Znwm", ptr_type, malloc_arg_types);
-  allocator__Znam       = make_function(m, "typeart_allocator__Znam", ptr_type, malloc_arg_types);
+  auto malloc_arg_types = instrumentation_helper.make_parameters(IType::allocation_id, IType::extent, IType::extent);
+  auto calloc_arg_types =
+      instrumentation_helper.make_parameters(IType::allocation_id, IType::extent, IType::extent, IType::extent);
+  auto ptr_type    = instrumentation_helper.getTypeFor(IType::ptr);
+  allocator_malloc = make_function(m, "typeart_allocator_malloc", ptr_type, malloc_arg_types);
+  allocator_calloc = make_function(m, "typeart_allocator_calloc", ptr_type, calloc_arg_types);
+  allocator__Znwm  = make_function(m, "typeart_allocator__Znwm", ptr_type, malloc_arg_types);
+  allocator__Znam  = make_function(m, "typeart_allocator__Znam", ptr_type, malloc_arg_types);
 }
 
 }  // namespace typeart::instrumentation::common

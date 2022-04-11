@@ -35,6 +35,7 @@ struct TypeArtFunctions {
   llvm::Function* tracker_leave_scope_omp  = nullptr;
 
   llvm::Function* allocator_malloc = nullptr;
+  llvm::Function* allocator_calloc = nullptr;
   llvm::Function* allocator__Znwm  = nullptr;
   llvm::Function* allocator__Znam  = nullptr;
 };
