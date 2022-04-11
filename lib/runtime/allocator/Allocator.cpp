@@ -174,8 +174,8 @@ void* malloc(int allocation_id, size_t count, size_t size) {
     return ::malloc(size);
   }
   assert(required_size <= region->allocation_size);
-  auto allocation                                      = (size_t*)region->allocate();
-  *(int*)allocation                                    = allocation_id;
+  auto allocation                                        = (size_t*)region->allocate();
+  *(allocation_id_t*)allocation                          = allocation_id;
   *(size_t*)((int8_t*)allocation + config::count_offset) = count;
   return (int8_t*)allocation + heap::min_alignment;
 }
@@ -348,7 +348,7 @@ __attribute__((noinline)) void* typeart_copy_main_stack(char** envp, void* stack
     auto aligned    = (uintptr_t)new_stack_begin & ~alignment_mask;
     auto offset     = (uintptr_t)new_stack_begin - aligned;
     new_stack_begin = (void*)aligned;
-    new_stack_end = (int8_t*)new_stack_end - offset;
+    new_stack_end   = (int8_t*)new_stack_end - offset;
   }
 
   // Copy the data from the old stack onto the new stack.
