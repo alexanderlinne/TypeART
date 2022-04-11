@@ -30,12 +30,11 @@ struct PointerInfo;
 
 class TypeResolution {
   const TypeDB& typeDB;
-  Recorder& recorder;
 
  public:
   using TypeArtStatus = typeart_status;
 
-  TypeResolution(const TypeDB& db, Recorder& recorder);
+  TypeResolution(const TypeDB& db);
 
   [[nodiscard]] size_t getMemberIndex(typeart_struct_layout structInfo, size_t offset) const;
 

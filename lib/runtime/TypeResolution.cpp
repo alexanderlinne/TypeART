@@ -12,7 +12,6 @@
 
 #include "TypeResolution.h"
 
-#include "AllocationTracking.h"
 #include "CallbackInterface.h"
 #include "Runtime.h"
 #include "RuntimeData.h"
@@ -37,7 +36,7 @@ inline const void* addByteOffset(const void* addr, T offset) {
   return static_cast<const void*>(static_cast<const uint8_t*>(addr) + offset);
 }
 
-TypeResolution::TypeResolution(const TypeDB& db, Recorder& recorder) : typeDB{db}, recorder{recorder} {
+TypeResolution::TypeResolution(const TypeDB& db) : typeDB{db} {
 }
 
 size_t TypeResolution::getMemberIndex(typeart_struct_layout structInfo, size_t offset) const {
@@ -160,9 +159,6 @@ TypeResolution::TypeArtStatus TypeResolution::getTypeInfo(const void* addr, cons
   // First, retrieve the containing type
   TypeArtStatus status = getContainingTypeInfo(addr, basePtr, ptrInfo, &containingTypeCount, &internalOffset);
   if (status != TYPEART_OK) {
-    if (status == TYPEART_UNKNOWN_ADDRESS) {
-      recorder.incAddrMissing(addr);
-    }
     return status;
   }
 
@@ -328,19 +324,23 @@ typeart_status typeart_get_builtin_type(const void* addr, typeart::BuiltinType* 
 
 typeart_status typeart_get_type(const void* addr, int* type, size_t* count) {
   typeart::RTGuard guard;
-  return typeart::detail::query_type(addr, type, count);
+  auto result = typeart::detail::query_type(addr, type, count);
+  if (result == TYPEART_UNKNOWN_ADDRESS) {
+    typeart::RuntimeSystem::get().recorder.incAddrMissing(addr);
+  }
+  return result;
 }
 
 typeart_status typeart_get_type_length(const void* addr, size_t* count) {
   typeart::RTGuard guard;
   int type{0};
-  return typeart::detail::query_type(addr, &type, count);
+  return typeart_get_type(addr, &type, count);
 }
 
 typeart_status typeart_get_type_id(const void* addr, int* type_id) {
   typeart::RTGuard guard;
   size_t count{0};
-  return typeart::detail::query_type(addr, type_id, &count);
+  return typeart_get_type(addr, type_id, &count);
 }
 
 typeart_status typeart_get_containing_type(const void* addr, int* type, size_t* count, const void** base_address,
@@ -379,7 +379,7 @@ typeart_status typeart_resolve_type_addr(const void* addr, typeart_struct_layout
   typeart::RTGuard guard;
   int type_id{0};
   size_t size{0};
-  auto status = typeart::detail::query_type(addr, &type_id, &size);
+  auto status = typeart_get_type(addr, &type_id, &size);
   if (status != TYPEART_OK) {
     return status;
   }

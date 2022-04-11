@@ -34,12 +34,12 @@ set(RUNTIME_LIB_SOURCES
     TypeResolution.h
     Runtime.cpp
     Runtime.h
-    AllocationTracking.cpp
-    AllocationTracking.h
     allocator/Allocator.cpp
     allocator/Allocator.h
     allocator/Config.h
     allocator/Malloc.cpp
+    tracker/AllocationTracking.cpp
+    tracker/AllocationTracking.h
     ${TYPEART_META_SOURCE}
     ${TYPEART_ALLOCATOR_CONSTANTS_SOURCE}
     $<$<BOOL:${MPI_LOGGER}>:../support/MPILogger.cpp>

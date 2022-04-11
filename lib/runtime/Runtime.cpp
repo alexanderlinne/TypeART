@@ -18,8 +18,6 @@
 #include "TypeIO.h"
 #include "support/Logger.h"
 
-//#include "llvm/Support/raw_ostream.h"
-
 #include <cstdlib>
 #include <iostream>
 #include <set>
@@ -59,7 +57,7 @@ inline void printTraceStart() {
 
 static constexpr const char* defaultTypeFileName = "types.yaml";
 
-RuntimeSystem::RuntimeSystem() : rtScopeInit(), typeResolution(typeDB, recorder), allocTracker(typeDB, recorder) {
+RuntimeSystem::RuntimeSystem() : rtScopeInit(), typeResolution(typeDB), allocTracker(typeDB, recorder) {
   debug::printTraceStart();
 
   auto loadTypes = [this](const std::string& file, std::error_code& ec) -> bool {

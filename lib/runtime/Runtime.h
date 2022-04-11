@@ -14,9 +14,9 @@
 #define TYPEART_RUNTIME_H
 
 #include "AccessCounter.h"
-#include "AllocationTracking.h"
 #include "TypeDB.h"
 #include "TypeResolution.h"
+#include "tracker/AllocationTracking.h"
 
 #include <cstddef>
 #include <string>
