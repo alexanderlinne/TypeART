@@ -177,11 +177,13 @@ size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
         const auto allocation_padding =
             llvm::ArrayType::get(llvm::Type::getInt8Ty(ctx), config::get_allocation_padding(alignment, sdata.is_vla));
         wrapper_type = llvm::StructType::create(
-            {allocation_id_type, count_padding, count_type, allocation_padding, allocated_type}, name);
+            {allocation_id_type, count_padding, count_type, allocation_padding, allocated_type}, name,
+            /* packed = */ true);
       } else {
         const auto allocation_padding =
             llvm::ArrayType::get(llvm::Type::getInt8Ty(ctx), config::get_allocation_padding(alignment, sdata.is_vla));
-        wrapper_type = llvm::StructType::create({allocation_id_type, allocation_padding, allocated_type}, name);
+        wrapper_type = llvm::StructType::create({allocation_id_type, allocation_padding, allocated_type}, name,
+                                                /* packed = */ true);
       }
     }
 
