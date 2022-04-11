@@ -200,6 +200,7 @@ constexpr size_t guard_size          = config::stack::guard_size;
 constexpr size_t guarded_region_size = config::stack::guarded_region_size;
 constexpr size_t stack_size          = config::stack::stack_size;
 constexpr size_t regions_begin       = config::stack::regions_begin;
+constexpr size_t min_allocation_size = config::stack::min_allocation_size;
 
 constexpr size_t virtual_memory_size = (region_count + 1) * (region_size + 2 * config::page_size);
 
@@ -233,11 +234,11 @@ void setup() {
 }
 
 size_t index_for(const void* addr) {
-  return ((uintptr_t)addr - (uintptr_t)mapped_begin) / guarded_region_size - 1;
+  return ((uintptr_t)addr - (uintptr_t)mapped_begin) / guarded_region_size;
 }
 
 size_t allocation_size_for(const void* addr) {
-  return 1UL << (index_for(addr) + regions_begin - 1);
+  return min_allocation_size << index_for(addr);
 }
 
 std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
