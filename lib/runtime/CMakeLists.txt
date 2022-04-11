@@ -27,7 +27,6 @@ add_custom_command(
 
 set(RUNTIME_LIB_SOURCES
     AccessCounter.h
-    CallbackInterface.h
     RuntimeData.h
     RuntimeInterface.cpp
     RuntimeInterface.h
@@ -37,10 +36,13 @@ set(RUNTIME_LIB_SOURCES
     Runtime.h
     allocator/Allocator.cpp
     allocator/Allocator.h
+    allocator/CallbackInterface.cpp
+    allocator/CallbackInterface.h
     allocator/Config.h
-    allocator/Malloc.cpp
     tracker/AllocationTracking.cpp
     tracker/AllocationTracking.h
+    tracker/CallbackInterface.cpp
+    tracker/CallbackInterface.h
     ${TYPEART_META_SOURCE}
     ${TYPEART_ALLOCATOR_CONSTANTS_SOURCE}
     $<$<BOOL:${MPI_LOGGER}>:../support/MPILogger.cpp>

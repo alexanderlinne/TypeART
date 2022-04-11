@@ -1,3 +1,5 @@
+#include "CallbackInterface.h"
+
 #include "Allocator.h"
 
 extern "C" {
