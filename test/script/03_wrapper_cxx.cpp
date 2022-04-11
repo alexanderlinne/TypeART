@@ -9,7 +9,7 @@
 #include "../../lib/runtime/CallbackInterface.h"
 
 int main(int argc, char** argv) {
-  __typeart_alloc((const void*)2, 7, 1);  // OK
+  typeart_tracker_alloc((const void*)2, 7, 1);  // OK
   return 0;
 }
 

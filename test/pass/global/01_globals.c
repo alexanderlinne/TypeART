@@ -17,10 +17,10 @@ void foo() {
   bar(&global_6);
 }
 
-// CHECK: void @__typeart_init_module_
+// CHECK: void @typeart_init_module_
 // CHECK-NEXT: entry:
-// CHECK-DAG: call void @__typeart_alloc_global(i8* bitcast (i32* @global to i8*)
-// CHECK-DAG: call void @__typeart_alloc_global(i8* bitcast (i32* @global_2 to i8*)
-// CHECK-DAG: call void @__typeart_alloc_global(i8* bitcast (i32* @global_5 to i8*)
-// CHECK-DAG: call void @__typeart_alloc_global(i8* bitcast (i32* @global_6 to i8*)
+// CHECK-DAG: call void @typeart_tracker_alloc_global(i8* bitcast (i32* @global to i8*)
+// CHECK-DAG: call void @typeart_tracker_alloc_global(i8* bitcast (i32* @global_2 to i8*)
+// CHECK-DAG: call void @typeart_tracker_alloc_global(i8* bitcast (i32* @global_5 to i8*)
+// CHECK-DAG: call void @typeart_tracker_alloc_global(i8* bitcast (i32* @global_6 to i8*)
 // CHECK: ret void

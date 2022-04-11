@@ -3,6 +3,7 @@
 
 // RUN: %c-to-llvm -fno-discard-value-names %omp_c_flags %s | %apply-typeart -typeart-stack -typeart-call-filter -typeart-filter-pointer-alloca=false -S | %filecheck %s --check-prefix=check-inst
 // REQUIRES: openmp
+// REQUIRES: tracker
 // clang-format on
 
 // NOTE: This test has limited applicability in this scenario:

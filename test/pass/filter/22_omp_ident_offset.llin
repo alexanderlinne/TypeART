@@ -1,4 +1,5 @@
 ; RUN: cat %s | %apply-typeart -typeart-stack -typeart-call-filter -S 2>&1 | %filecheck %s
+; REQUIRES: tracker
 
 
 %struct.ident_t = type { i32, i32, i32, i32, i8* }

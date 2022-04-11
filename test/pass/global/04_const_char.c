@@ -6,7 +6,7 @@ void foo() {
   bar((const void*)"Hello world");
 }
 
-// CHECK: void @__typeart_init_module_
+// CHECK: void @typeart_init_module_
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @__typeart_alloc_global(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str
+// CHECK-NEXT: call void @typeart_tracker_alloc_global(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str
 // CHECK-NEXT: ret void

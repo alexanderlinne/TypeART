@@ -51,7 +51,7 @@ install/
 
 # llvm-lit related
 test/**/Output/
-test/*/*.ll
+test/**/*.ll
 test/*/*.s
 test/*/*.o
 test/**/*.log

@@ -4,6 +4,7 @@
 
 // RUN: %c-to-llvm -fno-discard-value-names %omp_c_flags %s | %apply-typeart -typeart-stack -typeart-call-filter -S | %filecheck %s --check-prefix=check-inst
 // REQUIRES: openmp
+// REQUIRES: tracker
 // clang-format on
 extern void MPI_call(void*);
 

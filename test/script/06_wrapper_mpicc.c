@@ -15,7 +15,7 @@
 
 int main(int argc, char** argv) {
   MPI_Init(&argc, &argv);
-  __typeart_alloc((const void*)2, 7, 1);  // OK
+  typeart_tracker_alloc((const void*)2, 7, 1);  // OK
   MPI_Finalize();
   return 0;
 }
