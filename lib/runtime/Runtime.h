@@ -22,17 +22,8 @@
 #include <string>
 
 namespace typeart {
+
 struct PointerInfo;
-
-namespace debug {
-
-std::string toString(const void* memAddr, int typeId, size_t count, size_t typeSize, const void* calledFrom);
-
-std::string toString(const void* memAddr, int typeId, size_t count, const void* calledFrom);
-
-std::string toString(const void* addr, const PointerInfo& info);
-
-}  // namespace debug
 
 struct RuntimeSystem {
  private:
@@ -69,6 +60,10 @@ struct RuntimeSystem {
     static RuntimeSystem instance;
     return instance;
   }
+
+  std::string toString(const void* memAddr, int typeId, size_t count, size_t typeSize, const void* calledFrom);
+  std::string toString(const void* memAddr, int typeId, size_t count, const void* calledFrom);
+  std::string toString(const void* addr, const PointerInfo& info);
 
  private:
   RuntimeSystem();

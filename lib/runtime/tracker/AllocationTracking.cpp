@@ -90,8 +90,6 @@ inline typename std::underlying_type<Enum>::type operator==(Enum lhs, Enum rhs) 
   }
 }
 
-using namespace debug;
-
 namespace {
 struct ThreadData final {
   RuntimeT::Stack stackVars;
@@ -113,7 +111,7 @@ void AllocationTracker::onAlloc(const void* addr, int typeId, size_t count, cons
   if (status != AllocState::ADDR_SKIPPED) {
     recorder.incHeapAlloc(typeId, count);
   }
-  LOG_TRACE("Alloc " << toString(addr, typeId, count, retAddr) << " " << 'H');
+  LOG_TRACE("Alloc " << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr) << " " << 'H');
 }
 
 void AllocationTracker::onAllocStack(const void* addr, int typeId, size_t count, const void* retAddr) {
@@ -122,7 +120,7 @@ void AllocationTracker::onAllocStack(const void* addr, int typeId, size_t count,
     threadData.stackVars.push_back(addr);
     recorder.incStackAlloc(typeId, count);
   }
-  LOG_TRACE("Alloc " << toString(addr, typeId, count, retAddr) << " " << 'S');
+  LOG_TRACE("Alloc " << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr) << " " << 'S');
 }
 
 void AllocationTracker::onAllocGlobal(const void* addr, int typeId, size_t count, const void* retAddr) {
@@ -130,14 +128,14 @@ void AllocationTracker::onAllocGlobal(const void* addr, int typeId, size_t count
   if (status != AllocState::ADDR_SKIPPED) {
     recorder.incGlobalAlloc(typeId, count);
   }
-  LOG_TRACE("Alloc " << toString(addr, typeId, count, retAddr) << " " << 'G');
+  LOG_TRACE("Alloc " << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr) << " " << 'G');
 }
 
 AllocState AllocationTracker::doAlloc(const void* addr, int typeId, size_t count, const void* retAddr) {
   AllocState status = AllocState::NO_INIT;
   if (unlikely(!typeDB.isValid(typeId))) {
     status |= AllocState::UNKNOWN_ID;
-    LOG_ERROR("Allocation of unknown type " << toString(addr, typeId, count, retAddr));
+    LOG_ERROR("Allocation of unknown type " << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr));
   }
 
   // Calling malloc with size 0 may return a nullptr or some address that can not be written to.
@@ -146,15 +144,16 @@ AllocState AllocationTracker::doAlloc(const void* addr, int typeId, size_t count
   if (unlikely(count == 0)) {
     recorder.incZeroLengthAddr();
     status |= AllocState::ZERO_COUNT;
-    LOG_WARNING("Zero-size allocation " << toString(addr, typeId, count, retAddr));
+    LOG_WARNING("Zero-size allocation " << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr));
     if (addr == nullptr) {
       recorder.incZeroLengthAndNullAddr();
-      LOG_ERROR("Zero-size and nullptr allocation " << toString(addr, typeId, count, retAddr));
+      LOG_ERROR("Zero-size and nullptr allocation "
+                << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr));
       return status | AllocState::NULL_ZERO | AllocState::ADDR_SKIPPED;
     }
   } else if (unlikely(addr == nullptr)) {
     recorder.incNullAddr();
-    LOG_ERROR("Nullptr allocation " << toString(addr, typeId, count, retAddr));
+    LOG_ERROR("Nullptr allocation " << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr));
     return status | AllocState::NULL_PTR | AllocState::ADDR_SKIPPED;
   }
 
@@ -163,7 +162,7 @@ AllocState AllocationTracker::doAlloc(const void* addr, int typeId, size_t count
   if (unlikely(overridden)) {
     recorder.incAddrReuse();
     status |= AllocState::ADDR_REUSE;
-    LOG_WARNING("Pointer already in map " << toString(addr, typeId, count, retAddr));
+    LOG_WARNING("Pointer already in map " << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr));
     // LOG_WARNING("Overridden data in map " << toString(addr, def));
   }
 
@@ -184,7 +183,8 @@ FreeState AllocationTracker::doFreeHeap(const void* addr, const void* retAddr) {
     return FreeState::ADDR_SKIPPED | FreeState::UNREG_ADDR;
   }
 
-  LOG_TRACE("Free " << toString(addr, *removed));
+  LOG_TRACE("Free " << typeart::RuntimeSystem::get().toString(addr, *removed));
+
   if constexpr (!std::is_same_v<Recorder, softcounter::NoneRecorder>) {
     recorder.incHeapFree(removed->typeId, removed->count);
   }
@@ -213,7 +213,7 @@ void AllocationTracker::onLeaveScope(int alloca_count, const void* retAddr) {
     if (unlikely(!removed)) {
       LOG_ERROR("Free on unregistered address " << addr << " (" << retAddr << ")");
     } else {
-      LOG_TRACE("Free " << toString(addr, *removed));
+      LOG_TRACE("Free " << typeart::RuntimeSystem::get().toString(addr, *removed));
       if constexpr (!std::is_same_v<Recorder, softcounter::NoneRecorder>) {
         recorder.incStackFree(removed->typeId, removed->count);
       }

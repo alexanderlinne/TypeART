@@ -27,38 +27,13 @@
 
 namespace typeart {
 
-namespace debug {
+static constexpr const char* defaultTypeFileName = "types.yaml";
 
-std::string toString(const void* memAddr, int typeId, size_t count, size_t typeSize, const void* calledFrom) {
-  std::string buf;
-  llvm::raw_string_ostream s(buf);
-  const auto name = typeart::RuntimeSystem::get().typeResolution.db().getTypeName(typeId);
-  s << memAddr << " " << typeId << " " << name << " " << typeSize << " " << count << " (" << calledFrom << ")";
-  return s.str();
-}
-
-std::string toString(const void* memAddr, int typeId, size_t count, const void* calledFrom) {
-  const auto typeSize = typeart::RuntimeSystem::get().typeResolution.db().getTypeSize(typeId);
-  return toString(memAddr, typeId, count, typeSize, calledFrom);
-}
-
-std::string toString(const void* addr, const PointerInfo& info) {
-  return toString(addr, info.typeId, info.count, info.debug);
-}
-
-inline void printTraceStart() {
+RuntimeSystem::RuntimeSystem() : rtScopeInit(), typeResolution(typeDB), allocTracker(typeDB, recorder) {
   LOG_TRACE("TypeART Runtime Trace");
   LOG_TRACE("*********************");
   LOG_TRACE("Operation  Address   Type   Size   Count   (CallAddr)   Stack/Heap/Global");
   LOG_TRACE("-------------------------------------------------------------------------");
-}
-
-}  // namespace debug
-
-static constexpr const char* defaultTypeFileName = "types.yaml";
-
-RuntimeSystem::RuntimeSystem() : rtScopeInit(), typeResolution(typeDB), allocTracker(typeDB, recorder) {
-  debug::printTraceStart();
 
   auto loadTypes = [this](const std::string& file, std::error_code& ec) -> bool {
     auto loaded = io::load(&typeDB, file);
@@ -120,5 +95,23 @@ RuntimeSystem::~RuntimeSystem() {
 
 // This is initially set to true in order to prevent tracking anything before the runtime library is properly set up.
 thread_local bool RuntimeSystem::rtScope = false;
+
+std::string RuntimeSystem::toString(const void* memAddr, int typeId, size_t count, size_t typeSize,
+                                    const void* calledFrom) {
+  std::string buf;
+  llvm::raw_string_ostream s(buf);
+  const auto name = typeResolution.db().getTypeName(typeId);
+  s << memAddr << " " << typeId << " " << name << " " << typeSize << " " << count << " (" << calledFrom << ")";
+  return s.str();
+}
+
+std::string RuntimeSystem::toString(const void* memAddr, int typeId, size_t count, const void* calledFrom) {
+  const auto typeSize = typeResolution.db().getTypeSize(typeId);
+  return toString(memAddr, typeId, count, typeSize, calledFrom);
+}
+
+std::string RuntimeSystem::toString(const void* addr, const PointerInfo& info) {
+  return toString(addr, info.typeId, info.count, info.debug);
+}
 
 }  // namespace typeart

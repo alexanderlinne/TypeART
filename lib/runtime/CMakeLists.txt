@@ -29,6 +29,7 @@ set(RUNTIME_LIB_SOURCES
     AccessCounter.h
     CallbackInterface.h
     RuntimeData.h
+    RuntimeInterface.cpp
     RuntimeInterface.h
     TypeResolution.cpp
     TypeResolution.h
