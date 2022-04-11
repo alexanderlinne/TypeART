@@ -89,7 +89,7 @@ struct Region {
       auto allocation_id   = *(allocation_id_t*)bucket_ptr;
       auto allocation_info = RuntimeSystem::get().typeResolution.db().getAllocationInfo(allocation_id);
       if (allocation_info == nullptr) {
-        fmt::print(stderr, "Found invalid allocaton_id {}!", allocation_id);
+        fmt::print(stderr, "Found invalid allocaton_id {}!\n", allocation_id);
         return {};
       }
       auto base_ptr = (void*)((char*)bucket_ptr + allocation_info->base_ptr_offset.value_or(heap::min_alignment));
@@ -247,11 +247,11 @@ std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
     auto allocation_id         = *(allocation_id_t*)bucket_ptr;
     auto allocation_info       = RuntimeSystem::get().typeResolution.db().getAllocationInfo(allocation_id);
     if (allocation_info == nullptr) {
-      fmt::print(stderr, "Found invalid allocaton_id {}!", allocation_id);
+      fmt::print(stderr, "Found invalid allocaton_id {}!\n", allocation_id);
       return {};
     }
     if (!allocation_info->base_ptr_offset.has_value()) {
-      fmt::print(stderr, "Missing base pointer offset for stack allocation at {} with allocation id {}!", addr,
+      fmt::print(stderr, "Missing base pointer offset for stack allocation at {} with allocation id {}!\n", addr,
                  allocation_id);
       return {};
     }
