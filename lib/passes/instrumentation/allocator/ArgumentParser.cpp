@@ -18,12 +18,11 @@
 namespace typeart::instrumentation::allocator {
 
 ArgumentParser::ArgumentParser(llvm::Module& m, TypeGenerator* tm)
-    : instrumentation::ArgumentParser(), type_m(tm), m(&m), instr_helper(m), tracker_parser(m, tm) {
+    : instrumentation::ArgumentParser(), type_m(tm), instr_helper(m), tracker_parser(m, tm) {
 }
 
 HeapArgList ArgumentParser::collectHeap(const MallocDataList& mallocs) {
-  const auto& dl = m->getDataLayout();
-  auto result    = tracker_parser.collectHeap(mallocs);
+  auto result = tracker_parser.collectHeap(mallocs);
   for (auto& data : result) {
     const auto type_id      = llvm::dyn_cast<llvm::ConstantInt>(data.args[ArgMap::ID::type_id])->getZExtValue();
     const auto allocationId = type_m->registerAllocation(static_cast<int>(type_id), {}, {});

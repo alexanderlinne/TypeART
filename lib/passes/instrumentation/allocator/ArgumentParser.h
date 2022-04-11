@@ -22,7 +22,6 @@ namespace typeart::instrumentation::allocator {
 
 class ArgumentParser final : public instrumentation::ArgumentParser {
   TypeGenerator* type_m;
-  llvm::Module* m;
   common::InstrumentationHelper instr_helper;
   tracker::ArgumentParser tracker_parser;
 
