@@ -22,9 +22,10 @@ class InstrumentationStrategy final : public instrumentation::InstrumentationStr
   llvm::Module* module;
   common::TypeArtFunctions type_art_functions;
   common::InstrumentationHelper instr_helper;
+  bool instrument_lifetime{false};
 
  public:
-  InstrumentationStrategy(llvm::Module& m);
+  InstrumentationStrategy(llvm::Module& m, bool instrument_lifetime);
   size_t instrumentHeap(const HeapArgList& heap) override;
   size_t instrumentFree(const FreeArgList& frees) override;
   size_t instrumentStack(const StackArgList& stack) override;

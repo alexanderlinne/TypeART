@@ -24,6 +24,7 @@ class GlobalVariable;
 class StoreInst;
 class Value;
 class GetElementPtrInst;
+class IntrinsicInst;
 }  // namespace llvm
 
 namespace typeart {
@@ -144,6 +145,7 @@ struct AllocaData {
   llvm::AllocaInst* alloca{nullptr};
   size_t array_size;
   bool is_vla{false};
+  llvm::SmallPtrSet<llvm::IntrinsicInst*, 4> lifetime_start{};
 };
 
 struct GlobalData {

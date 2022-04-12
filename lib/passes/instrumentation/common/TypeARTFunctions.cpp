@@ -23,11 +23,18 @@ namespace typeart::instrumentation::common {
 
 llvm::Function* make_function(llvm::Module& m, llvm::StringRef name, llvm::Type* result_type,
                               llvm::ArrayRef<llvm::Type*> arg_types) {
-  const auto addOptimizerAttributes = [&](llvm::Function* f) {
-    for (Argument& arg : f->args()) {
+  const auto addOptimizerAttributes = [&](llvm::Function* function) {
+    function->setDoesNotThrow();
+    function->setDoesNotFreeMemory();
+    function->setDoesNotRecurse();
+#if LLVM_VERSION_MAJOR >= 12
+    function->setWillReturn();
+#endif
+    for (Argument& arg : function->args()) {
       if (arg.getType()->isPointerTy()) {
         arg.addAttr(Attribute::NoCapture);
         arg.addAttr(Attribute::ReadOnly);
+        arg.addAttr(Attribute::NoFree);
       }
     }
   };

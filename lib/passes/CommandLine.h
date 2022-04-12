@@ -7,6 +7,7 @@ analysis::MemInstFinderConfig getMemInstFinderConfig();
 const std::string& getTypeFilepath();
 bool getInstrumentGlobal();
 bool getInstrumentStack();
+bool getInstrumentStackLifetime();
 bool getInstrumentHeap();
 bool getPrintStats();
 

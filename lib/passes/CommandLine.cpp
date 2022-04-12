@@ -27,6 +27,10 @@ static cl::opt<bool> cl_typeart_instrument_stack(
       }
     }));
 
+static cl::opt<bool> cl_typeart_instrument_stack_lifetime(
+    "typeart-stack-lifetime", cl::desc("Instrument lifetime.start intrinsic instead of alloca."), cl::init(true),
+    cl::cat(typeart_category));
+
 static cl::OptionCategory typeart_meminstfinder_category(
     "TypeART memory instruction finder", "These options control which memory instructions are collected/filtered.");
 
@@ -101,6 +105,10 @@ bool getInstrumentGlobal() {
 
 bool getInstrumentStack() {
   return cl_typeart_instrument_stack.getValue();
+}
+
+bool getInstrumentStackLifetime() {
+  return cl_typeart_instrument_stack_lifetime.getValue();
 }
 
 bool getInstrumentHeap() {

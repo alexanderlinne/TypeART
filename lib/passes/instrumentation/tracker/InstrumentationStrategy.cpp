@@ -38,8 +38,12 @@ using namespace llvm;
 
 namespace typeart::instrumentation::tracker {
 
-InstrumentationStrategy::InstrumentationStrategy(llvm::Module& m)
-    : instrumentation::InstrumentationStrategy(), module(&m), type_art_functions(m), instr_helper(m) {
+InstrumentationStrategy::InstrumentationStrategy(llvm::Module& m, bool instrument_lifetime)
+    : instrumentation::InstrumentationStrategy(),
+      module(&m),
+      type_art_functions(m),
+      instr_helper(m),
+      instrument_lifetime(instrument_lifetime) {
 }
 
 size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
@@ -159,33 +163,40 @@ size_t InstrumentationStrategy::instrumentFree(const FreeArgList& frees) {
 size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
   size_t counter{0};
   StackCounter::StackOpCounter allocCounts;
-  Function* f{nullptr};
+  Function* function{nullptr};
   for (const auto& [sdata, args] : stack) {
-    // auto alloca = sdata.alloca;
-    auto* alloca = args.get_as<Instruction>(ArgMap::ID::pointer);
+    auto* alloca         = args.get_as<Instruction>(ArgMap::ID::pointer);
+    auto* typeIdConst    = args.get_value(ArgMap::ID::type_id);
+    auto* numElementsVal = args.get_value(ArgMap::ID::element_count);
 
-    IRBuilder<> IRB(alloca->getNextNode());
+    const auto instrument_stack = [&](IRBuilder<>& IRB, Value* data_ptr, Instruction* anchor) {
+      const auto callback = util::omp::isOmpContext(anchor->getFunction()) ? type_art_functions.tracker_alloc_stacks_omp
+                                                                           : type_art_functions.tracker_alloc_stack;
+      IRB.CreateCall(callback, ArrayRef<Value*>{data_ptr, typeIdConst, numElementsVal});
+      ++counter;
 
-    auto typeIdConst    = args.get_value(ArgMap::ID::type_id);
-    auto numElementsVal = args.get_value(ArgMap::ID::element_count);
-    auto arrayPtr       = IRB.CreateBitOrPointerCast(alloca, instr_helper.getTypeFor(IType::ptr));
+      auto* bblock = anchor->getParent();
+      allocCounts[bblock]++;
+      if (function == nullptr) {
+        function = bblock->getParent();
+      }
+    };
 
-    auto parent_f       = sdata.alloca->getFunction();
-    const auto callback = util::omp::isOmpContext(parent_f) ? type_art_functions.tracker_alloc_stacks_omp
-                                                            : type_art_functions.tracker_alloc_stack;
-
-    IRB.CreateCall(callback, ArrayRef<Value*>{arrayPtr, typeIdConst, numElementsVal});
-    ++counter;
-
-    auto bb = alloca->getParent();
-    allocCounts[bb]++;
-    if (!f) {
-      f = bb->getParent();
+    const auto& lifetime_starts = sdata.lifetime_start;
+    if (lifetime_starts.empty() || !instrument_lifetime) {
+      IRBuilder<> IRB(alloca->getNextNode());
+      auto* data_ptr = IRB.CreateBitOrPointerCast(alloca, instr_helper.getTypeFor(IType::ptr));
+      instrument_stack(IRB, data_ptr, alloca);
+    } else {
+      for (auto* lifetime_s : lifetime_starts) {
+        IRBuilder<> IRB(lifetime_s->getNextNode());
+        instrument_stack(IRB, lifetime_s->getOperand(1), lifetime_s->getNextNode());
+      }
     }
   }
 
-  if (f) {
-    StackCounter scount(f, &instr_helper, &type_art_functions);
+  if (function != nullptr) {
+    StackCounter scount(function, &instr_helper, &type_art_functions);
     scount.addStackHandling(allocCounts);
   }
 

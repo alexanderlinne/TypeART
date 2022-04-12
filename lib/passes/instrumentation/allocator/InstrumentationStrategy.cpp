@@ -43,7 +43,7 @@ class Value;
 namespace typeart::instrumentation::allocator {
 
 InstrumentationStrategy::InstrumentationStrategy(llvm::Module& m)
-    : instrumentation::InstrumentationStrategy(), type_art_functions(m), instr_helper(m), tracker_instrumentation(m) {
+    : instrumentation::InstrumentationStrategy(), type_art_functions(m), instr_helper(m), tracker_instrumentation(m, false) {
 }
 
 size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {

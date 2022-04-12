@@ -78,8 +78,9 @@ bool TypeArtPass::doInitialization(llvm::Module& m) {
   auto parser   = std::make_unique<instrumentation::allocator::ArgumentParser>(m, typeManager.get());
   auto strategy = std::make_unique<instrumentation::allocator::InstrumentationStrategy>(m);
 #else
-  auto parser   = std::make_unique<instrumentation::tracker::ArgumentParser>(m, typeManager.get());
-  auto strategy = std::make_unique<instrumentation::tracker::InstrumentationStrategy>(m);
+  auto parser = std::make_unique<instrumentation::tracker::ArgumentParser>(m, typeManager.get());
+  auto strategy =
+      std::make_unique<instrumentation::tracker::InstrumentationStrategy>(m, cl::getInstrumentStackLifetime());
 #endif
 
   instrumentation = std::make_unique<instrumentation::TypeArtInstrumentation>(std::move(parser), std::move(strategy));
