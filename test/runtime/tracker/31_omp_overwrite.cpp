@@ -5,7 +5,7 @@
 // REQUIRES: tracker
 // clang-format on
 
-#include "../../lib/runtime/CallbackInterface.h"
+#include "../../lib/runtime/tracker/CallbackInterface.h"
 
 #include <algorithm>
 #include <random>
@@ -13,7 +13,7 @@
 
 template <typename S, typename E>
 void repeat_alloc(S s, E e) {
-  std::for_each(s, e, [&](auto elem) { __typeart_alloc(reinterpret_cast<const void*>(elem), 6, 20); });
+  std::for_each(s, e, [&](auto elem) { typeart_tracker_alloc(reinterpret_cast<const void*>(elem), 6, 20); });
 }
 
 std::vector<int> unique_rand(const unsigned size) {

@@ -1,7 +1,7 @@
 // RUN: %run %s --manual 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "../../lib/runtime/CallbackInterface.h"
+#include "../../lib/runtime/tracker/CallbackInterface.h"
 #include "util.h"
 
 #include <stdio.h>
@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
   const int addr      = 2;
   const int type      = -1;
   const size_t extent = 2;
-  __typeart_alloc((const void*)addr, type, extent);
+  typeart_tracker_alloc((const void*)addr, type, extent);
 
   int id_result         = 0;
   size_t count_check    = 0;

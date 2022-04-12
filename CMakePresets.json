@@ -7,6 +7,20 @@
   },
   "configurePresets": [
     {
+      "name": "allocator",
+      "hidden": true,
+      "cacheVariables": {
+        "TYPEART_INSTRUMENTATION": "Allocator"
+      }
+    },
+    {
+      "name": "tracker",
+      "hidden": true,
+      "cacheVariables": {
+        "TYPEART_INSTRUMENTATION": "Tracker"
+      }
+    },
+    {
       "name": "clang-toolchain",
       "hidden": true,
       "generator": "Unix Makefiles",
@@ -59,10 +73,7 @@
       "displayName": "Development config (debug)",
       "description": "Default develop build options for Clang",
       "binaryDir": "${sourceDir}/build",
-      "inherits": [
-        "clang-toolchain",
-        "san"
-      ],
+      "inherits": ["clang-toolchain", "san"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "TYPEART_TEST_CONFIG": "ON",
@@ -74,9 +85,7 @@
       "displayName": "Release config",
       "description": "Default release build options for Clang",
       "binaryDir": "${sourceDir}/build_release",
-      "inherits": [
-        "clang-toolchain"
-      ],
+      "inherits": ["clang-toolchain"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
@@ -85,9 +94,7 @@
       "name": "release-counter",
       "displayName": "Release config (w/ runtime counters)",
       "description": "Default release build options with softcounter for Clang",
-      "inherits": [
-        "release"
-      ],
+      "inherits": ["release"],
       "cacheVariables": {
         "TYPEART_SOFTCOUNTERS": "ON"
       }
@@ -96,46 +103,32 @@
       "name": "release-safeptr",
       "displayName": "Release config (w/ safeptr)",
       "description": "Release build options with safeptr for Clang",
-      "inherits": [
-        "safe-ptr",
-        "release"
-      ]
+      "inherits": ["safe-ptr", "release"]
     },
     {
       "name": "release-safeptr-counter",
       "displayName": "Release config (w/ safeptr, runtime counters)",
       "description": "Release build options with safeptr and softcounter for Clang",
-      "inherits": [
-        "safe-ptr",
-        "release-counter"
-      ]
+      "inherits": ["safe-ptr", "release-counter"]
     },
     {
       "name": "release-unsafe",
       "displayName": "Release config w/o thread-safety",
       "description": "Release build options without thread-safety for Clang",
-      "inherits": [
-        "thread-unsafe",
-        "release"
-      ]
+      "inherits": ["thread-unsafe", "release"]
     },
     {
       "name": "release-unsafe-counter",
       "displayName": "Release config w/o thread-safety (w/ runtime counters)",
       "description": "Release build options without thread-safety and with softcounter for Clang",
-      "inherits": [
-        "thread-unsafe",
-        "release-counter"
-      ]
+      "inherits": ["thread-unsafe", "release-counter"]
     },
     {
       "name": "ci-base",
       "hidden": true,
       "description": "Default CI configuration base (debug, softcounter, testing)",
       "binaryDir": "${sourceDir}/build",
-      "inherits": [
-        "develop"
-      ],
+      "inherits": ["develop"],
       "cacheVariables": {
         "TYPEART_ASAN": "OFF",
         "TYPEART_UBSAN": "OFF"
@@ -144,80 +137,61 @@
     {
       "name": "ci-thread-safe",
       "displayName": "CI build: Thread-safe (mutex), tsan",
-      "inherits": [
-        "tsan",
-        "ci-base"
-      ]
+      "inherits": ["tsan", "ci-base"]
     },
     {
       "name": "ci-thread-safe-safeptr",
       "displayName": "CI build: Safe-ptr, tsan",
-      "inherits": [
-        "tsan",
-        "safe-ptr",
-        "ci-base"
-      ]
+      "inherits": ["tsan", "safe-ptr", "ci-base"]
     },
     {
       "name": "ci-thread-unsafe",
       "displayName": "CI build: Serial-only, asan, ubsan",
-      "inherits": [
-        "thread-unsafe",
-        "san",
-        "ci-base"
-      ]
+      "inherits": ["thread-unsafe", "san", "ci-base"]
     },
     {
       "name": "ci-cov-thread-safe",
       "displayName": "CI build: Thread-safe w/ coverage (lcov)",
-      "inherits": [
-        "coverage",
-        "san",
-        "ci-thread-safe"
-      ]
+      "inherits": ["coverage", "san", "ci-thread-safe"]
     },
     {
       "name": "ci-cov-thread-safe-safeptr",
       "displayName": "CI build: Safe-ptr w/ coverage (lcov)",
-      "inherits": [
-        "coverage",
-        "san",
-        "ci-thread-safe-safeptr"
-      ]
+      "inherits": ["coverage", "san", "ci-thread-safe-safeptr"]
     },
     {
       "name": "ci-cov-thread-unsafe",
       "displayName": "CI build: Serial-only w/ coverage (lcov)",
-      "inherits": [
-        "coverage",
-        "san",
-        "ci-thread-unsafe"
-      ]
+      "inherits": ["coverage", "san", "ci-thread-unsafe"]
     },
     {
       "name": "ci-libcxx",
       "displayName": "CI build: Thread-safe w/ libcxx (LLVM)",
-      "inherits": [
-        "ci-thread-safe"
-      ],
+      "inherits": ["ci-thread-safe"],
       "cacheVariables": {
         "CMAKE_CXX_FLAGS": "-stdlib=libc++"
       }
     },
     {
       "name": "ci-mpi",
+      "hidden": true,
       "displayName": "CI build: MPI",
-      "inherits": [
-        "ci-base"
-      ]
+      "inherits": ["ci-base"]
+    },
+    {
+      "name": "ci-mpi-allocator",
+      "displayName": "CI build: MPI \\w Allocator",
+      "inherits": ["ci-base", "allocator"]
+    },
+    {
+      "name": "ci-mpi-tracker",
+      "displayName": "CI build: MPI \\w Tracker",
+      "inherits": ["ci-base", "tracker"]
     },
     {
       "name": "ci-cov-mpi",
       "displayName": "CI build: MPI w/ coverage (lcov)",
-      "inherits": [
-        "coverage",
-        "ci-mpi"
-      ]
+      "inherits": ["coverage", "ci-mpi"]
     }
   ]
 }

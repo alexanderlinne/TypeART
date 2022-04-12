@@ -25,6 +25,15 @@ add_custom_command(
   COMMENT "Generate Allocator Constants"
 )
 
+set(RUNTIME_LIB_ALLOCATOR_SOURCES
+    allocator/Allocator.cpp
+    allocator/Allocator.h
+    allocator/CallbackInterface.cpp
+    allocator/CallbackInterface.h
+    allocator/Config.h
+    ${TYPEART_ALLOCATOR_CONSTANTS_SOURCE}
+)
+
 set(RUNTIME_LIB_SOURCES
     AccessCounter.h
     RuntimeData.h
@@ -34,18 +43,13 @@ set(RUNTIME_LIB_SOURCES
     TypeResolution.h
     Runtime.cpp
     Runtime.h
-    allocator/Allocator.cpp
-    allocator/Allocator.h
-    allocator/CallbackInterface.cpp
-    allocator/CallbackInterface.h
-    allocator/Config.h
     tracker/AllocationTracking.cpp
     tracker/AllocationTracking.h
     tracker/CallbackInterface.cpp
     tracker/CallbackInterface.h
     ${TYPEART_META_SOURCE}
-    ${TYPEART_ALLOCATOR_CONSTANTS_SOURCE}
     $<$<BOOL:${MPI_LOGGER}>:../support/MPILogger.cpp>
+    $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:${RUNTIME_LIB_ALLOCATOR_SOURCES}>
 )
 
 add_library(${TYPEART_PREFIX}_Runtime SHARED ${RUNTIME_LIB_SOURCES})
@@ -85,7 +89,7 @@ target_include_directories(${TYPEART_PREFIX}_Runtime SYSTEM PRIVATE ${LLVM_INCLU
 target_compile_definitions(
   ${TYPEART_PREFIX}_Runtime
   PRIVATE TYPEART_LOG_LEVEL=${TYPEART_LOG_LEVEL_RT}
-          $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:TYPEART_USE_ALLOCATOR=1>
+          $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:TYPEART_USE_ALLOCATOR>
           $<$<BOOL:${MPI_LOGGER}>:MPI_LOGGER=1>
           $<$<BOOL:${TYPEART_SOFTCOUNTERS}>:ENABLE_SOFTCOUNTER=1>
           $<$<BOOL:${TYPEART_BTREE}>:TYPEART_BTREE>

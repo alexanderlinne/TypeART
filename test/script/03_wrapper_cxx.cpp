@@ -6,7 +6,7 @@
 // RUN: %wrapper-cxx %s.o -o %s.exe
 // RUN: %mpi-exec -np 1 %s.exe 2>&1 | %filecheck %s
 
-#include "../../lib/runtime/CallbackInterface.h"
+#include "../../lib/runtime/tracker/CallbackInterface.h"
 
 int main(int argc, char** argv) {
   typeart_tracker_alloc((const void*)2, 7, 1);  // OK

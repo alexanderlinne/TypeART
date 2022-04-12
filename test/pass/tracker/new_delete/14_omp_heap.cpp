@@ -17,11 +17,11 @@ void foo(int** x) {
   }
 }
 
-// CHECK: call void @__typeart_alloc_omp
-// CHECK: call void @__typeart_free_omp
-// CHECK: call void @__typeart_alloc_omp
+// CHECK: call void @typeart_tracker_alloc_omp
+// CHECK: call void @typeart_tracker_free_omp
+// CHECK: call void @typeart_tracker_alloc_omp
 
-// CHECK: TypeArtPass [Heap]
+// CHECK: TypeArtPass [Heap & Stack]
 // CHECK-NEXT: Malloc{{[ ]*}}:{{[ ]*}}2
 // CHECK-NEXT: Free{{[ ]*}}:{{[ ]*}}1
 // CHECK-NEXT: Alloca{{[ ]*}}:{{[ ]*}}0

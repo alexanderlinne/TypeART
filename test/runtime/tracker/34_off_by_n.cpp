@@ -3,7 +3,7 @@
 // REQUIRES: tracker
 // clang-format on
 
-#include "../../lib/runtime/CallbackInterface.h"
+#include "../../lib/runtime/tracker/CallbackInterface.h"
 #include "util.h"
 
 #include <stdio.h>
@@ -32,8 +32,8 @@ int main(int argc, char** argv) {
 
   auto* d = new double[extent];
 
-  __typeart_alloc(reinterpret_cast<const void*>(&d[0]), type, 1);
-  __typeart_alloc(reinterpret_cast<const void*>(&d[1]), type, 1);
+  typeart_tracker_alloc(reinterpret_cast<const void*>(&d[0]), type, 1);
+  typeart_tracker_alloc(reinterpret_cast<const void*>(&d[1]), type, 1);
 
   // CHECK-NOT: [Error]
   check(&d[0]);

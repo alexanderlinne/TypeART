@@ -1,7 +1,7 @@
 // RUN: %run %s -typeart-stack-array-only=true 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "../struct_defs.h"
+#include "../../struct_defs.h"
 #include "util.h"
 
 #include <stdint.h>

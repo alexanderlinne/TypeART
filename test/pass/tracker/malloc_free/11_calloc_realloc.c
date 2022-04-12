@@ -14,14 +14,14 @@ int main() {
 }
 
 // CHECK: [[POINTER:%[0-9a-z]+]] = call noalias{{( align [0-9]+)?}} i8* @calloc(i64 [[SIZE:[0-9]+]], i64 8)
-// CHECK-NEXT: call void @__typeart_alloc(i8* [[POINTER]], i32 6, i64 [[SIZE]])
+// CHECK-NEXT: call void @typeart_tracker_alloc(i8* [[POINTER]], i32 6, i64 [[SIZE]])
 // CHECK-NEXT: bitcast i8* [[POINTER]] to double*
 
-// REALLOC: __typeart_free(i8* [[POINTER:%[0-9a-z]+]])
+// REALLOC: typeart_tracker_free(i8* [[POINTER:%[0-9a-z]+]])
 // REALLOC-NEXT: [[POINTER2:%[0-9a-z]+]] = call{{( align [0-9]+)?}} i8* @realloc(i8* [[POINTER]], i64 160)
-// REALLOC-NEXT: __typeart_alloc(i8* [[POINTER2]], i32 6, i64 20)
+// REALLOC-NEXT: typeart_tracker_alloc(i8* [[POINTER2]], i32 6, i64 20)
 
-// CHECK: TypeArtPass [Heap]
+// CHECK: TypeArtPass [Heap & Stack]
 // CHECK-NEXT: Malloc{{[ ]*}}:{{[ ]*}}2
 // CHECK-NEXT: Free{{[ ]*}}:{{[ ]*}}0
 // CHECK-NEXT: Alloca{{[ ]*}}:{{[ ]*}}0

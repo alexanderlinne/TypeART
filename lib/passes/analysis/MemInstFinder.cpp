@@ -258,7 +258,7 @@ bool MemInstFinderPass::runOnModule(Module& module) {
 }  // namespace typeart
 
 bool MemInstFinderPass::runOnFunction(llvm::Function& function) {
-  if (function.isDeclaration() || function.getName().startswith("__typeart")) {
+  if (function.isDeclaration() || function.getName().startswith("typeart")) {
     return false;
   }
 

@@ -9,7 +9,7 @@
 // REQUIRES: mpicc
 // UNSUPPORTED: sanitizer
 
-#include "../../lib/runtime/CallbackInterface.h"
+#include "../../lib/runtime/tracker/CallbackInterface.h"
 
 #include <mpi.h>
 

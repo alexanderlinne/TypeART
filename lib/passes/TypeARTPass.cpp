@@ -74,7 +74,7 @@ bool TypeArtPass::doInitialization(llvm::Module& m) {
     LOG_DEBUG("No valid existing type configuration found: " << type_filepath << ". Reason: " << error.message());
   }
 
-#if TYPEART_USE_ALLOCATOR
+#ifdef TYPEART_USE_ALLOCATOR
   auto parser   = std::make_unique<instrumentation::allocator::ArgumentParser>(m, typeManager.get());
   auto strategy = std::make_unique<instrumentation::allocator::InstrumentationStrategy>(m);
 #else
@@ -107,9 +107,11 @@ bool TypeArtPass::runOnModule(llvm::Module& m) {
 bool TypeArtPass::runOnFunc(llvm::Function& f) {
   using namespace typeart;
 
+#ifdef TYPEART_USE_ALLOCATOR
   if (f.getName().equals("main")) {
     addPreinitCall(*f.getParent());
   }
+#endif
 
   if (f.isDeclaration() || f.getName().startswith("typeart")) {
     return false;

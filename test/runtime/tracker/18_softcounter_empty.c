@@ -1,11 +1,12 @@
-// RUN: %run %s -o -O3 2>&1 | %filecheck %s
+// RUN: %run %s -o -O3 > %s.log 2>&1
+// RUN: cat %s.log | %filecheck %s
 // REQUIRES: softcounter
 // REQUIRES: tracker
 
-void __typeart_leave_scope(int alloca_count);
+void typeart_tracker_leave_scope(int alloca_count);
 
 int main(void) {
-  __typeart_leave_scope(0);  // This simply "triggers" the runtime
+  typeart_tracker_leave_scope(0);  // This simply "triggers" the runtime
   return 0;
 }
 

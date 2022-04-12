@@ -1,4 +1,4 @@
-// RUN: %run %s 2>&1 | %filecheck %s
+// RUN: %run %s --compile_flags "-std=c++17" 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
 #include "../../lib/runtime/RuntimeInterface.h"

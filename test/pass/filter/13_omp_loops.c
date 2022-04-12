@@ -22,8 +22,8 @@ void foo(int count) {
   // check-inst: define {{.*}} @foo
   // check-inst: %d = alloca
   // check-inst: %0 = bitcast i32* %d to i8*
-  // check-inst: call void @__typeart_alloc_stack(i8* %0, i32 2, i64 1)
-  // check-inst-not: __typeart_alloc_stack_omp
+  // check-inst: call void @typeart_tracker_alloc_stack(i8* %0, i32 2, i64 1)
+  // check-inst-not: typeart_tracker_alloc_stack_omp
   int d = 3;
   int e = 4;
 #pragma omp parallel for schedule(dynamic, 1)

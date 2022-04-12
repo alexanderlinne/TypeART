@@ -136,13 +136,19 @@ function parse_cmd_line() {
 }
 
 function global_init() {
+  readonly typeart_instrumentation=@TYPEART_INSTRUMENTATION@
   local -r typeart_use_rel_path=@TYPEART_RELOCATABLE@
   if [ "$typeart_use_rel_path" == 0 ]; then
     local -r typeart_bin_dir="@TYPEART_BINARY_DIR@"
     local -r typeart_lib_dir="@TYPEART_RT_DIR@"
     local -r typeart_include_dir="@TYPEART_INCLUDE_DIRS@"
     local -r typeart_pass="@TYPEART_PASS_DIR@/$<TARGET_FILE_NAME:typeart::TransformPass>"
-    readonly typeart_preload="@TYPEART_PRELOAD_DIR@/$<TARGET_FILE_NAME:typeart::Preload>"
+    if [ "$typeart_instrumentation" = "Allocator" ];
+    then
+      readonly typeart_preload="@TYPEART_PRELOAD_DIR@/@TYPEART_PRELOAD_LIB@"
+    else
+      readonly typeart_preload=""
+    fi
     readonly typeart_interceptor="@TYPEART_MPI_INTERCEPT_DIR@/@TYPEART_MPI_TOOL@"
   else
     # shellcheck disable=SC2155
@@ -152,7 +158,12 @@ function global_init() {
     local -r typeart_lib_dir="${typeart_install_dir}/@CMAKE_INSTALL_LIBDIR@"
     local -r typeart_include_dir="-I${typeart_install_dir}/@CMAKE_INSTALL_INCLUDEDIR@"
     local -r typeart_pass="${typeart_lib_dir}/$<TARGET_FILE_NAME:typeart::TransformPass>"
-    readonly typeart_preload="@TYPEART_PRELOAD_DIR@/$<TARGET_FILE_NAME:typeart::Preload>"
+    if [ "$typeart_instrumentation" = "Allocator" ];
+    then
+      readonly typeart_preload="@TYPEART_PRELOAD_DIR@/@TYPEART_PRELOAD_LIB@"
+    else
+      readonly typeart_preload=""
+    fi
     readonly typeart_interceptor="@TYPEART_MPI_INTERCEPT_DIR@/@TYPEART_MPI_TOOL@"
   fi
 
@@ -220,9 +231,17 @@ function apply_typeart() {
 }
 
 function apply_typeart_optim() {
-  source_to_llvm |
-    $opt_tool ${typeart_plugin} ${typeart_combined_mode_args} ${ta_more_args} -S |
-    $opt_tool ${optimize} -S
+  if [ "$typeart_instrumentation" = "Allocator" ];
+  then
+    source_to_llvm |
+      $opt_tool ${typeart_plugin} ${typeart_combined_mode_args} ${ta_more_args} |
+      $opt_tool ${optimize} -S
+  else
+    source_to_llvm |
+      $opt_tool ${typeart_plugin} ${typeart_heap_mode_args} ${ta_more_args} |
+      $opt_tool ${optimize} |
+      $opt_tool ${typeart_plugin} ${typeart_stack_mode_args} ${ta_more_args} -S
+  fi
 }
 
 function make_no_optim() {

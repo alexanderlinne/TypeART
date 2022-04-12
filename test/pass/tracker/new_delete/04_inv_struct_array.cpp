@@ -11,7 +11,7 @@ struct S1 {
 };
 
 // CHECK: invoke{{.*}} i8* @_Znam(i64 40)
-// CHECK: call void @__typeart_alloc(i8* [[POINTER:%[0-9a-z]+]], i32 {{2[5-9][0-9]}}, i64 2)
+// CHECK: call void @typeart_tracker_alloc(i8* [[POINTER:%[0-9a-z]+]], i32 {{2[5-9][0-9]}}, i64 2)
 // CHECK: bitcast i8* [[POINTER]] to %struct.S1*
 int main() {
   try {
@@ -22,7 +22,7 @@ int main() {
   return 0;
 }
 
-// CHECK: TypeArtPass [Heap]
+// CHECK: TypeArtPass [Heap & Stack]
 // CHECK-NEXT: Malloc{{[ ]*}}:{{[ ]*}}1
 // CHECK-NEXT: Free
 // CHECK-NEXT: Alloca{{[ ]*}}:{{[ ]*}}0

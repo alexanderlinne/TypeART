@@ -14,5 +14,5 @@ int main(int argc, char** argv) {
   return 0;
 }
 
-// CHECK: call{{.*}}__typeart_alloc
-// vanilla-CHECK-NOT: call{{.*}}__typeart_alloc
+// CHECK: call{{.*}}typeart_tracker_alloc
+// vanilla-CHECK-NOT: call{{.*}}typeart_tracker_alloc

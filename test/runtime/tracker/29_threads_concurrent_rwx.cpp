@@ -5,7 +5,7 @@
 // REQUIRES: tracker
 // clang-format on
 
-#include "../../lib/runtime/CallbackInterface.h"
+#include "../../lib/runtime/tracker/CallbackInterface.h"
 #include "util.h"
 
 #include <algorithm>
@@ -20,16 +20,16 @@ const size_t extent{1};
 
 template <typename S, typename E>
 void repeat_alloc(S s, E e) {
-  std::for_each(s, e, [&](auto elem) { __typeart_alloc(reinterpret_cast<const void*>(elem), int{6}, extent); });
+  std::for_each(s, e, [&](auto elem) { typeart_tracker_alloc(reinterpret_cast<const void*>(elem), int{6}, extent); });
 }
 
 template <typename S, typename E>
 void repeat_alloc_free_v2(S s, E e) {
   using namespace std::chrono_literals;
   std::for_each(s, e, [&](auto elem) {
-    __typeart_alloc(reinterpret_cast<const void*>(elem), int{7}, extent);
+    typeart_tracker_alloc(reinterpret_cast<const void*>(elem), int{7}, extent);
     // std::this_thread::sleep_for(1ms);
-    __typeart_free(reinterpret_cast<const void*>(elem));
+    typeart_tracker_free(reinterpret_cast<const void*>(elem));
   });
 }
 

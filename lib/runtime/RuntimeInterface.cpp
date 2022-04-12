@@ -9,7 +9,7 @@ namespace typeart::detail {
 inline typeart_status query_type(const void* addr, int* type, size_t* count) {
   typeart::RuntimeSystem::get().recorder.incUsedInRequest(addr);
 
-#if TYPEART_USE_ALLOCATOR
+#ifdef TYPEART_USE_ALLOCATOR
   auto allocation_info = allocator::getAllocationInfo(addr);
   if (allocation_info.has_value()) {
     return typeart::RuntimeSystem::get().typeResolution.getTypeInfo(addr, allocation_info->base_addr,
@@ -43,7 +43,7 @@ char* string2char(std::string_view src) {
   const size_t source_length = src.size() + 1;  // +1 for '\0'
   char* string_copy          = nullptr;
 
-#if TYPEART_USE_ALLOCATOR
+#ifdef TYPEART_USE_ALLOCATOR
   string_copy = (char*)typeart_allocator_malloc(TYPEART_INT8, source_length, sizeof(char) * source_length);
 #else
   string_copy = (char*)malloc(sizeof(char) * source_length);
@@ -67,9 +67,17 @@ char* string2char(std::string_view src) {
 
 typeart_status typeart_get_builtin_type(const void* addr, typeart::BuiltinType* type) {
   typeart::RTGuard guard;
-  auto alloc = typeart::allocator::getAllocationInfo(addr);
-  if (alloc.has_value()) {
-    return typeart::RuntimeSystem::get().typeResolution.getBuiltinInfo(addr, alloc->pointer_info, type);
+
+#ifdef TYPEART_USE_ALLOCATOR
+  auto allocation_info = typeart::allocator::getAllocationInfo(addr);
+  if (allocation_info.has_value()) {
+    return typeart::RuntimeSystem::get().typeResolution.getBuiltinInfo(addr, allocation_info->pointer_info, type);
+  }
+#endif
+
+  auto alloc = typeart::RuntimeSystem::get().allocTracker.findBaseAlloc(addr);
+  if (alloc) {
+    return typeart::RuntimeSystem::get().typeResolution.getBuiltinInfo(addr, alloc->second, type);
   }
   return TYPEART_UNKNOWN_ADDRESS;
 }
@@ -99,7 +107,7 @@ typeart_status typeart_get_containing_type(const void* addr, int* type, size_t* 
                                            size_t* offset) {
   typeart::RTGuard guard;
 
-#if TYPEART_USE_ALLOCATOR
+#ifdef TYPEART_USE_ALLOCATOR
   auto alloc = typeart::allocator::getAllocationInfo(addr);
   if (alloc.has_value()) {
     *type         = alloc->pointer_info.typeId;
@@ -146,7 +154,7 @@ typeart_status typeart_resolve_type_id(int type_id, typeart_struct_layout* struc
 typeart_status typeart_get_return_address(const void* addr, const void** return_addr) {
   typeart::RTGuard guard;
 
-#if TYPEART_USE_ALLOCATOR
+#ifdef TYPEART_USE_ALLOCATOR
   auto alloc = typeart::allocator::getAllocationInfo(addr);
   if (alloc.has_value()) {
     *return_addr = alloc->pointer_info.debug;

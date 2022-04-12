@@ -1,9 +1,11 @@
 add_subdirectory(support)
 add_subdirectory(passes)
-add_subdirectory(preload)
 add_subdirectory(typelib)
 add_subdirectory(runtime)
 
+if(${TYPEART_USE_ALLOCATOR})
+  add_subdirectory(preload)
+endif()
 if(${TYPEART_MPI_INTERCEPT_LIB})
   add_subdirectory(mpi_interceptor)
 endif()

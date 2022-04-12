@@ -1,5 +1,6 @@
 // clang-format off
-// RUN: %c-to-llvm %s | %apply-typeart -S | %apply-typeart -typeart-stack -typeart-heap=false -typeart-call-filter -S 2>&1 | %filecheck %s
+// RUN: %c-to-llvm %s | %apply-typeart -S | %apply-typeart -typeart-stack -typeart-heap=false -typeart-call-filter -S > %s.log 2>&1
+// RUN: cat %s.log | %filecheck %s
 // REQUIRES: tracker
 // clang-format on
 
@@ -17,10 +18,10 @@ int main(int argc, char** argv) {
   return 0;
 }
 
-// CHECK: call void @__typeart_alloc(
-// CHECK: call void @__typeart_free(
+// CHECK: call void @typeart_tracker_alloc(
+// CHECK: call void @typeart_tracker_free(
 
-// CHECK-NOT: call void @__typeart_leave_scope
+// CHECK-NOT: call void @typeart_tracker_leave_scope
 
 // CHECK:      TypeArtPass [Heap & Stack]
 // CHECK-NEXT  Malloc :   0

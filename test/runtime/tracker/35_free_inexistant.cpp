@@ -3,7 +3,7 @@
 // REQUIRES: tracker
 // clang-format on
 
-#include "../../lib/runtime/CallbackInterface.h"
+#include "../../lib/runtime/tracker/CallbackInterface.h"
 #include "util.h"
 
 #include <stdio.h>
@@ -33,20 +33,20 @@ int main(int argc, char** argv) {
   auto* d = new double[extent];
 
   // CHECK: [Error]{{.*}}Free on nullptr
-  __typeart_free(nullptr);
+  typeart_tracker_free(nullptr);
   // CHECK: [Error]{{.*}}Free on unregistered address
-  __typeart_free(reinterpret_cast<const void*>(d));
+  typeart_tracker_free(reinterpret_cast<const void*>(d));
 
   // CHECK: [Trace] Alloc 0x{{[0-9a-f]+}} 6 double 8 6
-  __typeart_alloc(reinterpret_cast<const void*>(&d[0]), type, extent);
+  typeart_tracker_alloc(reinterpret_cast<const void*>(&d[0]), type, extent);
   // CHECK-NOT: [Error]
   // CHECK-NOT: [Check]
   check(&d[0]);
 
   // CHECK: [Trace] Free 0x{{[0-9a-f]+}} 6 double 8 6
-  __typeart_free(reinterpret_cast<const void*>(d));
+  typeart_tracker_free(reinterpret_cast<const void*>(d));
   // CHECK: [Error]{{.*}}Free on unregistered address
-  __typeart_free(reinterpret_cast<const void*>(d));
+  typeart_tracker_free(reinterpret_cast<const void*>(d));
 
   delete[] d;
 

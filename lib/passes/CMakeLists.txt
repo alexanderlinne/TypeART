@@ -42,7 +42,7 @@ target_link_libraries(
 
 target_compile_definitions(
   ${TYPEART_PREFIX}_TransformPass PRIVATE TYPEART_LOG_LEVEL=${TYPEART_LOG_LEVEL}
-                        $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:TYPEART_USE_ALLOCATOR=1>
+                        $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:TYPEART_USE_ALLOCATOR>
                         $<$<BOOL:${TYPEART_SHOW_STATS}>:LLVM_FORCE_ENABLE_STATS=1>
 )
 

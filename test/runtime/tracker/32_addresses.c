@@ -1,15 +1,15 @@
 // RUN: %run %s --manual 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "../../lib/runtime/CallbackInterface.h"
+#include "../../lib/runtime/tracker/CallbackInterface.h"
 
 #include <stdlib.h>
 
 int main(int argc, char** argv) {
-  __typeart_alloc((const void*)0, 6, 1);
-  __typeart_alloc((const void*)1, 5, 0);
-  __typeart_alloc((const void*)0, 6, 0);
-  __typeart_alloc((const void*)2, 7, 1);  // OK
+  typeart_tracker_alloc((const void*)0, 6, 1);
+  typeart_tracker_alloc((const void*)1, 5, 0);
+  typeart_tracker_alloc((const void*)0, 6, 0);
+  typeart_tracker_alloc((const void*)2, 7, 1);  // OK
 
   return 0;
 }
