@@ -22,7 +22,7 @@
 #include <cstddef>
 #include <string>
 
-namespace typeart {
+namespace typeart::runtime {
 
 using BuiltinType = typeart_builtin_type;
 
@@ -35,6 +35,9 @@ class TypeResolution {
   using TypeArtStatus = typeart_status;
 
   TypeResolution(const TypeDB& db);
+
+  const std::string& getTypeName(int type_id) const;
+  size_t getTypeSize(int type_id) const;
 
   [[nodiscard]] size_t getMemberIndex(typeart_struct_layout structInfo, size_t offset) const;
 
@@ -53,13 +56,25 @@ class TypeResolution {
   TypeArtStatus getContainingTypeInfo(const void* addr, const void* basePtr, const PointerInfo& ptrInfo, size_t* count,
                                       size_t* offset) const;
 
-  TypeArtStatus getBuiltinInfo(const void* addr, const PointerInfo& ptrInfo, typeart::BuiltinType* type) const;
+  TypeArtStatus getBuiltinInfo(const void* addr, const PointerInfo& ptrInfo, BuiltinType* type) const;
 
-  TypeArtStatus getStructInfo(int id, const StructTypeInfo** structInfo) const;
+  TypeArtStatus getStructInfo(int type_id, const StructTypeInfo** structInfo) const;
 
-  [[nodiscard]] const TypeDB& db() const;
+  TypeArtStatus getAllocationInfo(allocation_id_t allocation_id, const AllocationInfo** allocation_info) const;
+
+  std::string toString(const void* memAddr, int typeId, size_t count, size_t typeSize, const void* calledFrom) const;
+  std::string toString(const void* memAddr, int typeId, size_t count, const void* calledFrom) const;
+  std::string toString(const void* addr, const PointerInfo& info) const;
+
+  bool isUnknown(int type_id) const;
+  bool isValid(int type_id) const;
+  bool isReservedType(int type_id) const;
+  bool isBuiltinType(int type_id) const;
+  bool isStructType(int type_id) const;
+  bool isUserDefinedType(int type_id) const;
+  bool isVectorType(int type_id) const;
 };
 
-}  // namespace typeart
+}  // namespace typeart::runtime
 
 #endif  // TYPEART_TYPERESOLUTION_H

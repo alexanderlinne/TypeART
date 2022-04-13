@@ -16,6 +16,7 @@
 #include "AccessCounter.h"
 #include "AllocMapWrapper.h"
 #include "RuntimeData.h"
+#include "typelib/TypeDB.h"
 
 #include <cstddef>
 
@@ -24,9 +25,7 @@ template <typename T>
 class Optional;
 }  // namespace llvm
 
-namespace typeart {
-
-class TypeDB;
+namespace typeart::runtime::tracker {
 
 enum class AllocState : unsigned {
   NO_INIT      = 1 << 0,
@@ -47,13 +46,13 @@ enum class FreeState : unsigned {
   UNREG_ADDR   = 1 << 4,
 };
 
-class AllocationTracker {
+class Tracker {
   PointerMap wrapper;
   const TypeDB& typeDB;
   Recorder& recorder;
 
  public:
-  AllocationTracker(const TypeDB& db, Recorder& recorder);
+  Tracker(const TypeDB& db, Recorder& recorder);
 
   void onAlloc(const void* addr, int typeID, size_t count, const void* retAddr);
 
@@ -73,6 +72,6 @@ class AllocationTracker {
   FreeState doFreeHeap(const void* addr, const void* retAddr);
 };
 
-}  // namespace typeart
+}  // namespace typeart::runtime::tracker
 
 #endif  // TYPEART_ALLOCATIONTRACKING_H

@@ -9,7 +9,7 @@ extern "C" {
 void typeart_setup_main_stack(int argc, char** argv, char** envp);
 }
 
-namespace typeart::allocator {
+namespace typeart::runtime::allocator {
 
 void* malloc(int allocation_id, size_t count, size_t size);
 bool free(void* addr);
@@ -30,4 +30,4 @@ void free(pthread_t current_owner);
 
 }  // namespace stack
 
-}  // namespace typeart::allocator
+}  // namespace typeart::runtime::allocator

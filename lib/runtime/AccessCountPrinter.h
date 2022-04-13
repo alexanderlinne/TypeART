@@ -27,7 +27,7 @@
 #include <unordered_set>
 #include <utility>
 
-namespace typeart::softcounter {
+namespace typeart::runtime::softcounter {
 namespace memory {
 struct MemOverhead {
   static constexpr auto pointerMapSize = sizeof(RuntimeT::PointerMap);  // Map overhead
@@ -144,6 +144,6 @@ void serialize(const Recorder& r, std::ostringstream& buf) {
     thread_table.print(buf);
   }
 }
-}  // namespace typeart::softcounter
+}  // namespace typeart::runtime::softcounter
 
 #endif  // TYPEART_ACCESSCOUNTPRINTER_H

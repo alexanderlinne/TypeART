@@ -19,7 +19,7 @@
 
 #include <algorithm>
 
-namespace typeart {
+namespace typeart::runtime::tracker {
 namespace mixin {
 enum class BulkOperation { remove = 0 };
 
@@ -200,6 +200,6 @@ using PointerMap = mixin::SharedMutexMap<mixin::StandardMapBase<mixin::MapOp>>;
 #endif
 #endif
 
-}  // namespace typeart
+}  // namespace typeart::runtime::tracker
 
 #endif  // TYPEART_ALLOCMAPWRAPPER_H

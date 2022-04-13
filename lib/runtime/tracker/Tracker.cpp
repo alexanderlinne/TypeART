@@ -10,7 +10,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "AllocationTracking.h"
+#include "Tracker.h"
 
 #include "AccessCounter.h"
 #include "CallbackInterface.h"
@@ -39,7 +39,7 @@ using namespace btree;
 #define CONCAT(x, y) CONCAT_(x, y)
 #define GUARDNAME CONCAT(typeart_guard_, __LINE__)
 
-namespace typeart {
+namespace typeart::runtime::tracker {
 
 namespace detail {
 template <class...>
@@ -97,39 +97,39 @@ thread_local ThreadData threadData;
 
 }  // namespace
 
-AllocationTracker::AllocationTracker(const TypeDB& db, Recorder& recorder) : typeDB{db}, recorder{recorder} {
+Tracker::Tracker(const TypeDB& db, Recorder& recorder) : typeDB{db}, recorder{recorder} {
 }
 
-void AllocationTracker::onAlloc(const void* addr, int typeId, size_t count, const void* retAddr) {
+void Tracker::onAlloc(const void* addr, int typeId, size_t count, const void* retAddr) {
   const auto status = doAlloc(addr, typeId, count, retAddr);
   if (status != AllocState::ADDR_SKIPPED) {
     recorder.incHeapAlloc(typeId, count);
   }
-  LOG_TRACE("Alloc " << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr) << " " << 'H');
+  LOG_TRACE("Alloc " << Runtime::toString(addr, typeId, count, retAddr) << " " << 'H');
 }
 
-void AllocationTracker::onAllocStack(const void* addr, int typeId, size_t count, const void* retAddr) {
+void Tracker::onAllocStack(const void* addr, int typeId, size_t count, const void* retAddr) {
   const auto status = doAlloc(addr, typeId, count, retAddr);
   if (status != AllocState::ADDR_SKIPPED) {
     threadData.stackVars.push_back(addr);
     recorder.incStackAlloc(typeId, count);
   }
-  LOG_TRACE("Alloc " << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr) << " " << 'S');
+  LOG_TRACE("Alloc " << Runtime::toString(addr, typeId, count, retAddr) << " " << 'S');
 }
 
-void AllocationTracker::onAllocGlobal(const void* addr, int typeId, size_t count, const void* retAddr) {
+void Tracker::onAllocGlobal(const void* addr, int typeId, size_t count, const void* retAddr) {
   const auto status = doAlloc(addr, typeId, count, retAddr);
   if (status != AllocState::ADDR_SKIPPED) {
     recorder.incGlobalAlloc(typeId, count);
   }
-  LOG_TRACE("Alloc " << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr) << " " << 'G');
+  LOG_TRACE("Alloc " << Runtime::toString(addr, typeId, count, retAddr) << " " << 'G');
 }
 
-AllocState AllocationTracker::doAlloc(const void* addr, int typeId, size_t count, const void* retAddr) {
+AllocState Tracker::doAlloc(const void* addr, int typeId, size_t count, const void* retAddr) {
   AllocState status = AllocState::NO_INIT;
   if (unlikely(!typeDB.isValid(typeId))) {
     status |= AllocState::UNKNOWN_ID;
-    LOG_ERROR("Allocation of unknown type " << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr));
+    LOG_ERROR("Allocation of unknown type " << Runtime::toString(addr, typeId, count, retAddr));
   }
 
   // Calling malloc with size 0 may return a nullptr or some address that can not be written to.
@@ -138,16 +138,15 @@ AllocState AllocationTracker::doAlloc(const void* addr, int typeId, size_t count
   if (unlikely(count == 0)) {
     recorder.incZeroLengthAddr();
     status |= AllocState::ZERO_COUNT;
-    LOG_WARNING("Zero-size allocation " << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr));
+    LOG_WARNING("Zero-size allocation " << Runtime::toString(addr, typeId, count, retAddr));
     if (addr == nullptr) {
       recorder.incZeroLengthAndNullAddr();
-      LOG_ERROR("Zero-size and nullptr allocation "
-                << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr));
+      LOG_ERROR("Zero-size and nullptr allocation " << Runtime::toString(addr, typeId, count, retAddr));
       return status | AllocState::NULL_ZERO | AllocState::ADDR_SKIPPED;
     }
   } else if (unlikely(addr == nullptr)) {
     recorder.incNullAddr();
-    LOG_ERROR("Nullptr allocation " << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr));
+    LOG_ERROR("Nullptr allocation " << Runtime::toString(addr, typeId, count, retAddr));
     return status | AllocState::NULL_PTR | AllocState::ADDR_SKIPPED;
   }
 
@@ -156,14 +155,14 @@ AllocState AllocationTracker::doAlloc(const void* addr, int typeId, size_t count
   if (unlikely(overridden)) {
     recorder.incAddrReuse();
     status |= AllocState::ADDR_REUSE;
-    LOG_WARNING("Pointer already in map " << typeart::RuntimeSystem::get().toString(addr, typeId, count, retAddr));
+    LOG_WARNING("Pointer already in map " << Runtime::toString(addr, typeId, count, retAddr));
     // LOG_WARNING("Overridden data in map " << toString(addr, def));
   }
 
   return status | AllocState::OK;
 }
 
-FreeState AllocationTracker::doFreeHeap(const void* addr, const void* retAddr) {
+FreeState Tracker::doFreeHeap(const void* addr, const void* retAddr) {
   if (unlikely(addr == nullptr)) {
     LOG_ERROR("Free on nullptr "
               << "(" << retAddr << ")");
@@ -177,7 +176,7 @@ FreeState AllocationTracker::doFreeHeap(const void* addr, const void* retAddr) {
     return FreeState::ADDR_SKIPPED | FreeState::UNREG_ADDR;
   }
 
-  LOG_TRACE("Free " << typeart::RuntimeSystem::get().toString(addr, *removed));
+  LOG_TRACE("Free " << Runtime::get().toString(addr, *removed));
 
   if constexpr (!std::is_same_v<Recorder, softcounter::NoneRecorder>) {
     recorder.incHeapFree(removed->typeId, removed->count);
@@ -185,14 +184,14 @@ FreeState AllocationTracker::doFreeHeap(const void* addr, const void* retAddr) {
   return FreeState::OK;
 }
 
-void AllocationTracker::onFreeHeap(const void* addr, const void* retAddr) {
+void Tracker::onFreeHeap(const void* addr, const void* retAddr) {
   const auto status = doFreeHeap(addr, retAddr);
   if (FreeState::OK == status) {
     recorder.decHeapAlloc();
   }
 }
 
-void AllocationTracker::onLeaveScope(int alloca_count, const void* retAddr) {
+void Tracker::onLeaveScope(int alloca_count, const void* retAddr) {
   if (unlikely(alloca_count > static_cast<int>(threadData.stackVars.size()))) {
     LOG_ERROR("Stack is smaller than requested de-allocation count. alloca_count: " << alloca_count << ". size: "
                                                                                     << threadData.stackVars.size());
@@ -207,7 +206,7 @@ void AllocationTracker::onLeaveScope(int alloca_count, const void* retAddr) {
     if (unlikely(!removed)) {
       LOG_ERROR("Free on unregistered address " << addr << " (" << retAddr << ")");
     } else {
-      LOG_TRACE("Free " << typeart::RuntimeSystem::get().toString(addr, *removed));
+      LOG_TRACE("Free " << Runtime::get().toString(addr, *removed));
       if constexpr (!std::is_same_v<Recorder, softcounter::NoneRecorder>) {
         recorder.incStackFree(removed->typeId, removed->count);
       }
@@ -219,8 +218,8 @@ void AllocationTracker::onLeaveScope(int alloca_count, const void* retAddr) {
   LOG_TRACE("Stack after free: " << threadData.stackVars.size());
 }
 // Base address
-llvm::Optional<RuntimeT::MapEntry> AllocationTracker::findBaseAlloc(const void* addr) {
+llvm::Optional<RuntimeT::MapEntry> Tracker::findBaseAlloc(const void* addr) {
   return wrapper.find(addr);
 }
 
-}  // namespace typeart
+}  // namespace typeart::runtime::tracker

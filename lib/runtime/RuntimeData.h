@@ -44,7 +44,7 @@
 #include <cstddef>  // size_t
 #include <vector>
 
-namespace typeart {
+namespace typeart::runtime {
 
 struct PointerInfo final {
   int typeId{-1};
@@ -83,6 +83,6 @@ struct RuntimeT {
   using StackEntry = Stack::value_type;
 };
 
-}  // namespace typeart
+}  // namespace typeart::runtime
 
 #endif  // TYPEART_RUNTIMEDATA_H

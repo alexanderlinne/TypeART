@@ -26,7 +26,7 @@
 #include <utility>
 #include <vector>
 
-namespace typeart {
+namespace typeart::runtime {
 
 template <typename T>
 inline const void* addByteOffset(const void* addr, T offset) {
@@ -34,6 +34,14 @@ inline const void* addByteOffset(const void* addr, T offset) {
 }
 
 TypeResolution::TypeResolution(const TypeDB& db) : typeDB{db} {
+}
+
+const std::string& TypeResolution::getTypeName(int type_id) const {
+  return typeDB.getTypeName(type_id);
+}
+
+size_t TypeResolution::getTypeSize(int type_id) const {
+  return typeDB.getTypeSize(type_id);
 }
 
 size_t TypeResolution::getMemberIndex(typeart_struct_layout structInfo, size_t offset) const {
@@ -200,7 +208,7 @@ TypeResolution::TypeArtStatus TypeResolution::getContainingTypeInfo(const void* 
   if (addr >= blockEnd) {
     const std::ptrdiff_t offset2base = static_cast<const uint8_t*>(addr) - static_cast<const uint8_t*>(basePtr);
     const auto oob_index             = (offset2base / typeSize) - basePtrInfo.count + 1;
-    LOG_WARNING("Out of bounds for the lookup: (" << typeart::RuntimeSystem::get().toString(addr, basePtrInfo)
+    LOG_WARNING("Out of bounds for the lookup: (" << toString(addr, basePtrInfo)
                                                   << ") #Elements too far: " << oob_index);
     return TYPEART_UNKNOWN_ADDRESS;
   }
@@ -230,13 +238,13 @@ TypeResolution::TypeArtStatus TypeResolution::getBuiltinInfo(const void* addr, c
   return TYPEART_WRONG_KIND;
 }
 
-TypeResolution::TypeArtStatus TypeResolution::getStructInfo(int id, const StructTypeInfo** structInfo) const {
+TypeResolution::TypeArtStatus TypeResolution::getStructInfo(int type_id, const StructTypeInfo** structInfo) const {
   // Requested ID must correspond to a struct
-  if (!typeDB.isStructType(id)) {
+  if (!typeDB.isStructType(type_id)) {
     return TYPEART_WRONG_KIND;
   }
 
-  const auto* result = typeDB.getStructInfo(id);
+  const auto* result = typeDB.getStructInfo(type_id);
 
   if (result != nullptr) {
     *structInfo = result;
@@ -245,8 +253,60 @@ TypeResolution::TypeArtStatus TypeResolution::getStructInfo(int id, const Struct
   return TYPEART_INVALID_ID;
 }
 
-const TypeDB& TypeResolution::db() const {
-  return typeDB;
+TypeResolution::TypeArtStatus TypeResolution::getAllocationInfo(allocation_id_t allocation_id,
+                                                                const AllocationInfo** allocation_info) const {
+  auto result = typeDB.getAllocationInfo(allocation_id);
+  if (result != nullptr) {
+    *allocation_info = result;
+    return TYPEART_OK;
+  }
+  return TYPEART_INVALID_ID;
 }
 
-}  // namespace typeart
+std::string TypeResolution::toString(const void* memAddr, int typeId, size_t count, size_t typeSize,
+                                     const void* calledFrom) const {
+  std::string buf;
+  llvm::raw_string_ostream s(buf);
+  const auto name = typeDB.getTypeName(typeId);
+  s << memAddr << " " << typeId << " " << name << " " << typeSize << " " << count << " (" << calledFrom << ")";
+  return s.str();
+}
+
+std::string TypeResolution::toString(const void* memAddr, int typeId, size_t count, const void* calledFrom) const {
+  const auto typeSize = typeDB.getTypeSize(typeId);
+  return toString(memAddr, typeId, count, typeSize, calledFrom);
+}
+
+std::string TypeResolution::toString(const void* addr, const PointerInfo& info) const {
+  return toString(addr, info.typeId, info.count, info.debug);
+}
+
+bool TypeResolution::isUnknown(int type_id) const {
+  return typeDB.isUnknown(type_id);
+}
+
+bool TypeResolution::isValid(int type_id) const {
+  return typeDB.isValid(type_id);
+}
+
+bool TypeResolution::isReservedType(int type_id) const {
+  return typeDB.isReservedType(type_id);
+}
+
+bool TypeResolution::isBuiltinType(int type_id) const {
+  return typeDB.isBuiltinType(type_id);
+}
+
+bool TypeResolution::isStructType(int type_id) const {
+  return typeDB.isStructType(type_id);
+}
+
+bool TypeResolution::isUserDefinedType(int type_id) const {
+  return typeDB.isUserDefinedType(type_id);
+}
+
+bool TypeResolution::isVectorType(int type_id) const {
+  return typeDB.isVectorType(type_id);
+}
+
+}  // namespace typeart::runtime

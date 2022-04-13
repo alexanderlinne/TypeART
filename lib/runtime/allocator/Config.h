@@ -3,7 +3,7 @@
 #include <typelib/TypeDatabase.h>
 #include <unistd.h>
 
-namespace typeart::allocator::config {
+namespace typeart::runtime::allocator::config {
 
 constexpr size_t page_size = 4096;
 

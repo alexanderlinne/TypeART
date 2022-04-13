@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <iostream>
 
-using namespace typeart;
+using namespace typeart::runtime;
 
 #define o_(getter) std::cerr << recorder.getter << '\n'
 

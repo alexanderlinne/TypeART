@@ -36,7 +36,8 @@ FreeArgList ArgumentParser::collectFree(const FreeDataList& frees) {
 }
 
 StackArgList ArgumentParser::collectStack(const AllocaDataList& allocs) {
-  auto result = tracker_parser.collectStack(allocs);
+  namespace config = typeart::runtime::allocator::config;
+  auto result      = tracker_parser.collectStack(allocs);
   for (auto& data : result) {
     const auto& alloca     = data.mem_data.alloca;
     const auto elementType = alloca->getAllocatedType();
@@ -48,10 +49,9 @@ StackArgList ArgumentParser::collectStack(const AllocaDataList& allocs) {
       }
       elementCount = {arraySize};
     }
-    auto type_id = llvm::dyn_cast<llvm::ConstantInt>(data.args[ArgMap::ID::type_id])->getZExtValue();
-    auto base_ptr_offset =
-        typeart::allocator::config::stack::base_ptr_offset_for(alloca->getAlignment(), data.mem_data.is_vla);
-    auto allocation_id = type_m->registerAllocation(static_cast<int>(type_id), elementCount, base_ptr_offset);
+    auto type_id         = llvm::dyn_cast<llvm::ConstantInt>(data.args[ArgMap::ID::type_id])->getZExtValue();
+    auto base_ptr_offset = config::stack::base_ptr_offset_for(alloca->getAlignment(), data.mem_data.is_vla);
+    auto allocation_id   = type_m->registerAllocation(static_cast<int>(type_id), elementCount, base_ptr_offset);
     data.args[ArgMap::ID::allocation_id] = instr_helper.getConstantFor(IType::allocation_id, allocation_id);
   }
   return result;

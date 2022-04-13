@@ -43,7 +43,10 @@ class Value;
 namespace typeart::instrumentation::allocator {
 
 InstrumentationStrategy::InstrumentationStrategy(llvm::Module& m)
-    : instrumentation::InstrumentationStrategy(), type_art_functions(m), instr_helper(m), tracker_instrumentation(m, false) {
+    : instrumentation::InstrumentationStrategy(),
+      type_art_functions(m),
+      instr_helper(m),
+      tracker_instrumentation(m, false) {
 }
 
 size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
@@ -159,7 +162,7 @@ std::string typeNameFor(llvm::Type* ty) {
 }
 
 size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
-  namespace config              = typeart::allocator::config::stack;
+  namespace config              = typeart::runtime::allocator::config;
   const auto allocation_id_type = instr_helper.getTypeFor(IType::allocation_id);
   const auto count_type         = instr_helper.getTypeFor(IType::extent);
   for (const auto& [sdata, args] : stack) {
@@ -169,8 +172,8 @@ size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
     const auto allocated_type   = alloca->getAllocatedType();
     const auto alloca_byte_size = dl.getTypeAllocSize(allocated_type).getFixedSize();
     const auto alignment        = alloca->getAlignment();
-    const auto required_size    = alloca_byte_size + config::base_ptr_offset_for(alignment, sdata.is_vla);
-    const auto allocation_size  = config::allocation_size_for(required_size);
+    const auto required_size    = alloca_byte_size + config::stack::base_ptr_offset_for(alignment, sdata.is_vla);
+    const auto allocation_size  = config::stack::allocation_size_for(required_size);
 
     // Create a struct data type for the stack allocation
     auto wrapper_type = (llvm::Type*)nullptr;
@@ -179,16 +182,15 @@ size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
     wrapper_type      = alloca->getModule()->getTypeByName(name);
     if (wrapper_type == nullptr) {
       if (sdata.is_vla) {
-        const auto count_padding =
-            llvm::ArrayType::get(llvm::Type::getInt8Ty(ctx), typeart::allocator::config::count_padding);
-        const auto allocation_padding =
-            llvm::ArrayType::get(llvm::Type::getInt8Ty(ctx), config::get_allocation_padding(alignment, sdata.is_vla));
+        const auto count_padding      = llvm::ArrayType::get(llvm::Type::getInt8Ty(ctx), config::count_padding);
+        const auto allocation_padding = llvm::ArrayType::get(
+            llvm::Type::getInt8Ty(ctx), config::stack::get_allocation_padding(alignment, sdata.is_vla));
         wrapper_type = llvm::StructType::create(
             {allocation_id_type, count_padding, count_type, allocation_padding, allocated_type}, name,
             /* packed = */ true);
       } else {
-        const auto allocation_padding =
-            llvm::ArrayType::get(llvm::Type::getInt8Ty(ctx), config::get_allocation_padding(alignment, sdata.is_vla));
+        const auto allocation_padding = llvm::ArrayType::get(
+            llvm::Type::getInt8Ty(ctx), config::stack::get_allocation_padding(alignment, sdata.is_vla));
         wrapper_type = llvm::StructType::create({allocation_id_type, allocation_padding, allocated_type}, name,
                                                 /* packed = */ true);
       }
@@ -202,11 +204,12 @@ size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
     auto wrapper_alloca = IRB.CreateAlloca(wrapper_type);
 
     auto byte_size          = dl.getTypeAllocSize(wrapper_type).getFixedSize();
-    auto required_alignment = config::alignment_for(allocation_size);
+    auto required_alignment = config::stack::alignment_for(allocation_size);
     wrapper_alloca->setAlignment(llvm::MaybeAlign{alignment >= required_alignment ? alignment : required_alignment});
 
-    auto offset_name = fmt::format("typeart_stack_region_offset_for_size_{}", config::allocation_size_for(byte_size));
-    auto offset      = alloca->getModule()->getNamedGlobal(offset_name);
+    auto offset_name =
+        fmt::format("typeart_stack_region_offset_for_size_{}", config::stack::allocation_size_for(byte_size));
+    auto offset = alloca->getModule()->getNamedGlobal(offset_name);
     if (offset == nullptr) {
       offset = llvm::dyn_cast<llvm::GlobalVariable>(
           alloca->getModule()->getOrInsertGlobal(offset_name, llvm::Type::getInt64Ty(ctx)));

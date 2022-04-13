@@ -43,10 +43,10 @@ set(RUNTIME_LIB_SOURCES
     TypeResolution.h
     Runtime.cpp
     Runtime.h
-    tracker/AllocationTracking.cpp
-    tracker/AllocationTracking.h
     tracker/CallbackInterface.cpp
     tracker/CallbackInterface.h
+    tracker/Tracker.cpp
+    tracker/Tracker.h
     ${TYPEART_META_SOURCE}
     $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:${RUNTIME_LIB_ALLOCATOR_SOURCES}>
     $<$<BOOL:${TYPEART_MPI_LOGGER}>:../support/MPILogger.cpp>

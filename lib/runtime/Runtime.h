@@ -16,79 +16,99 @@
 #include "AccessCounter.h"
 #include "TypeDB.h"
 #include "TypeResolution.h"
-#include "tracker/AllocationTracking.h"
+#include "tracker/Tracker.h"
 
 #include <cstddef>
 #include <string>
 
-namespace typeart {
+namespace typeart::runtime {
 
 struct PointerInfo;
 
-struct RuntimeSystem {
- private:
-  // rtScope must be set to true before all other members are initialized.
+class Runtime {
+  static thread_local size_t scope;
+
+  // scope must be set to true before all other members are initialized.
   // This is achieved by adding this struct as the first member.
-  struct RTScopeInitializer {
-    RTScopeInitializer() : rtScopeWasSet(rtScope) {
-      rtScope = true;
+  struct Initializer {
+    Initializer() {
+      scope = 1;
     }
 
-    void reset() {
-      // Reset rtScope to old value.
-      rtScope = rtScopeWasSet;
+    void reset() const {
+      scope = initial_scope;
     }
 
    private:
-    bool rtScopeWasSet;
+    size_t initial_scope = scope;
   };
 
-  RTScopeInitializer rtScopeInit;
+  Initializer init;
   TypeDB typeDB{};
-
- public:
   Recorder recorder{};
   TypeResolution typeResolution;
-  AllocationTracker allocTracker;
+  tracker::Tracker tracker;
 
-  static thread_local bool rtScope;
+ public:
+  struct ScopeGuard final {
+    ScopeGuard() {
+      scope += 1;
+    }
 
-  static RuntimeSystem& get() {
+    ~ScopeGuard() {
+      scope -= 1;
+    }
+
+    ScopeGuard(const ScopeGuard&) = delete;
+    ScopeGuard(ScopeGuard&&)      = delete;
+
+    ScopeGuard& operator=(const ScopeGuard&) = delete;
+    ScopeGuard& operator=(ScopeGuard&&) = delete;
+
+    bool shouldTrack() const {
+      return scope <= 1;
+    }
+  };
+
+  static Runtime& get() {
     // As opposed to a global variable, a singleton + instantiation during
     // the first callback/query avoids some problems when
     // preloading (especially with MUST).
-    static RuntimeSystem instance;
+    static Runtime instance;
     return instance;
   }
 
-  std::string toString(const void* memAddr, int typeId, size_t count, size_t typeSize, const void* calledFrom);
-  std::string toString(const void* memAddr, int typeId, size_t count, const void* calledFrom);
-  std::string toString(const void* addr, const PointerInfo& info);
+  static tracker::Tracker& getTracker() {
+    return get().tracker;
+  }
+
+  static const TypeResolution& getTypeResolution() {
+    return get().typeResolution;
+  }
+
+  static Recorder& getRecorder() {
+    return get().recorder;
+  }
+
+  static ScopeGuard scopeGuard() {
+    return {};
+  }
+
+  static const AllocationInfo* getAllocationInfo(allocation_id_t allocation_id) {
+    auto result = (const AllocationInfo*)nullptr;
+    get().typeResolution.getAllocationInfo(allocation_id, &result);
+    return result;
+  }
+
+  static std::string toString(const void* memAddr, int typeId, size_t count, size_t typeSize, const void* calledFrom);
+  static std::string toString(const void* memAddr, int typeId, size_t count, const void* calledFrom);
+  static std::string toString(const void* addr, const PointerInfo& info);
 
  private:
-  RuntimeSystem();
-  ~RuntimeSystem();
+  Runtime();
+  ~Runtime();
 };
 
-struct RTGuard final {
-  RTGuard() : alreadyInRT(typeart::RuntimeSystem::rtScope) {
-    typeart::RuntimeSystem::rtScope = true;
-  }
-
-  ~RTGuard() {
-    if (!alreadyInRT) {
-      typeart::RuntimeSystem::rtScope = false;
-    }
-  }
-
-  bool shouldTrack() const {
-    return !alreadyInRT;
-  }
-
- private:
-  const bool alreadyInRT;
-};
-
-}  // namespace typeart
+}  // namespace typeart::runtime
 
 #endif  // TYPEART_RUNTIME_H

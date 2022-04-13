@@ -10,7 +10,7 @@ extern "C" {
 void* typeart_thread_start(void*, void*);
 }
 
-namespace typeart {
+namespace typeart::preload {
 
 static void* find_next_symbol(const char* function_name) {
   void* function = dlsym(RTLD_NEXT, function_name);
@@ -41,27 +41,27 @@ __attribute__((constructor)) void preload_init() {
   actual_pthread_create = (pthread_create_t)find_next_symbol("pthread_create");
 }
 
-}  // namespace typeart
+}  // namespace typeart::preload
 
 // Preloaded functions
 extern "C" {
 
 void free(void* ptr) {
   using namespace typeart;
-  if (!actual_free) {
-    actual_free = (free_t)find_next_symbol("free");
+  if (!preload::actual_free) {
+    preload::actual_free = (preload::free_t)preload::find_next_symbol("free");
   }
-  if (!allocator::free(ptr)) {
-    actual_free(ptr);
+  if (!runtime::allocator::free(ptr)) {
+    preload::actual_free(ptr);
   }
 }
 
 int pthread_create(pthread_t* thread, const pthread_attr_t* attr, void* (*start_routine)(void*), void* arg) {
   using namespace typeart;
-  auto args           = (wrapper_args*)malloc(sizeof(wrapper_args));
+  auto args           = (preload::wrapper_args*)malloc(sizeof(preload::wrapper_args));
   args->start_routine = start_routine;
   args->arg           = arg;
-  return actual_pthread_create(thread, attr, thread_wrapper, args);
+  return preload::actual_pthread_create(thread, attr, preload::thread_wrapper, args);
 }
 }
 
@@ -76,7 +76,7 @@ void typeart_reclaim_stack(void* args) {
 void* typeart_allocate_stack(void** stack_ptr) {
   using namespace typeart;
   auto current_thread  = pthread_self();
-  auto new_stack_begin = allocator::stack::allocate(current_thread);
+  auto new_stack_begin = runtime::allocator::stack::allocate(current_thread);
 
   pthread_attr_t attr;
   if (pthread_getattr_np(current_thread, &attr) != 0) {
@@ -90,7 +90,7 @@ void* typeart_allocate_stack(void** stack_ptr) {
     fprintf(stderr, "pthread_attr_getstack failed!\n");
     abort();
   }
-  auto config_stack_size = allocator::config::stack::stack_size;
+  auto config_stack_size = runtime::allocator::config::stack::stack_size;
   if (stack_size > config_stack_size) {
     fprintf(stderr, "Configured stack size %ld is insufficient for required stack size %ld!\n", config_stack_size,
             stack_size);
@@ -119,7 +119,7 @@ void typeart_free_stack() {
   // our caller should be the exact same caller as
   // the one who called typeart_allocate_stack.
   using namespace typeart;
-  allocator::stack::free(pthread_self());
+  runtime::allocator::stack::free(pthread_self());
 }
 
 }  // extern "C"

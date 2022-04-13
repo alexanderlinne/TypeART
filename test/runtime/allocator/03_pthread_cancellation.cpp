@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-using namespace typeart::allocator;
+using namespace typeart::runtime::allocator;
 
 void* f(void*) {
   if (!stack::is_owner(pthread_self())) {

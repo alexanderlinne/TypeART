@@ -11,7 +11,7 @@
 // We require to be on a 64bit architecture
 static_assert(sizeof(void*) == sizeof(std::int64_t));
 
-namespace typeart::allocator {
+namespace typeart::runtime::allocator {
 
 void* reserve_virtual_memory(size_t size) {
   return mmap64(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
@@ -87,7 +87,7 @@ struct Region {
     if (addr >= begin && addr < end) {
       auto bucket_ptr      = (void*)((uintptr_t)addr & ~(allocation_size - 1));
       auto allocation_id   = *(allocation_id_t*)bucket_ptr;
-      auto allocation_info = RuntimeSystem::get().typeResolution.db().getAllocationInfo(allocation_id);
+      auto allocation_info = Runtime::getAllocationInfo(allocation_id);
       if (allocation_info == nullptr) {
         fmt::print(stderr, "Found invalid allocaton_id {}!\n", allocation_id);
         return {};
@@ -301,7 +301,7 @@ std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
     const auto allocation_size = allocation_size_for(addr);
     auto bucket_ptr            = (void*)((uintptr_t)addr & ~(allocation_size - 1));
     auto allocation_id         = *(allocation_id_t*)bucket_ptr;
-    auto allocation_info       = RuntimeSystem::get().typeResolution.db().getAllocationInfo(allocation_id);
+    auto allocation_info       = Runtime::getAllocationInfo(allocation_id);
     if (allocation_info == nullptr) {
       fmt::print(stderr, "Found invalid allocaton_id {}!\n", allocation_id);
       return {};
@@ -333,7 +333,9 @@ std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
   return stack::getAllocationInfo(addr);
 }
 
-}  // namespace typeart::allocator
+}  // namespace typeart::runtime::allocator
+
+using namespace typeart::runtime;
 
 extern "C" {
 
@@ -348,7 +350,7 @@ __attribute__((noinline)) void* typeart_copy_main_stack(char** envp, void* stack
   void* stack_end = (void**)&envp[envp_it + 1];
 
   auto current_stack_size = (uintptr_t)stack_end - (uintptr_t)stack_begin;
-  auto new_stack_end      = typeart::allocator::stack::main_end;
+  auto new_stack_end      = allocator::stack::main_end;
   auto new_stack_begin    = (void*)((int8_t*)new_stack_end - current_stack_size);
 
   // As stack_begin is the stack pointer taken upon entry to the caller of this
@@ -385,8 +387,8 @@ __attribute__((noinline)) void* typeart_copy_main_stack(char** envp, void* stack
 void typeart_replace_main_stack(char** envp);
 
 void typeart_setup_main_stack(int argc, char** argv, char** envp) {
-  assert(typeart::allocator::config::page_size == sysconf(_SC_PAGE_SIZE));
-  typeart::allocator::stack::setup();
+  assert(allocator::config::page_size == sysconf(_SC_PAGE_SIZE));
+  allocator::stack::setup();
   typeart_replace_main_stack(envp);
 }
 

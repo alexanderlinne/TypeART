@@ -5,28 +5,28 @@
 #include "allocator/CallbackInterface.h"
 #include "support/System.h"
 
-namespace typeart::detail {
+namespace typeart::runtime::detail {
 inline typeart_status query_type(const void* addr, int* type, size_t* count) {
-  typeart::RuntimeSystem::get().recorder.incUsedInRequest(addr);
+  Runtime::getRecorder().incUsedInRequest(addr);
 
 #ifdef TYPEART_USE_ALLOCATOR
   auto allocation_info = allocator::getAllocationInfo(addr);
   if (allocation_info.has_value()) {
-    return typeart::RuntimeSystem::get().typeResolution.getTypeInfo(addr, allocation_info->base_addr,
-                                                                    allocation_info->pointer_info, type, count);
+    return Runtime::getTypeResolution().getTypeInfo(addr, allocation_info->base_addr, allocation_info->pointer_info,
+                                                    type, count);
   }
 #endif
 
-  auto alloc = typeart::RuntimeSystem::get().allocTracker.findBaseAlloc(addr);
+  auto alloc = Runtime::getTracker().findBaseAlloc(addr);
   if (alloc) {
-    return typeart::RuntimeSystem::get().typeResolution.getTypeInfo(addr, alloc->first, alloc->second, type, count);
+    return Runtime::getTypeResolution().getTypeInfo(addr, alloc->first, alloc->second, type, count);
   }
   return TYPEART_UNKNOWN_ADDRESS;
 }
 
 inline typeart_status query_struct_layout(int id, typeart_struct_layout* struct_layout) {
   const typeart::StructTypeInfo* struct_info;
-  typeart_status status = typeart::RuntimeSystem::get().typeResolution.getStructInfo(id, &struct_info);
+  typeart_status status = Runtime::getTypeResolution().getStructInfo(id, &struct_info);
   if (status == TYPEART_OK) {
     struct_layout->type_id      = struct_info->type_id;
     struct_layout->name         = struct_info->name.c_str();
@@ -51,78 +51,79 @@ char* string2char(std::string_view src) {
     return nullptr;
   }
   const void* ret_addr = __builtin_return_address(0);
-  typeart::RuntimeSystem::get().allocTracker.onAlloc(string_copy, TYPEART_INT8, source_length, ret_addr);
+  Runtime::getTracker().onAlloc(string_copy, TYPEART_INT8, source_length, ret_addr);
 #endif
 
   memcpy(string_copy, src.data(), source_length);
   return string_copy;
 };
 
-}  // namespace typeart::detail
+}  // namespace typeart::runtime::detail
+
+using namespace typeart::runtime;
 
 /**
  * Runtime interface implementation
  *
  */
 
-typeart_status typeart_get_builtin_type(const void* addr, typeart::BuiltinType* type) {
-  typeart::RTGuard guard;
+typeart_status typeart_get_builtin_type(const void* addr, BuiltinType* type) {
+  auto guard = Runtime::scopeGuard();
 
 #ifdef TYPEART_USE_ALLOCATOR
-  auto allocation_info = typeart::allocator::getAllocationInfo(addr);
+  auto allocation_info = allocator::getAllocationInfo(addr);
   if (allocation_info.has_value()) {
-    return typeart::RuntimeSystem::get().typeResolution.getBuiltinInfo(addr, allocation_info->pointer_info, type);
+    return Runtime::getTypeResolution().getBuiltinInfo(addr, allocation_info->pointer_info, type);
   }
 #endif
 
-  auto alloc = typeart::RuntimeSystem::get().allocTracker.findBaseAlloc(addr);
+  auto alloc = Runtime::getTracker().findBaseAlloc(addr);
   if (alloc) {
-    return typeart::RuntimeSystem::get().typeResolution.getBuiltinInfo(addr, alloc->second, type);
+    return Runtime::getTypeResolution().getBuiltinInfo(addr, alloc->second, type);
   }
   return TYPEART_UNKNOWN_ADDRESS;
 }
 
 typeart_status typeart_get_type(const void* addr, int* type, size_t* count) {
-  typeart::RTGuard guard;
-  auto result = typeart::detail::query_type(addr, type, count);
+  auto guard  = Runtime::scopeGuard();
+  auto result = detail::query_type(addr, type, count);
   if (result == TYPEART_UNKNOWN_ADDRESS) {
-    typeart::RuntimeSystem::get().recorder.incAddrMissing(addr);
+    Runtime::getRecorder().incAddrMissing(addr);
   }
   return result;
 }
 
 typeart_status typeart_get_type_length(const void* addr, size_t* count) {
-  typeart::RTGuard guard;
+  auto guard = Runtime::scopeGuard();
   int type{0};
   return typeart_get_type(addr, &type, count);
 }
 
 typeart_status typeart_get_type_id(const void* addr, int* type_id) {
-  typeart::RTGuard guard;
+  auto guard = Runtime::scopeGuard();
   size_t count{0};
   return typeart_get_type(addr, type_id, &count);
 }
 
 typeart_status typeart_get_containing_type(const void* addr, int* type, size_t* count, const void** base_address,
                                            size_t* offset) {
-  typeart::RTGuard guard;
+  auto guard = Runtime::scopeGuard();
 
 #ifdef TYPEART_USE_ALLOCATOR
-  auto alloc = typeart::allocator::getAllocationInfo(addr);
+  auto alloc = allocator::getAllocationInfo(addr);
   if (alloc.has_value()) {
     *type         = alloc->pointer_info.typeId;
     *base_address = alloc->base_addr;
-    return typeart::RuntimeSystem::get().typeResolution.getContainingTypeInfo(addr, alloc->base_addr,
-                                                                              alloc->pointer_info, count, offset);
+    return Runtime::getTypeResolution().getContainingTypeInfo(addr, alloc->base_addr, alloc->pointer_info, count,
+                                                              offset);
   }
 #endif
 
-  auto alloc2 = typeart::RuntimeSystem::get().allocTracker.findBaseAlloc(addr);
+  auto alloc2 = Runtime::getTracker().findBaseAlloc(addr);
   if (alloc2) {
     *type         = alloc2->second.typeId;
     *base_address = alloc2->first;
-    return typeart::RuntimeSystem::get().typeResolution.getContainingTypeInfo(addr, alloc2->first, alloc2->second,
-                                                                              count, offset);
+    return Runtime::getTypeResolution().getContainingTypeInfo(addr, alloc2->first, alloc2->second, count, offset);
   }
   return TYPEART_UNKNOWN_ADDRESS;
 }
@@ -130,39 +131,39 @@ typeart_status typeart_get_containing_type(const void* addr, int* type, size_t* 
 typeart_status typeart_get_subtype(const void* base_addr, size_t offset, typeart_struct_layout container_layout,
                                    int* subtype_id, const void** subtype_base_addr, size_t* subtype_offset,
                                    size_t* subtype_count) {
-  typeart::RTGuard guard;
-  return typeart::RuntimeSystem::get().typeResolution.getSubTypeInfo(base_addr, offset, container_layout, subtype_id,
-                                                                     subtype_base_addr, subtype_offset, subtype_count);
+  auto guard = Runtime::scopeGuard();
+  return Runtime::getTypeResolution().getSubTypeInfo(base_addr, offset, container_layout, subtype_id, subtype_base_addr,
+                                                     subtype_offset, subtype_count);
 }
 
 typeart_status typeart_resolve_type_addr(const void* addr, typeart_struct_layout* struct_layout) {
-  typeart::RTGuard guard;
+  auto guard = Runtime::scopeGuard();
   int type_id{0};
   size_t size{0};
   auto status = typeart_get_type(addr, &type_id, &size);
   if (status != TYPEART_OK) {
     return status;
   }
-  return typeart::detail::query_struct_layout(type_id, struct_layout);
+  return detail::query_struct_layout(type_id, struct_layout);
 }
 
 typeart_status typeart_resolve_type_id(int type_id, typeart_struct_layout* struct_layout) {
-  typeart::RTGuard guard;
-  return typeart::detail::query_struct_layout(type_id, struct_layout);
+  auto guard = Runtime::scopeGuard();
+  return detail::query_struct_layout(type_id, struct_layout);
 }
 
 typeart_status typeart_get_return_address(const void* addr, const void** return_addr) {
-  typeart::RTGuard guard;
+  auto guard = Runtime::scopeGuard();
 
 #ifdef TYPEART_USE_ALLOCATOR
-  auto alloc = typeart::allocator::getAllocationInfo(addr);
+  auto alloc = allocator::getAllocationInfo(addr);
   if (alloc.has_value()) {
     *return_addr = alloc->pointer_info.debug;
     return TYPEART_OK;
   }
 #endif
 
-  auto alloc2 = typeart::RuntimeSystem::get().allocTracker.findBaseAlloc(addr);
+  auto alloc2 = Runtime::getTracker().findBaseAlloc(addr);
   if (alloc2) {
     *return_addr = alloc2.getValue().second.debug;
     return TYPEART_OK;
@@ -172,15 +173,14 @@ typeart_status typeart_get_return_address(const void* addr, const void** return_
 }
 
 typeart_status_t typeart_get_source_location(const void* addr, char** file, char** function, char** line) {
-  using namespace typeart::detail;
-  typeart::RTGuard guard;
+  auto guard = Runtime::scopeGuard();
 
   auto source_loc = typeart::SourceLocation::create(addr);
 
   if (source_loc) {
-    *file     = string2char(source_loc->file);
-    *function = string2char(source_loc->function);
-    *line     = string2char(source_loc->line);
+    *file     = detail::string2char(source_loc->file);
+    *function = detail::string2char(source_loc->function);
+    *line     = detail::string2char(source_loc->line);
 
     if (*file == nullptr || *function == nullptr || *line == nullptr) {
       return TYPEART_ERROR;
@@ -193,41 +193,41 @@ typeart_status_t typeart_get_source_location(const void* addr, char** file, char
 }
 
 const char* typeart_get_type_name(int type_id) {
-  typeart::RTGuard guard;
-  return typeart::RuntimeSystem::get().typeResolution.db().getTypeName(type_id).c_str();
+  auto guard = Runtime::scopeGuard();
+  return Runtime::getTypeResolution().getTypeName(type_id).c_str();
 }
 
 bool typeart_is_vector_type(int type_id) {
-  typeart::RTGuard guard;
-  return typeart::RuntimeSystem::get().typeResolution.db().isVectorType(type_id);
+  auto guard = Runtime::scopeGuard();
+  return Runtime::getTypeResolution().isVectorType(type_id);
 }
 
 bool typeart_is_valid_type(int type_id) {
-  typeart::RTGuard guard;
-  return typeart::RuntimeSystem::get().typeResolution.db().isValid(type_id);
+  auto guard = Runtime::scopeGuard();
+  return Runtime::getTypeResolution().isValid(type_id);
 }
 
 bool typeart_is_reserved_type(int type_id) {
-  typeart::RTGuard guard;
-  return typeart::RuntimeSystem::get().typeResolution.db().isReservedType(type_id);
+  auto guard = Runtime::scopeGuard();
+  return Runtime::getTypeResolution().isReservedType(type_id);
 }
 
 bool typeart_is_builtin_type(int type_id) {
-  typeart::RTGuard guard;
-  return typeart::RuntimeSystem::get().typeResolution.db().isBuiltinType(type_id);
+  auto guard = Runtime::scopeGuard();
+  return Runtime::getTypeResolution().isBuiltinType(type_id);
 }
 
 bool typeart_is_struct_type(int type_id) {
-  typeart::RTGuard guard;
-  return typeart::RuntimeSystem::get().typeResolution.db().isStructType(type_id);
+  auto guard = Runtime::scopeGuard();
+  return Runtime::getTypeResolution().isStructType(type_id);
 }
 
 bool typeart_is_userdefined_type(int type_id) {
-  typeart::RTGuard guard;
-  return typeart::RuntimeSystem::get().typeResolution.db().isUserDefinedType(type_id);
+  auto guard = Runtime::scopeGuard();
+  return Runtime::getTypeResolution().isUserDefinedType(type_id);
 }
 
 size_t typeart_get_type_size(int type_id) {
-  typeart::RTGuard guard;
-  return typeart::RuntimeSystem::get().typeResolution.db().getTypeSize(type_id);
+  auto guard = Runtime::scopeGuard();
+  return Runtime::getTypeResolution().getTypeSize(type_id);
 }
