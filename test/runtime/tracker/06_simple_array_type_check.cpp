@@ -1,7 +1,7 @@
 // RUN: %run %s 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "../../lib/typelib/TypeInterface.h"
+#include "typelib/TypeInterface.h"
 #include "util.h"
 
 #include <stdint.h>

@@ -1,7 +1,7 @@
 // RUN: %run %s 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "../../lib/runtime/RuntimeInterface.h"
+#include "runtime/RuntimeInterface.h"
 
 #include <stdio.h>
 

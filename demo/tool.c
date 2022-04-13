@@ -1,5 +1,5 @@
-#include <RuntimeInterface.h>
 #include <mpi.h>
+#include <runtime/RuntimeInterface.h>
 #include <stdio.h>
 
 int isCompatible(MPI_Datatype mpi_type, typeart_builtin_type recorded_type) {

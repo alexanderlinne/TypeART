@@ -3,7 +3,7 @@
 // REQUIRES: tracker
 // clang-format on
 
-#include "../../lib/runtime/tracker/CallbackInterface.h"
+#include "runtime/tracker/CallbackInterface.h"
 #include "util.h"
 
 #include <stdio.h>

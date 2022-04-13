@@ -1,7 +1,7 @@
 // RUN: %run  %s --compile_flags "-std=c++17" 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "../../lib/support/System.h"
+#include "support/System.h"
 
 #include <cstdio>
 

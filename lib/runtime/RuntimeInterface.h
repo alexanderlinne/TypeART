@@ -13,7 +13,7 @@
 #ifndef TYPEART_RUNTIMEINTERFACE_H
 #define TYPEART_RUNTIMEINTERFACE_H
 
-#include "TypeInterface.h"
+#include "typelib/TypeInterface.h"
 
 #ifdef __cplusplus
 #include <cstddef>

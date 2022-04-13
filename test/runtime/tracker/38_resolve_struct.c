@@ -1,7 +1,7 @@
 // RUN: %run %s --manual 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "../../lib/runtime/tracker/CallbackInterface.h"
+#include "runtime/tracker/CallbackInterface.h"
 #include "util.h"
 
 #include <stddef.h>

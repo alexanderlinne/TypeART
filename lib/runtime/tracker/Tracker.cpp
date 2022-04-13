@@ -12,11 +12,11 @@
 
 #include "Tracker.h"
 
-#include "AccessCounter.h"
 #include "CallbackInterface.h"
-#include "Runtime.h"
-#include "RuntimeData.h"
 #include "TypeDB.h"
+#include "runtime/AccessCounter.h"
+#include "runtime/Runtime.h"
+#include "runtime/RuntimeData.h"
 #include "support/Logger.h"
 
 #include "llvm/ADT/Optional.h"

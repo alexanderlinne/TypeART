@@ -21,6 +21,7 @@ set(TYPEART_ALLOCATOR_CONSTANTS_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/AllocatorCons
 add_custom_command(
   OUTPUT ${TYPEART_ALLOCATOR_CONSTANTS_SOURCE}
   COMMAND ${Python3_EXECUTABLE} allocator/create_constants.py ${TYPEART_ALLOCATOR_CONSTANTS_SOURCE}
+  MAIN_DEPENDENCY allocator/create_constants.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   COMMENT "Generate Allocator Constants"
 )
@@ -78,10 +79,7 @@ target_link_libraries(
 target_include_directories(
   ${TYPEART_PREFIX}_Runtime
   PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/runtime>
-         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/typelib>
-  PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/passes/support>
-          $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
+  PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
 )
 
 target_include_directories(${TYPEART_PREFIX}_Runtime SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})

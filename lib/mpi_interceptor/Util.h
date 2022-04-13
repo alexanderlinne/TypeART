@@ -13,7 +13,7 @@
 #ifndef TYPEART_MPI_INTERCEPTOR_UTIL_H
 #define TYPEART_MPI_INTERCEPTOR_UTIL_H
 
-#include "RuntimeInterface.h"
+#include "runtime/RuntimeInterface.h"
 
 #include <mpi.h>
 

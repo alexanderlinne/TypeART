@@ -12,9 +12,9 @@
 
 #include "TypeCheck.h"
 
-#include "RuntimeInterface.h"
-#include "TypeInterface.h"
 #include "Util.h"
+#include "runtime/RuntimeInterface.h"
+#include "typelib/TypeInterface.h"
 
 #include <algorithm>
 #include <fmt/core.h>

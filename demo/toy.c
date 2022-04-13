@@ -1,5 +1,5 @@
-#include <RuntimeInterface.h>
 #include <mpi.h>
+#include <runtime/RuntimeInterface.h>
 #include <stdio.h>
 #include <stdlib.h>
 

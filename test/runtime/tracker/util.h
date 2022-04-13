@@ -1,7 +1,7 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include "../../lib/runtime/RuntimeInterface.h"
+#include "runtime/RuntimeInterface.h"
 
 #include <stddef.h>
 #include <stdio.h>

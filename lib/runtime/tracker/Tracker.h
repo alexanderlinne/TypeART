@@ -13,9 +13,9 @@
 #ifndef TYPEART_ALLOCATIONTRACKING_H
 #define TYPEART_ALLOCATIONTRACKING_H
 
-#include "AccessCounter.h"
 #include "AllocMapWrapper.h"
-#include "RuntimeData.h"
+#include "runtime/AccessCounter.h"
+#include "runtime/RuntimeData.h"
 #include "typelib/TypeDB.h"
 
 #include <cstddef>

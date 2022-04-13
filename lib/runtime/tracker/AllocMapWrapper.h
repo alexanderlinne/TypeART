@@ -13,11 +13,12 @@
 #ifndef TYPEART_ALLOCMAPWRAPPER_H
 #define TYPEART_ALLOCMAPWRAPPER_H
 
-#include "RuntimeData.h"
+#include "runtime/RuntimeData.h"
 
 #include "llvm/ADT/Optional.h"
 
 #include <algorithm>
+#include <shared_mutex>
 
 namespace typeart::runtime::tracker {
 namespace mixin {

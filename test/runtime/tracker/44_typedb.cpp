@@ -1,8 +1,8 @@
 // RUN: %run %s --compile_flags "-std=c++17" 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "../../lib/runtime/RuntimeInterface.h"
-#include "../../lib/typelib/TypeDatabase.h"
+#include "runtime/RuntimeInterface.h"
+#include "typelib/TypeDatabase.h"
 
 #include <cstdio>
 

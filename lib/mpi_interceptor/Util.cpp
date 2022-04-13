@@ -12,7 +12,7 @@
 
 #include "Util.h"
 
-#include "TypeInterface.h"
+#include "typelib/TypeInterface.h"
 
 #include <cstdint>
 #include <cstdio>
