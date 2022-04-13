@@ -339,7 +339,7 @@ using namespace typeart::runtime;
 
 extern "C" {
 
-__attribute__((noinline)) void* typeart_copy_main_stack(char** envp, void* stack_begin) {
+__attribute__((noinline)) void* typeart_allocator_copy_main_stack(char** envp, void* stack_begin) {
   // From the implementation of _start in glibc we know that the first element
   // at the top of the stack is the terminal nullptr in the envp array. As the
   // _start function does not return, we can safely copy the stack up to this
@@ -384,20 +384,20 @@ __attribute__((noinline)) void* typeart_copy_main_stack(char** envp, void* stack
   return new_stack_begin;
 }
 
-void typeart_replace_main_stack(char** envp);
+void typeart_allocator_replace_main_stack(char** envp);
 
-void typeart_setup_main_stack(int argc, char** argv, char** envp) {
+void typeart_allocator_setup_main_stack(int argc, char** argv, char** envp) {
   assert(allocator::config::page_size == sysconf(_SC_PAGE_SIZE));
   allocator::stack::setup();
-  typeart_replace_main_stack(envp);
+  typeart_allocator_replace_main_stack(envp);
 }
 
 }  // extern "C"
 
 __asm__(
     "\t.align 16, 0x90\n"
-    "\t.type typeart_replace_main_stack,@function\n"
-    "typeart_replace_main_stack:\n"
+    "\t.type typeart_allocator_replace_main_stack,@function\n"
+    "typeart_allocator_replace_main_stack:\n"
 
     // We need to assure that %rsp is propely aligned on a 16 byte boundary.
     // The System V ABI
@@ -410,7 +410,7 @@ __asm__(
     // Call typeart_copy_main_stack:
     // %rdi is the first argument (envp)
     "\tmovq %rsp, %rsi\n"  // pass the stack pointer as the second argument
-    "\tmovabsq $typeart_copy_main_stack, %rax\n"
+    "\tmovabsq $typeart_allocator_copy_main_stack, %rax\n"
     "\tcallq *%rax\n"
     "\tmovq %rax, %rsp\n"  // copy the result of the call into the stack pointer
 

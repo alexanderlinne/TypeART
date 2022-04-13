@@ -28,6 +28,9 @@ void* typeart_allocator__Znwm(int type_id, size_t count, size_t size);
 void* typeart_allocator__Znam(int type_id, size_t count, size_t size);
 int typeart_allocator_free(void*);
 
+// Implemented in Allocator.cpp
+void typeart_allocator_setup_main_stack(int argc, char** argv, char** envp);
+
 #ifdef __cplusplus
 }
 #endif

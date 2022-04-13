@@ -7,7 +7,7 @@
 #include <runtime/allocator/Config.h>
 
 extern "C" {
-void* typeart_thread_start(void*, void*);
+void* typeart_preload_thread_start(void*, void*);
 }
 
 namespace typeart::preload {
@@ -28,7 +28,7 @@ struct wrapper_args {
 
 void* thread_wrapper(void* _args) {
   auto args = (wrapper_args*)_args;
-  return typeart_thread_start((void*)args->start_routine, args->arg);
+  return typeart_preload_thread_start((void*)args->start_routine, args->arg);
 }
 
 using free_t           = decltype(&free);
@@ -68,12 +68,12 @@ int pthread_create(pthread_t* thread, const pthread_attr_t* attr, void* (*start_
 // Thread stack replacement
 extern "C" {
 
-void typeart_reclaim_stack(void* args) {
+void typeart_preload_reclaim_stack(void* args) {
   using namespace typeart;
   // TODO
 }
 
-void* typeart_allocate_stack(void** stack_ptr) {
+void* typeart_preload_allocate_stack(void** stack_ptr) {
   using namespace typeart;
   auto current_thread  = pthread_self();
   auto new_stack_begin = runtime::allocator::stack::allocate(current_thread);
@@ -106,15 +106,15 @@ void* typeart_allocate_stack(void** stack_ptr) {
   return new_stack_ptr;
 }
 
-void* typeart_exec_thread(void* (*routine)(void*), void* arg) {
+void* typeart_preload_exec_thread(void* (*routine)(void*), void* arg) {
   void* result = nullptr;
-  pthread_cleanup_push(&typeart_reclaim_stack, nullptr);
+  pthread_cleanup_push(&typeart_preload_reclaim_stack, nullptr);
   result = routine(arg);
   pthread_cleanup_pop(0);
   return result;
 }
 
-void typeart_free_stack() {
+void typeart_preload_free_stack() {
   // Here we don't have to copy the stack back, as
   // our caller should be the exact same caller as
   // the one who called typeart_allocate_stack.
@@ -128,8 +128,8 @@ __asm__(
     // %rdi is the function to call
     // %rsi is the arg for the thread function
     "\t.align 16, 0x90\n"
-    "\t.type typeart_thread_start,@function\n"
-    "typeart_thread_start:\n"
+    "\t.type typeart_preload_thread_start,@function\n"
+    "typeart_preload_thread_start:\n"
 
     // Handle the frame pointer and reserve stack space:
     "\tpushq %rbp\n"
@@ -143,12 +143,12 @@ __asm__(
     // Allocate the instrumented stack for the thread:
     "\tmovq %rsp, %rdi\n"       // pass the original stack pointer as the first argument
     "\tmovq %rsp, -24(%rbp)\n"  // and also save it on the stack
-    "\tmovabsq $typeart_allocate_stack, %rax\n"
+    "\tmovabsq $typeart_preload_allocate_stack, %rax\n"
     "\tcallq *%rax\n"
     "\tmovq %rax, %rsp\n"
 
     // Call the actual thread routine:
-    "\tmovabsq $typeart_exec_thread, %rax\n"
+    "\tmovabsq $typeart_preload_exec_thread, %rax\n"
     "\tmovq -16(%rbp), %rdi\n"
     "\tmovq -8(%rbp), %rsi\n"
     "\tcallq *%rax\n"
@@ -156,7 +156,7 @@ __asm__(
     // Restore the original stack pointer and free the stack.
     "\tmovq -24(%rbp), %rsp\n"  // restore the original stack from %rbp
     "\tmovq %rax, %rbp\n"       // save the result in %rbp
-    "\tmovabsq $typeart_free_stack, %rax\n"
+    "\tmovabsq $typeart_preload_free_stack, %rax\n"
     "\tcallq *%rax\n"
 
     // Restore the result and the frame pointer

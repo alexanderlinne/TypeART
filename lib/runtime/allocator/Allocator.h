@@ -4,11 +4,6 @@
 #include <optional>
 #include <pthread.h>
 
-extern "C" {
-
-void typeart_setup_main_stack(int argc, char** argv, char** envp);
-}
-
 namespace typeart::runtime::allocator {
 
 void* malloc(int allocation_id, size_t count, size_t size);

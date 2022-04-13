@@ -176,7 +176,7 @@ void TypeArtPass::addPreinitCall(llvm::Module& m) {
   auto function_ty   = llvm::FunctionType::get(llvm::Type::getVoidTy(ctx),
                                                {llvm::Type::getInt32Ty(ctx), string_arr_ty, string_arr_ty}, false);
   auto preinit_function =
-      llvm::Function::Create(function_ty, llvm::Function::ExternalLinkage, "typeart_setup_main_stack", m);
+      llvm::Function::Create(function_ty, llvm::Function::ExternalLinkage, "typeart_allocator_setup_main_stack", m);
   m.getOrInsertGlobal("typeart_preinit", function_ty->getPointerTo());
   auto preinit_global = m.getNamedGlobal("typeart_preinit");
   preinit_global->setInitializer(preinit_function);
