@@ -33,15 +33,12 @@ void* thread_wrapper(void* _args) {
 
 using free_t           = decltype(&free);
 using pthread_create_t = decltype(&pthread_create);
-using pthread_exit_t   = decltype(&pthread_exit);
 
 static free_t actual_free                     = NULL;
 static pthread_create_t actual_pthread_create = NULL;
-static pthread_exit_t actual_pthread_exit     = NULL;
 
 __attribute__((constructor)) void preload_init() {
   actual_pthread_create = (pthread_create_t)find_next_symbol("pthread_create");
-  actual_pthread_exit   = (pthread_exit_t)find_next_symbol("pthread_exit");
 }
 
 }  // namespace typeart
@@ -66,16 +63,15 @@ int pthread_create(pthread_t* thread, const pthread_attr_t* attr, void* (*start_
   args->arg           = arg;
   return actual_pthread_create(thread, attr, thread_wrapper, args);
 }
-
-void pthread_exit(void* retval) {
-  using namespace typeart;
-  fprintf(stderr, "pthread_exit\n");
-  actual_pthread_exit(retval);
-}
 }
 
 // Thread stack replacement
 extern "C" {
+
+void typeart_reclaim_stack(void* args) {
+  using namespace typeart;
+  // TODO
+}
 
 void* typeart_allocate_stack(void** stack_ptr) {
   using namespace typeart;
@@ -108,6 +104,14 @@ void* typeart_allocate_stack(void** stack_ptr) {
   // stack pointer we also swap it back.
 
   return new_stack_ptr;
+}
+
+void* typeart_exec_thread(void* (*routine)(void*), void* arg) {
+  void* result = nullptr;
+  pthread_cleanup_push(&typeart_reclaim_stack, nullptr);
+  result = routine(arg);
+  pthread_cleanup_pop(0);
+  return result;
 }
 
 void typeart_free_stack() {
@@ -144,8 +148,9 @@ __asm__(
     "\tmovq %rax, %rsp\n"
 
     // Call the actual thread routine:
-    "\tmovq -16(%rbp), %rax\n"
-    "\tmovq -8(%rbp), %rdi\n"
+    "\tmovabsq $typeart_exec_thread, %rax\n"
+    "\tmovq -16(%rbp), %rdi\n"
+    "\tmovq -8(%rbp), %rsi\n"
     "\tcallq *%rax\n"
 
     // Restore the original stack pointer and free the stack.

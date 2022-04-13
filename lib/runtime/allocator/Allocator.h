@@ -24,7 +24,8 @@ std::optional<AllocationInfo> getAllocationInfo(const void* addr);
 namespace stack {
 
 void* allocate(pthread_t new_owner);
-void set_owner(const void* owned_ptr, pthread_t new_owner);
+bool is_owner(pthread_t thread);
+bool is_instrumented(void* addr);
 void free(pthread_t current_owner);
 
 }  // namespace stack

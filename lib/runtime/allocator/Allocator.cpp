@@ -253,7 +253,7 @@ void* allocate(pthread_t new_owner) {
     setup();
   }
   std::lock_guard _lock(owner_mutex);
-  for (size_t i = 0; i < thread_count; ++i) {
+  for (size_t i = 1; i < thread_count; ++i) {
     if (!has_owner[i]) {
       has_owner[i] = true;
       owner[i]     = new_owner;
@@ -263,9 +263,22 @@ void* allocate(pthread_t new_owner) {
   abort();
 }
 
+bool is_owner(pthread_t thread) {
+  for (size_t i = 1; i < thread_count; ++i) {
+    if (has_owner[i] && pthread_equal(owner[i], thread)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool is_instrumented(void* addr) {
+  return mapped_begin <= addr && addr < mapped_end;
+}
+
 void free(pthread_t current_owner) {
   std::lock_guard _lock(owner_mutex);
-  for (size_t i = 0; i < thread_count; ++i) {
+  for (size_t i = 1; i < thread_count; ++i) {
     if (pthread_equal(owner[i], current_owner)) {
       has_owner[i] = false;
       return;
