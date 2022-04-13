@@ -29,6 +29,7 @@ add_custom_command(
 set(RUNTIME_LIB_ALLOCATOR_SOURCES
     allocator/Allocator.cpp
     allocator/Allocator.h
+    allocator/Allocator.S
     allocator/CallbackInterface.cpp
     allocator/CallbackInterface.h
     allocator/Config.h

@@ -393,27 +393,3 @@ void typeart_allocator_setup_main_stack(int argc, char** argv, char** envp) {
 }
 
 }  // extern "C"
-
-__asm__(
-    "\t.align 16, 0x90\n"
-    "\t.type typeart_allocator_replace_main_stack,@function\n"
-    "typeart_allocator_replace_main_stack:\n"
-
-    // We need to assure that %rsp is propely aligned on a 16 byte boundary.
-    // The System V ABI
-    // https://www.intel.com/content/dam/develop/external/us/en/documents/mpx-linux64-abi.pdf, page 18
-    // specifies, that (%rsp + 8) fulfills this condition whenever at a
-    // function entry point. These are usually used to store the frame pointer:
-    "\tpushq %rbp\n"
-    "\tmovq %rsp, %rbp\n"
-
-    // Call typeart_copy_main_stack:
-    // %rdi is the first argument (envp)
-    "\tmovq %rsp, %rsi\n"  // pass the stack pointer as the second argument
-    "\tmovabsq $typeart_allocator_copy_main_stack, %rax\n"
-    "\tcallq *%rax\n"
-    "\tmovq %rax, %rsp\n"  // copy the result of the call into the stack pointer
-
-    // Restore the stack pointer to it's original position and return.
-    "\tpopq %rbp\n"
-    "\tretq\n");

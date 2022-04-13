@@ -2,6 +2,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(PRELOAD_LIB_SOURCES
     Lib.cpp
+    Lib.S
 )
 
 add_library(${TYPEART_PREFIX}_Preload SHARED ${PRELOAD_LIB_SOURCES})

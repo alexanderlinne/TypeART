@@ -28,6 +28,15 @@ list(
 
 include(typeartToolchainOptions)
 
+if(TYPEART_USE_ALLOCATOR)
+  if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64")
+    message(STATUS "Building for system architecture ${CMAKE_SYSTEM_PROCESSOR}")
+    enable_language(ASM)
+  else()
+    message(FATAL_ERROR "The allocator instrumentation currently only supports x86_64! (Current processor is ${CMAKE_SYSTEM_PROCESSOR})")
+  endif()
+endif()
+
 typeart_add_format_target(
   format-sources "Formats project source files"
   TARGETS lib/passes/*.cpp
