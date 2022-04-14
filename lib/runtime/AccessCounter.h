@@ -13,8 +13,9 @@
 #ifndef TYPEART_ACCESSCOUNTER_H
 #define TYPEART_ACCESSCOUNTER_H
 
-#include "RuntimeData.h"
 #include "RuntimeInterface.h"
+#include "tracker/Types.h"
+#include "typelib/TypeDatabase.h"
 
 #include <atomic>
 #include <cmath>
@@ -185,14 +186,14 @@ class ThreadRecorder {
 
 class AccessRecorder {
  public:
-  using TypeCountMap      = std::unordered_map<int, Counter>;
+  using TypeCountMap      = std::unordered_map<type_id_t, Counter>;
   using AddressSet        = std::unordered_set<const void*>;
   using MutexT            = std::shared_mutex;
   using ThreadRecorderMap = std::unordered_map<std::thread::id, thread::ThreadRecorder>;
 
   ~AccessRecorder() = default;
 
-  inline void incHeapAlloc(int typeId, size_t count) {
+  inline void incHeapAlloc(type_id_t typeId, size_t count) {
     ++curHeapAllocs;
 
     // Always check here for max
@@ -213,7 +214,7 @@ class AccessRecorder {
     ++heapAlloc[typeId];
   }
 
-  inline void incStackAlloc(int typeId, size_t count) {
+  inline void incStackAlloc(type_id_t typeId, size_t count) {
     {
       std::lock_guard threadRecorderGuard(threadRecorderMutex);
       getCurrentThreadRecorder().incStackAlloc(count);
@@ -223,7 +224,7 @@ class AccessRecorder {
     ++stackAlloc[typeId];
   }
 
-  inline void incGlobalAlloc(int typeId, size_t count) {
+  inline void incGlobalAlloc(type_id_t typeId, size_t count) {
     ++globalAllocs;
     if (count > 1) {
       ++globalArray;
@@ -233,7 +234,7 @@ class AccessRecorder {
     ++globalAlloc[typeId];
   }
 
-  inline void incStackFree(int typeId, size_t count) {
+  inline void incStackFree(type_id_t typeId, size_t count) {
     {
       std::lock_guard threadRecorderGuard(threadRecorderMutex);
       getCurrentThreadRecorder().incStackFree(count);
@@ -243,7 +244,7 @@ class AccessRecorder {
     ++stackFree[typeId];
   }
 
-  inline void incHeapFree(int typeId, size_t count) {
+  inline void incHeapFree(type_id_t typeId, size_t count) {
     ++heapAllocsFree;
     if (count > 1) {
       ++heapArrayFree;
@@ -530,11 +531,11 @@ class AccessRecorder {
  */
 class NoneRecorder {
  public:
-  [[maybe_unused]] inline void incHeapAlloc(int, size_t) {
+  [[maybe_unused]] inline void incHeapAlloc(type_id_t, size_t) {
   }
-  [[maybe_unused]] inline void incStackAlloc(int, size_t) {
+  [[maybe_unused]] inline void incStackAlloc(type_id_t, size_t) {
   }
-  [[maybe_unused]] inline void incGlobalAlloc(int, size_t) {
+  [[maybe_unused]] inline void incGlobalAlloc(type_id_t, size_t) {
   }
   [[maybe_unused]] inline void incUsedInRequest(const void*) {
   }
@@ -546,9 +547,9 @@ class NoneRecorder {
   }
   [[maybe_unused]] inline void incAddrMissing(const void*) {
   }
-  [[maybe_unused]] inline void incStackFree(int, size_t) {
+  [[maybe_unused]] inline void incStackFree(type_id_t, size_t) {
   }
-  [[maybe_unused]] inline void incHeapFree(int, size_t) {
+  [[maybe_unused]] inline void incHeapFree(type_id_t, size_t) {
   }
   [[maybe_unused]] inline void incNullAddr() {
   }
@@ -568,7 +569,7 @@ class NoneRecorder {
 
 }  // namespace softcounter
 
-#if ENABLE_SOFTCOUNTER == 1
+#ifdef ENABLE_SOFTCOUNTER
 using Recorder = softcounter::AccessRecorder;
 #else
 using Recorder = softcounter::NoneRecorder;

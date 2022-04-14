@@ -15,6 +15,7 @@
 
 #include "Config.h"
 #include "System.h"
+#include "runtime/TypeResolution.h"
 
 #include <memory>
 #include <mpi.h>
@@ -34,7 +35,7 @@ struct [[nodiscard]] VariantError {
 
  public:
   template <class... Param>
-  VariantError(Param && ... param) : data(std::forward<Param>(param)...) {
+  VariantError(Param&&... param) : data(std::forward<Param>(param)...) {
   }
 
   template <class T>
@@ -48,12 +49,12 @@ struct [[nodiscard]] VariantError {
   }
 
   template <class T>
-  [[nodiscard]] T get()&& {
+  [[nodiscard]] T get() && {
     return std::get<T>(std::move(data));
   }
 
   template <class Visitor>
-  auto visit(Visitor && visitor) const->decltype(auto) {
+  auto visit(Visitor&& visitor) const -> decltype(auto) {
     return std::visit(std::forward<Visitor>(visitor), data);
   }
 };
@@ -82,7 +83,7 @@ struct UnsupportedCombinerArgs {
 };
 
 struct [[nodiscard]] InternalError : public detail::VariantError<MPIError, TypeARTError, InvalidArgument,
-                                                                 UnsupportedCombiner, UnsupportedCombinerArgs>{};
+                                                                 UnsupportedCombiner, UnsupportedCombinerArgs> {};
 
 struct TypeError;
 struct InsufficientBufferSize {
@@ -106,7 +107,7 @@ struct MemberCountMismatch {
 };
 
 struct MemberOffsetMismatch {
-  int type_id;
+  type_id_t::value_type type_id;
   size_t member;
   ptrdiff_t struct_offset;
   MPI_Aint mpi_offset;
@@ -118,7 +119,7 @@ struct MemberTypeMismatch {
 };
 
 struct MemberElementCountMismatch {
-  int type_id;
+  type_id_t::value_type type_id;
   size_t member;
   size_t count;
   size_t mpi_count;
@@ -139,7 +140,7 @@ struct StructSubtypeErrors {
 struct [[nodiscard]] TypeError
     : public detail::VariantError<StructSubtypeErrors, InsufficientBufferSize, BuiltinTypeMismatch,
                                   BufferNotOfStructType, MemberCountMismatch, MemberOffsetMismatch, MemberTypeMismatch,
-                                  MemberElementCountMismatch>{};
+                                  MemberElementCountMismatch> {};
 
 struct [[nodiscard]] Error : public detail::VariantError<InternalError, TypeError> {
   std::optional<Stacktrace> stacktrace =

@@ -52,10 +52,10 @@ HeapArgList ArgumentParser::collectHeap(const MallocDataList& mallocs) {
     auto kind                   = mdata.kind;
 
     // Number of bytes allocated
-    auto mallocArg = malloc_call->getOperand(0);
-    int typeId     = type_m->getOrRegisterType(malloc_call->getType()->getPointerElementType(),
-                                               dl);  // retrieveTypeID(tu::getVoidType(c));
-    if (typeId == TYPEART_UNKNOWN_TYPE) {
+    auto mallocArg   = malloc_call->getOperand(0);
+    type_id_t typeId = type_m->getOrRegisterType(malloc_call->getType()->getPointerElementType(),
+                                                 dl);  // retrieveTypeID(tu::getVoidType(c));
+    if (typeId == type_id_t::unknown_type) {
       LOG_ERROR("Unknown heap type. Not instrumenting. " << util::dump(*malloc_call));
       // TODO notify caller that we skipped: via lambda callback function
       continue;
@@ -77,7 +77,7 @@ HeapArgList ArgumentParser::collectHeap(const MallocDataList& mallocs) {
       }
 
       typeId = type_m->getOrRegisterType(dstPtrType, dl);
-      if (typeId == TYPEART_UNKNOWN_TYPE) {
+      if (typeId == type_id_t::unknown_type) {
         LOG_ERROR("Target type of casted allocation is unknown. Not instrumenting. " << util::dump(*malloc_call));
         LOG_ERROR("Cast: " << util::dump(*primaryBitcast));
         LOG_ERROR("Target type: " << util::dump(*dstPtrType));
@@ -88,7 +88,7 @@ HeapArgList ArgumentParser::collectHeap(const MallocDataList& mallocs) {
       LOG_WARNING("Primary bitcast is null. malloc: " << util::dump(*malloc_call))
     }
 
-    auto* typeIdConst    = instr_helper.getConstantFor(IType::type_id, typeId);
+    auto* typeIdConst    = instr_helper.getConstantFor(IType::type_id, typeId.value());
     Value* typeSizeConst = instr_helper.getConstantFor(IType::extent, typeSize);
 
     Value* elementCount{nullptr};
@@ -127,12 +127,16 @@ HeapArgList ArgumentParser::collectHeap(const MallocDataList& mallocs) {
         continue;
     }
 
+    const auto allocId      = type_m->getOrRegisterAllocation(typeId, {}, {});
+    const auto allocIdConst = instr_helper.getConstantFor(IType::alloc_id, allocId.value());
+
     arg_map[ArgMap::ID::pointer]       = pointer;
     arg_map[ArgMap::ID::type_id]       = typeIdConst;
     arg_map[ArgMap::ID::type_size]     = typeSizeConst;
     arg_map[ArgMap::ID::byte_count]    = byte_count;
     arg_map[ArgMap::ID::element_count] = elementCount;
     arg_map[ArgMap::ID::realloc_ptr]   = realloc_ptr;
+    arg_map[ArgMap::ID::alloc_id]      = allocIdConst;
     list.emplace_back(HeapArgList::value_type{mdata, arg_map});
   }
 
@@ -193,18 +197,21 @@ StackArgList ArgumentParser::collectStack(const AllocaDataList& allocs) {
     }
 
     // unsigned typeSize = tu::getTypeSizeInBytes(elementType, dl);
-    int typeId = type_m->getOrRegisterType(elementType, dl);
+    type_id_t typeId = type_m->getOrRegisterType(elementType, dl);
 
-    if (typeId == TYPEART_UNKNOWN_TYPE) {
+    if (typeId == type_id_t::unknown_type) {
       LOG_ERROR("Unknown stack type. Not instrumenting. " << util::dump(*elementType));
       continue;
     }
 
-    auto* typeIdConst = instr_helper.getConstantFor(IType::type_id, typeId);
+    auto* typeIdConst       = instr_helper.getConstantFor(IType::type_id, typeId.value());
+    const auto allocId      = type_m->getOrRegisterAllocation(typeId, {}, {});
+    const auto allocIdConst = instr_helper.getConstantFor(IType::alloc_id, allocId.value());
 
     arg_map[ArgMap::ID::pointer]       = alloca;
     arg_map[ArgMap::ID::type_id]       = typeIdConst;
     arg_map[ArgMap::ID::element_count] = numElementsVal;
+    arg_map[ArgMap::ID::alloc_id]      = allocIdConst;
 
     list.emplace_back(StackArgList::value_type{adata, arg_map});
   }
@@ -228,20 +235,22 @@ GlobalArgList ArgumentParser::collectGlobal(const GlobalDataList& globals) {
       type        = tu::getArrayElementType(type);
     }
 
-    int typeId = type_m->getOrRegisterType(type, dl);
+    type_id_t typeId = type_m->getOrRegisterType(type, dl);
 
-    if (typeId == TYPEART_UNKNOWN_TYPE) {
+    if (typeId == type_id_t::unknown_type) {
       LOG_ERROR("Unknown global type. Not instrumenting. " << util::dump(*type));
       continue;
     }
 
-    auto* typeIdConst      = instr_helper.getConstantFor(IType::type_id, typeId);
     auto* numElementsConst = instr_helper.getConstantFor(IType::extent, numElements);
     // auto globalPtr         = IRB.CreateBitOrPointerCast(global, instr.getTypeFor(IType::ptr));
 
+    const auto allocId      = type_m->getOrRegisterAllocation(typeId, {}, {});
+    const auto allocIdConst = instr_helper.getConstantFor(IType::alloc_id, allocId.value());
+
     arg_map[ArgMap::ID::pointer]       = global;
-    arg_map[ArgMap::ID::type_id]       = typeIdConst;
     arg_map[ArgMap::ID::element_count] = numElementsConst;
+    arg_map[ArgMap::ID::alloc_id]      = allocIdConst;
 
     list.emplace_back(GlobalArgList::value_type{gdata, arg_map});
   }

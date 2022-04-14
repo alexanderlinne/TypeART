@@ -13,8 +13,11 @@
 #ifndef TYPEART_TYPEDATABASE_H
 #define TYPEART_TYPEDATABASE_H
 
+#include "TypeInterface.h"
+
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -22,24 +25,90 @@
 
 namespace typeart {
 
+struct type_id_t {
+  using value_type = int;
+
+  static const type_id_t unknown_type;
+
+ private:
+  value_type _value = TYPEART_UNKNOWN_TYPE;
+
+ public:
+  type_id_t() = default;
+
+  type_id_t(value_type value) : _value(value) {
+  }
+
+  template <class T>
+  type_id_t(T t) = delete;
+
+  value_type value() const {
+    return _value;
+  }
+};
+
+inline bool operator==(const type_id_t& lhs, const type_id_t& rhs) {
+  return lhs.value() == rhs.value();
+}
+
+inline bool operator!=(const type_id_t& lhs, const type_id_t& rhs) {
+  return !(lhs == rhs);
+}
+
+inline bool operator<(const type_id_t& lhs, const type_id_t& rhs) {
+  return lhs.value() < rhs.value();
+}
+
+std::ostream& operator<<(std::ostream& os, const type_id_t& alloc_id);
+
+struct alloc_id_t {
+  using value_type = int;
+
+  static const alloc_id_t invalid;
+
+ private:
+  value_type _value = 0;
+
+ public:
+  alloc_id_t() = default;
+
+  alloc_id_t(value_type value) : _value(value) {
+  }
+
+  template <class T>
+  alloc_id_t(T t) = delete;
+
+  value_type value() const {
+    return _value;
+  }
+};
+
+inline bool operator==(const alloc_id_t& lhs, const alloc_id_t& rhs) {
+  return lhs.value() == rhs.value();
+}
+
+inline bool operator!=(const alloc_id_t& lhs, const alloc_id_t& rhs) {
+  return !(lhs == rhs);
+}
+
+std::ostream& operator<<(std::ostream& os, const alloc_id_t& alloc_id);
+
 enum class StructTypeFlag : int { USER_DEFINED = 1, LLVM_VECTOR = 2 };
 
 struct StructTypeInfo {
-  int type_id;
+  type_id_t type_id;
   std::string name;
   size_t extent;
   size_t num_members;
   std::vector<size_t> offsets;
-  std::vector<int> member_types;
+  std::vector<type_id_t> member_types;
   std::vector<size_t> array_sizes;
   StructTypeFlag flag;
 };
 
-using allocation_id_t = int;
-
 struct AllocationInfo {
-  allocation_id_t allocation_id;
-  int type_id;
+  alloc_id_t alloc_id = alloc_id_t::invalid;
+  type_id_t type_id   = type_id_t::unknown_type;
 
   std::optional<size_t> count;
 
@@ -56,32 +125,34 @@ class TypeDatabase {
  public:
   virtual void registerStruct(const StructTypeInfo& struct_info) = 0;
 
-  virtual allocation_id_t getOrCreateAllocationId(int type_id, std::optional<size_t> count,
-                                                  std::optional<ptrdiff_t> base_ptr_offset) = 0;
+  virtual alloc_id_t getOrCreateAllocationId(type_id_t type_id, std::optional<size_t> count,
+                                             std::optional<ptrdiff_t> base_ptr_offset) = 0;
 
   virtual void registerAllocations(std::vector<AllocationInfo> allocation_info) = 0;
 
-  [[nodiscard]] virtual bool isUnknown(int type_id) const = 0;
+  [[nodiscard]] virtual bool isUnknown(type_id_t type_id) const = 0;
 
-  [[nodiscard]] virtual bool isValid(int type_id) const = 0;
+  [[nodiscard]] virtual bool isValid(type_id_t type_id) const = 0;
 
-  [[nodiscard]] virtual bool isReservedType(int type_id) const = 0;
+  [[nodiscard]] virtual bool isValid(alloc_id_t alloc_id) const = 0;
 
-  [[nodiscard]] virtual bool isBuiltinType(int type_id) const = 0;
+  [[nodiscard]] virtual bool isReservedType(type_id_t type_id) const = 0;
 
-  [[nodiscard]] virtual bool isStructType(int type_id) const = 0;
+  [[nodiscard]] virtual bool isBuiltinType(type_id_t type_id) const = 0;
 
-  [[nodiscard]] virtual bool isUserDefinedType(int type_id) const = 0;
+  [[nodiscard]] virtual bool isStructType(type_id_t type_id) const = 0;
 
-  [[nodiscard]] virtual bool isVectorType(int type_id) const = 0;
+  [[nodiscard]] virtual bool isUserDefinedType(type_id_t type_id) const = 0;
 
-  [[nodiscard]] virtual const std::string& getTypeName(int type_id) const = 0;
+  [[nodiscard]] virtual bool isVectorType(type_id_t type_id) const = 0;
 
-  [[nodiscard]] virtual const StructTypeInfo* getStructInfo(int type_id) const = 0;
+  [[nodiscard]] virtual const std::string& getTypeName(type_id_t type_id) const = 0;
 
-  [[nodiscard]] virtual const AllocationInfo* getAllocationInfo(allocation_id_t allocation_id) const = 0;
+  [[nodiscard]] virtual const StructTypeInfo* getStructInfo(type_id_t type_id) const = 0;
 
-  [[nodiscard]] virtual size_t getTypeSize(int type_id) const = 0;
+  [[nodiscard]] virtual const AllocationInfo* getAllocationInfo(alloc_id_t alloc_id) const = 0;
+
+  [[nodiscard]] virtual size_t getTypeSize(type_id_t type_id) const = 0;
 
   [[nodiscard]] virtual const std::vector<StructTypeInfo>& getStructList() const = 0;
 
@@ -93,5 +164,15 @@ class TypeDatabase {
 std::pair<std::unique_ptr<TypeDatabase>, std::error_code> make_database(const std::string& file);
 
 }  // namespace typeart
+
+namespace std {
+template <>
+struct hash<typeart::type_id_t> {
+  std::size_t operator()(const typeart::type_id_t& type_id) const {
+    return hash<typeart::type_id_t::value_type>{}(type_id.value());
+  }
+};
+
+}  // namespace std
 
 #endif  // TYPEART_TYPEDATABASE_H

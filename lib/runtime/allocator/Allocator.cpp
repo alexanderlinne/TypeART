@@ -4,6 +4,7 @@
 #include "Config.h"
 
 #include <fmt/core.h>
+#include <fmt/ostream.h>
 #include <mutex>
 #include <set>
 #include <sys/mman.h>
@@ -83,18 +84,18 @@ struct Region {
     free_list.insert(addr);
   }
 
-  std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
+  std::optional<PointerInfo> getPointerInfo(const void* addr) {
     if (addr >= begin && addr < end) {
       auto bucket_ptr      = (void*)((uintptr_t)addr & ~(allocation_size - 1));
-      auto allocation_id   = *(allocation_id_t*)bucket_ptr;
-      auto allocation_info = Runtime::getAllocationInfo(allocation_id);
+      auto alloc_id        = *(alloc_id_t*)bucket_ptr;
+      auto allocation_info = Runtime::getAllocationInfo(alloc_id);
       if (allocation_info == nullptr) {
-        fmt::print(stderr, "Found invalid allocaton_id {}!\n", allocation_id);
+        fmt::print(stderr, "Found invalid allocaton_id {}!\n", alloc_id);
         return {};
       }
       auto base_ptr = (void*)((int8_t*)bucket_ptr + allocation_info->base_ptr_offset.value_or(heap::min_alignment));
       auto count    = *(size_t*)((int8_t*)bucket_ptr + config::count_offset);
-      return AllocationInfo{PointerInfo{allocation_info->type_id, count, nullptr}, base_ptr};
+      return PointerInfo{base_ptr, alloc_id, count, nullptr};
     } else {
       return {};
     }
@@ -155,16 +156,16 @@ Region* region_for(const void* addr) {
   return &regions[index_for(addr)];
 }
 
-std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
+std::optional<PointerInfo> getPointerInfo(const void* addr) {
   if (addr >= begin && addr < end) {
-    return region_for(addr)->getAllocationInfo(addr);
+    return region_for(addr)->getPointerInfo(addr);
   }
   return {};
 }
 
 }  // namespace heap
 
-void* malloc(int allocation_id, size_t count, size_t size) {
+void* malloc(alloc_id_t alloc_id, size_t count, size_t size) {
   if (!heap::initialized) {
     return ::malloc(size);
   }
@@ -175,7 +176,7 @@ void* malloc(int allocation_id, size_t count, size_t size) {
   }
   assert(required_size <= region->allocation_size);
   auto allocation                                        = (size_t*)region->allocate();
-  *(allocation_id_t*)allocation                          = allocation_id;
+  *(alloc_id_t*)allocation                               = alloc_id;
   *(size_t*)((int8_t*)allocation + config::count_offset) = count;
   return (int8_t*)allocation + heap::min_alignment;
 }
@@ -296,19 +297,19 @@ size_t allocation_size_for(const void* addr) {
   return min_allocation_size << index_for(addr);
 }
 
-std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
+std::optional<PointerInfo> getPointerInfo(const void* addr) {
   if (addr >= mapped_begin && addr < mapped_end) {
     const auto allocation_size = allocation_size_for(addr);
     auto bucket_ptr            = (void*)((uintptr_t)addr & ~(allocation_size - 1));
-    auto allocation_id         = *(allocation_id_t*)bucket_ptr;
-    auto allocation_info       = Runtime::getAllocationInfo(allocation_id);
+    auto alloc_id              = *(alloc_id_t*)bucket_ptr;
+    auto allocation_info       = Runtime::getAllocationInfo(alloc_id);
     if (allocation_info == nullptr) {
-      fmt::print(stderr, "Found invalid allocaton_id {}!\n", allocation_id);
+      fmt::print(stderr, "Found invalid allocaton_id {}!\n", alloc_id);
       return {};
     }
     if (!allocation_info->base_ptr_offset.has_value()) {
       fmt::print(stderr, "Missing base pointer offset for stack allocation at {} with allocation id {}!\n", addr,
-                 allocation_id);
+                 alloc_id);
       return {};
     }
     auto base_ptr = (void*)((int8_t*)bucket_ptr + allocation_info->base_ptr_offset.value());
@@ -318,7 +319,7 @@ std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
     } else {
       count = *(size_t*)((int8_t*)bucket_ptr + config::count_offset);
     }
-    return AllocationInfo{PointerInfo{allocation_info->type_id, count, nullptr}, base_ptr};
+    return PointerInfo{base_ptr, alloc_id, count, nullptr};
   } else {
     return {};
   }
@@ -326,11 +327,14 @@ std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
 
 }  // namespace stack
 
-std::optional<AllocationInfo> getAllocationInfo(const void* addr) {
-  if (auto result = heap::getAllocationInfo(addr); result.has_value()) {
+std::optional<PointerInfo> getPointerInfo(const void* addr) {
+  if (auto result = heap::getPointerInfo(addr); result.has_value()) {
     return result;
   }
-  return stack::getAllocationInfo(addr);
+  if (auto result = stack::getPointerInfo(addr); result.has_value()) {
+    return result;
+  }
+  return Runtime::getTracker().getPointerInfo(addr);
 }
 
 }  // namespace typeart::runtime::allocator

@@ -12,6 +12,8 @@
 
 #pragma once
 
+#include "typelib/TypeInterface.h"
+
 #ifdef __cplusplus
 #include <cstddef>
 #else
@@ -23,9 +25,9 @@
 extern "C" {
 #endif
 
-void* typeart_allocator_malloc(int type_id, size_t count, size_t size);
-void* typeart_allocator__Znwm(int type_id, size_t count, size_t size);
-void* typeart_allocator__Znam(int type_id, size_t count, size_t size);
+void* typeart_allocator_malloc(alloc_id_value alloc_id, size_t count, size_t size);
+void* typeart_allocator__Znwm(alloc_id_value alloc_id, size_t count, size_t size);
+void* typeart_allocator__Znam(alloc_id_value alloc_id, size_t count, size_t size);
 int typeart_allocator_free(void*);
 
 // Implemented in Allocator.cpp

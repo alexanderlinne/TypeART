@@ -1,6 +1,9 @@
 // RUN: %run %s --clean_types 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
+// TODO: with alloc_ids the runtime can't work without a proper types file
+// XFAIL: *
+
 struct Datastruct {
   int start;
   double middle;

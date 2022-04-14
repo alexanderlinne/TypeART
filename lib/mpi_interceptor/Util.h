@@ -14,6 +14,7 @@
 #define TYPEART_MPI_INTERCEPTOR_UTIL_H
 
 #include "runtime/RuntimeInterface.h"
+#include "runtime/TypeResolution.h"
 
 #include <mpi.h>
 
@@ -28,7 +29,7 @@ std::string error_message_for(int mpierr);
 // Note: this function cannot distinguish between TA_FP128 und TA_PPC_TP128,
 // therefore TA_FP128 is always returned in case of an 16 byte floating point
 // MPI type. This should be considered by the caller for performing typechecks.
-int type_id_for(MPI_Datatype mpi_type);
+type_id_t::value_type type_id_for(MPI_Datatype mpi_type);
 
 const char* combiner_name_for(int combiner);
 

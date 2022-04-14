@@ -53,8 +53,8 @@ size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
   for (const auto& [malloc, args] : heap) {
     auto malloc_call = llvm::dyn_cast<llvm::CallBase>(args.get_as<llvm::Instruction>(ArgMap::ID::pointer));
     llvm::IRBuilder<> builder(malloc_call);
-    auto allocation_id = args.get_value(ArgMap::ID::allocation_id);
-    auto type_size     = args.get_value(ArgMap::ID::type_size);
+    auto alloc_id  = args.get_value(ArgMap::ID::alloc_id);
+    auto type_size = args.get_value(ArgMap::ID::type_size);
     bool single_byte_type{false};
     if (auto const_int = llvm::dyn_cast<llvm::ConstantInt>(type_size)) {
       single_byte_type = const_int->equalsInt(1);
@@ -94,26 +94,25 @@ size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
 
     auto function_name = malloc_call->getCalledFunction()->getName();
     if (function_name == "malloc") {
-      auto size = malloc_call->getArgOperand(0);
-      auto typeart_malloc =
-          builder.CreateCall(type_art_functions.allocator_malloc, {allocation_id, element_count, size});
+      auto size           = malloc_call->getArgOperand(0);
+      auto typeart_malloc = builder.CreateCall(type_art_functions.allocator_malloc, {alloc_id, element_count, size});
       malloc_call->replaceAllUsesWith(typeart_malloc);
       malloc_call->eraseFromParent();
     } else if (function_name == "calloc") {
       auto num  = malloc_call->getArgOperand(0);
       auto size = malloc_call->getArgOperand(1);
       auto typeart_calloc =
-          builder.CreateCall(type_art_functions.allocator_calloc, {allocation_id, element_count, num, size});
+          builder.CreateCall(type_art_functions.allocator_calloc, {alloc_id, element_count, num, size});
       malloc_call->replaceAllUsesWith(typeart_calloc);
       malloc_call->eraseFromParent();
     } else if (function_name == "_Znwm") {
       auto size          = malloc_call->getArgOperand(0);
-      auto typeart__Znwm = builder.CreateCall(type_art_functions.allocator__Znwm, {allocation_id, element_count, size});
+      auto typeart__Znwm = builder.CreateCall(type_art_functions.allocator__Znwm, {alloc_id, element_count, size});
       malloc_call->replaceAllUsesWith(typeart__Znwm);
       malloc_call->eraseFromParent();
     } else if (function_name == "_Znam") {
       auto size          = malloc_call->getArgOperand(0);
-      auto typeart__Znam = builder.CreateCall(type_art_functions.allocator__Znam, {allocation_id, element_count, size});
+      auto typeart__Znam = builder.CreateCall(type_art_functions.allocator__Znam, {alloc_id, element_count, size});
       malloc_call->replaceAllUsesWith(typeart__Znam);
       malloc_call->eraseFromParent();
     } else {
@@ -159,12 +158,13 @@ std::string typeNameFor(llvm::Type* ty) {
     llvm::errs() << "\n";
   }
   assert(false);
+  return {};
 }
 
 size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
-  namespace config              = typeart::runtime::allocator::config;
-  const auto allocation_id_type = instr_helper.getTypeFor(IType::allocation_id);
-  const auto count_type         = instr_helper.getTypeFor(IType::extent);
+  namespace config         = typeart::runtime::allocator::config;
+  const auto alloc_id_type = instr_helper.getTypeFor(IType::alloc_id);
+  const auto count_type    = instr_helper.getTypeFor(IType::extent);
   for (const auto& [sdata, args] : stack) {
     auto* alloca                = args.get_as<llvm::AllocaInst>(ArgMap::ID::pointer);
     auto& ctx                   = alloca->getContext();
@@ -186,19 +186,19 @@ size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
         const auto allocation_padding = llvm::ArrayType::get(
             llvm::Type::getInt8Ty(ctx), config::stack::get_allocation_padding(alignment, sdata.is_vla));
         wrapper_type = llvm::StructType::create(
-            {allocation_id_type, count_padding, count_type, allocation_padding, allocated_type}, name,
+            {alloc_id_type, count_padding, count_type, allocation_padding, allocated_type}, name,
             /* packed = */ true);
       } else {
         const auto allocation_padding = llvm::ArrayType::get(
             llvm::Type::getInt8Ty(ctx), config::stack::get_allocation_padding(alignment, sdata.is_vla));
-        wrapper_type = llvm::StructType::create({allocation_id_type, allocation_padding, allocated_type}, name,
+        wrapper_type = llvm::StructType::create({alloc_id_type, allocation_padding, allocated_type}, name,
                                                 /* packed = */ true);
       }
     }
 
     llvm::IRBuilder<> IRB(alloca->getNextNode());
 
-    auto allocationIdConst = args.get_value(ArgMap::ID::allocation_id);
+    auto allocIdConst      = args.get_value(ArgMap::ID::alloc_id);
     auto elementCountConst = args.get_value(ArgMap::ID::element_count);
 
     auto wrapper_alloca = IRB.CreateAlloca(wrapper_type);
@@ -222,8 +222,8 @@ size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
     offset_wrapper      = IRB.CreateGEP(offset_wrapper, offset_value);
     offset_wrapper      = IRB.CreateBitCast(offset_wrapper, wrapper_type->getPointerTo());
 
-    const auto allocation_id = IRB.CreateStructGEP(offset_wrapper, 0);
-    IRB.CreateStore(allocationIdConst, allocation_id);
+    const auto alloc_id = IRB.CreateStructGEP(offset_wrapper, 0);
+    IRB.CreateStore(allocIdConst, alloc_id);
 
     if (sdata.is_vla) {
       const auto element_count = IRB.CreateStructGEP(offset_wrapper, 2);

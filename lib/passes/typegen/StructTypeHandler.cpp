@@ -36,13 +36,13 @@ std::string StructTypeHandler::getName() const {
   return getName(type);
 }
 
-llvm::Optional<int> StructTypeHandler::getID() const {
+llvm::Optional<type_id_t> StructTypeHandler::getID() const {
   const auto name = StructTypeHandler::getName(type);
   if (auto it = m_struct_map->find(name); it != m_struct_map->end()) {
     const auto type_id = it->second;
     if (!m_type_db->isUserDefinedType(type_id)) {
-      LOG_ERROR("Expected user defined struct type " << name << " for type id: " << type_id);
-      return TYPEART_UNKNOWN_TYPE;
+      LOG_ERROR("Expected user defined struct type " << name << " for type id: " << type_id.value());
+      return type_id_t::unknown_type;
     }
     return type_id;
   }

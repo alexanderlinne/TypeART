@@ -31,8 +31,10 @@ const char* error_message_for(typeart_status status) {
       return "Error in offset computation";
     case TYPEART_WRONG_KIND:
       return "Wrong type kind";
-    case TYPEART_INVALID_ID:
+    case TYPEART_INVALID_TYPE_ID:
       return "Invalid type ID";
+    case TYPEART_INVALID_ALLOC_ID:
+      return "Invalid alloc ID";
     default:
       return "Invalid error code";
   }
@@ -61,7 +63,7 @@ int type_of() {
 // Note: this function cannot distinguish between TYPEART_FP128 und TYPEART_PPC_TP128,
 // therefore TYPEART_FP128 is always returned in case of an 16 byte floating point
 // MPI type. This should be considered by the caller for performing typechecks.
-int type_id_for(MPI_Datatype mpi_type) {
+type_id_t::value_type type_id_for(MPI_Datatype mpi_type) {
   if (mpi_type == MPI_BYTE) {
     return TYPEART_INT8;
   } else if (mpi_type == MPI_CHAR) {

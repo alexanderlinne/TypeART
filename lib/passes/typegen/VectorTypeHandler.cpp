@@ -80,7 +80,7 @@ llvm::Optional<VectorTypeHandler::VectorData> VectorTypeHandler::getVectorData()
 
 llvm::Optional<VectorTypeHandler::ElementData> VectorTypeHandler::getElementData() const {
   const auto element_id = getElementID();
-  if (!element_id || element_id.getValue() == TYPEART_UNKNOWN_TYPE) {
+  if (!element_id || element_id.getValue() == type_id_t::unknown_type) {
     LOG_WARNING("Unknown vector element id.")
     return None;
   }
@@ -90,13 +90,13 @@ llvm::Optional<VectorTypeHandler::ElementData> VectorTypeHandler::getElementData
   return ElementData{element_id.getValue(), element_type, element_name};
 }
 
-llvm::Optional<int> VectorTypeHandler::getElementID() const {
+llvm::Optional<type_id_t> VectorTypeHandler::getElementID() const {
   auto element_type     = getElementType(type);
   const auto element_id = m.getTypeID(element_type, dl);
 
-  if (element_id == TYPEART_UNKNOWN_TYPE) {
+  if (element_id == type_id_t::unknown_type) {
     LOG_ERROR("Encountered vector of unknown type" << util::dump(*type));
-    return TYPEART_UNKNOWN_TYPE;
+    return type_id_t::unknown_type;
   }
 
   return element_id;
@@ -109,12 +109,12 @@ std::string VectorTypeHandler::getName(const ElementData& data) const {
   return name;
 }
 
-llvm::Optional<int> VectorTypeHandler::getID() const {
+llvm::Optional<type_id_t> VectorTypeHandler::getID() const {
   auto element_data = getElementData();
 
   if (!element_data) {
     LOG_ERROR("Cannot determine element data for " << util::dump(*type))
-    return TYPEART_UNKNOWN_TYPE;
+    return type_id_t::unknown_type;
   }
 
   const auto name = getName(element_data.getValue());
@@ -122,7 +122,7 @@ llvm::Optional<int> VectorTypeHandler::getID() const {
   if (auto it = m_struct_map->find(name); it != m_struct_map->end()) {
     if (!m_type_db->isVectorType(it->second)) {
       LOG_ERROR("Expected vector type for name:" << name << " Vector: " << util::dump(*type))
-      return TYPEART_UNKNOWN_TYPE;
+      return type_id_t::unknown_type;
     }
     return it->second;
   }

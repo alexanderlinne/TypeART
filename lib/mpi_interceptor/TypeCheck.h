@@ -34,11 +34,11 @@ struct Buffer {
   ptrdiff_t offset;
   const void* ptr;
   size_t count;
-  int type_id;
+  type_id_t::value_type type_id;
 
  public:
   static Result<Buffer> create(const void* ptr);
-  static Buffer create(ptrdiff_t offset, const void* ptr, size_t count, int type_id);
+  static Buffer create(ptrdiff_t offset, const void* ptr, size_t count, type_id_t::value_type type_id);
 };
 
 struct MPICombiner {
@@ -53,7 +53,7 @@ struct MPICombiner {
 
 struct MPIType {
   MPI_Datatype mpi_type;
-  int type_id;
+  type_id_t::value_type type_id;
   MPICombiner combiner;
 
  public:

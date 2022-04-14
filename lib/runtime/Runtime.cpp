@@ -14,7 +14,6 @@
 
 #include "AccessCountPrinter.h"
 #include "AccessCounter.h"
-#include "RuntimeData.h"
 #include "TypeIO.h"
 #include "support/Logger.h"
 
@@ -95,16 +94,14 @@ Runtime::~Runtime() {
 
 thread_local size_t Runtime::scope = 0;
 
-std::string Runtime::toString(const void* memAddr, int typeId, size_t count, size_t typeSize, const void* calledFrom) {
-  return get().typeResolution.toString(memAddr, typeId, count, typeSize, calledFrom);
+std::string Runtime::toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id, size_t count,
+                              size_t typeSize, const void* calledFrom) {
+  return get().typeResolution.toString(memAddr, alloc_id, type_id, count, typeSize, calledFrom);
 }
 
-std::string Runtime::toString(const void* memAddr, int typeId, size_t count, const void* calledFrom) {
-  return get().typeResolution.toString(memAddr, typeId, count, calledFrom);
-}
-
-std::string Runtime::toString(const void* addr, const PointerInfo& info) {
-  return get().typeResolution.toString(addr, info);
+std::string Runtime::toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id, size_t count,
+                              const void* calledFrom) {
+  return get().typeResolution.toString(memAddr, alloc_id, type_id, count, calledFrom);
 }
 
 }  // namespace typeart::runtime

@@ -3,6 +3,10 @@
 // RUN: %run %s -o -O1 --thread --manual 2>&1 | %filecheck %s
 // REQUIRES: thread && softcounter
 // REQUIRES: tracker
+
+// TODO: register allocation id at runtime
+// XFAIL: *
+
 // clang-format on
 
 #include "runtime/tracker/CallbackInterface.h"

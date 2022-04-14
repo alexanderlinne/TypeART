@@ -40,7 +40,7 @@ void analyseBuffer(const void* buf, int count, MPI_Datatype type) {
 
     printf("Basetype(%s, addr=%p, size=%i , count=%i)\n", type_name, buf, size, count);
 
-    int type_id;
+    type_id_value type_id;
     size_t count_check;
     typeart_status status = typeart_get_type(buf, &type_id, &count_check);
 

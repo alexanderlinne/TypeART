@@ -1,4 +1,4 @@
-set(TYPE_LIB_SOURCES TypeDB.cpp TypeIO.cpp)
+set(TYPE_LIB_SOURCES TypeDB.cpp TypeIO.cpp TypeDatabase.cpp)
 
 add_library(${TYPEART_PREFIX}_TypesObj OBJECT ${TYPE_LIB_SOURCES})
 

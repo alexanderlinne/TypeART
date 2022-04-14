@@ -9,31 +9,23 @@ namespace typeart::runtime::detail {
 inline typeart_status query_type(const void* addr, int* type, size_t* count) {
   Runtime::getRecorder().incUsedInRequest(addr);
 
-#ifdef TYPEART_USE_ALLOCATOR
-  auto allocation_info = allocator::getAllocationInfo(addr);
-  if (allocation_info.has_value()) {
-    return Runtime::getTypeResolution().getTypeInfo(addr, allocation_info->base_addr, allocation_info->pointer_info,
-                                                    type, count);
-  }
-#endif
-
-  auto alloc = Runtime::getTracker().findBaseAlloc(addr);
-  if (alloc) {
-    return Runtime::getTypeResolution().getTypeInfo(addr, alloc->first, alloc->second, type, count);
+  auto pointer_info = Runtime::getPointerInfo(addr);
+  if (pointer_info.has_value()) {
+    return Runtime::getTypeResolution().getTypeInfo(addr, pointer_info.value(), type, count);
   }
   return TYPEART_UNKNOWN_ADDRESS;
 }
 
-inline typeart_status query_struct_layout(int id, typeart_struct_layout* struct_layout) {
+inline typeart_status query_struct_layout(type_id_t type_id, typeart_struct_layout* struct_layout) {
   const typeart::StructTypeInfo* struct_info;
-  typeart_status status = Runtime::getTypeResolution().getStructInfo(id, &struct_info);
+  typeart_status status = Runtime::getTypeResolution().getStructInfo(type_id, &struct_info);
   if (status == TYPEART_OK) {
-    struct_layout->type_id      = struct_info->type_id;
+    struct_layout->type_id      = struct_info->type_id.value();
     struct_layout->name         = struct_info->name.c_str();
     struct_layout->num_members  = struct_info->num_members;
     struct_layout->extent       = struct_info->extent;
     struct_layout->offsets      = &struct_info->offsets[0];
-    struct_layout->member_types = &struct_info->member_types[0];
+    struct_layout->member_types = reinterpret_cast<const type_id_t::value_type*>(&struct_info->member_types[0]);
     struct_layout->count        = &struct_info->array_sizes[0];
   }
   return status;
@@ -43,23 +35,15 @@ char* string2char(std::string_view src) {
   const size_t source_length = src.size() + 1;  // +1 for '\0'
   char* string_copy          = nullptr;
 
-#ifdef TYPEART_USE_ALLOCATOR
-  string_copy = (char*)typeart_allocator_malloc(TYPEART_INT8, source_length, sizeof(char) * source_length);
-#else
+  // TODO track allocation
   string_copy = (char*)malloc(sizeof(char) * source_length);
-  if (string_copy == nullptr) {
-    return nullptr;
-  }
-  const void* ret_addr = __builtin_return_address(0);
-  Runtime::getTracker().onAlloc(string_copy, TYPEART_INT8, source_length, ret_addr);
-#endif
-
   memcpy(string_copy, src.data(), source_length);
   return string_copy;
 };
 
 }  // namespace typeart::runtime::detail
 
+using namespace typeart;
 using namespace typeart::runtime;
 
 /**
@@ -70,16 +54,9 @@ using namespace typeart::runtime;
 typeart_status typeart_get_builtin_type(const void* addr, BuiltinType* type) {
   auto guard = Runtime::scopeGuard();
 
-#ifdef TYPEART_USE_ALLOCATOR
-  auto allocation_info = allocator::getAllocationInfo(addr);
-  if (allocation_info.has_value()) {
-    return Runtime::getTypeResolution().getBuiltinInfo(addr, allocation_info->pointer_info, type);
-  }
-#endif
-
-  auto alloc = Runtime::getTracker().findBaseAlloc(addr);
-  if (alloc) {
-    return Runtime::getTypeResolution().getBuiltinInfo(addr, alloc->second, type);
+  auto pointer_info = Runtime::getPointerInfo(addr);
+  if (pointer_info.has_value()) {
+    return Runtime::getTypeResolution().getBuiltinInfo(addr, pointer_info.value(), type);
   }
   return TYPEART_UNKNOWN_ADDRESS;
 }
@@ -109,21 +86,15 @@ typeart_status typeart_get_containing_type(const void* addr, int* type, size_t* 
                                            size_t* offset) {
   auto guard = Runtime::scopeGuard();
 
-#ifdef TYPEART_USE_ALLOCATOR
-  auto alloc = allocator::getAllocationInfo(addr);
-  if (alloc.has_value()) {
-    *type         = alloc->pointer_info.typeId;
-    *base_address = alloc->base_addr;
-    return Runtime::getTypeResolution().getContainingTypeInfo(addr, alloc->base_addr, alloc->pointer_info, count,
-                                                              offset);
-  }
-#endif
+  auto pointer_info = std::optional<PointerInfo>{};
 
-  auto alloc2 = Runtime::getTracker().findBaseAlloc(addr);
-  if (alloc2) {
-    *type         = alloc2->second.typeId;
-    *base_address = alloc2->first;
-    return Runtime::getTypeResolution().getContainingTypeInfo(addr, alloc2->first, alloc2->second, count, offset);
+  pointer_info = Runtime::getPointerInfo(addr);
+  if (pointer_info.has_value()) {
+    const typeart::AllocationInfo* alloc_info;
+    Runtime::getTypeResolution().getAllocationInfo(pointer_info->alloc_id, &alloc_info);
+    *type         = alloc_info->type_id.value();
+    *base_address = pointer_info->base_addr;
+    return Runtime::getTypeResolution().getContainingTypeInfo(addr, pointer_info.value(), count, offset);
   }
   return TYPEART_UNKNOWN_ADDRESS;
 }
@@ -138,7 +109,7 @@ typeart_status typeart_get_subtype(const void* base_addr, size_t offset, typeart
 
 typeart_status typeart_resolve_type_addr(const void* addr, typeart_struct_layout* struct_layout) {
   auto guard = Runtime::scopeGuard();
-  int type_id{0};
+  type_id_t::value_type type_id{0};
   size_t size{0};
   auto status = typeart_get_type(addr, &type_id, &size);
   if (status != TYPEART_OK) {
@@ -155,17 +126,9 @@ typeart_status typeart_resolve_type_id(int type_id, typeart_struct_layout* struc
 typeart_status typeart_get_return_address(const void* addr, const void** return_addr) {
   auto guard = Runtime::scopeGuard();
 
-#ifdef TYPEART_USE_ALLOCATOR
-  auto alloc = allocator::getAllocationInfo(addr);
-  if (alloc.has_value()) {
-    *return_addr = alloc->pointer_info.debug;
-    return TYPEART_OK;
-  }
-#endif
-
-  auto alloc2 = Runtime::getTracker().findBaseAlloc(addr);
-  if (alloc2) {
-    *return_addr = alloc2.getValue().second.debug;
+  auto pointer_info = Runtime::getPointerInfo(addr);
+  if (pointer_info) {
+    *return_addr = pointer_info->debug;
     return TYPEART_OK;
   }
   *return_addr = nullptr;

@@ -51,35 +51,39 @@ void TypeDB::clear() {
   // reverseTypeMap.clear();
 }
 
-bool TypeDB::isBuiltinType(int type_id) const {
-  return type_id >= TYPEART_INT8 && type_id < TYPEART_NUM_VALID_IDS;
+bool TypeDB::isBuiltinType(type_id_t type_id) const {
+  return type_id.value() >= TYPEART_INT8 && type_id.value() < TYPEART_NUM_VALID_IDS;
 }
 
-bool TypeDB::isReservedType(int type_id) const {
-  return type_id < TYPEART_NUM_RESERVED_IDS;
+bool TypeDB::isReservedType(type_id_t type_id) const {
+  return type_id.value() < TYPEART_NUM_RESERVED_IDS;
 }
 
-bool TypeDB::isStructType(int type_id) const {
-  return type_id >= TYPEART_NUM_RESERVED_IDS;
+bool TypeDB::isStructType(type_id_t type_id) const {
+  return type_id.value() >= TYPEART_NUM_RESERVED_IDS;
 }
 
-bool TypeDB::isUserDefinedType(int type_id) const {
+bool TypeDB::isUserDefinedType(type_id_t type_id) const {
   const auto* structInfo = getStructInfo(type_id);
   return (structInfo != nullptr) &&
          ((static_cast<int>(structInfo->flag) & static_cast<int>(StructTypeFlag::USER_DEFINED)) != 0);
 }
 
-bool TypeDB::isVectorType(int type_id) const {
+bool TypeDB::isVectorType(type_id_t type_id) const {
   const auto* structInfo = getStructInfo(type_id);
   return (structInfo != nullptr) &&
          ((static_cast<int>(structInfo->flag) & static_cast<int>(StructTypeFlag::LLVM_VECTOR)) != 0);
 }
 
-bool TypeDB::isValid(int type_id) const {
+bool TypeDB::isValid(type_id_t type_id) const {
   if (isBuiltinType(type_id)) {
     return true;
   }
   return typeid_to_list_index.find(type_id) != typeid_to_list_index.end();
+}
+
+bool TypeDB::isValid(alloc_id_t alloc_id) const {
+  return alloc_id.value() > 0 && alloc_id.value() <= static_cast<alloc_id_t::value_type>(allocation_info.size());
 }
 
 void TypeDB::registerStruct(const StructTypeInfo& struct_type) {
@@ -100,33 +104,33 @@ void TypeDB::registerStruct(const StructTypeInfo& struct_type) {
   typeid_to_list_index.insert({struct_type.type_id, struct_info_vec.size() - 1});
 }
 
-allocation_id_t TypeDB::getOrCreateAllocationId(int type_id, std::optional<size_t> count,
-                                                std::optional<ptrdiff_t> base_ptr_offset) {
+alloc_id_t TypeDB::getOrCreateAllocationId(type_id_t type_id, std::optional<size_t> count,
+                                           std::optional<ptrdiff_t> base_ptr_offset) {
   auto it = std::find_if(allocation_info.begin(), allocation_info.end(), [&](auto& info) {
     return info.type_id == type_id && info.count == count && info.base_ptr_offset == base_ptr_offset;
   });
   if (it != allocation_info.end()) {
-    return it->allocation_id;
+    return it->alloc_id;
   }
   AllocationInfo info;
-  info.allocation_id   = static_cast<allocation_id_t>(allocation_info.size() + 1);
+  info.alloc_id        = static_cast<alloc_id_t::value_type>(allocation_info.size() + 1);
   info.type_id         = type_id;
   info.count           = count;
   info.base_ptr_offset = base_ptr_offset;
   allocation_info.push_back(std::move(info));
-  return allocation_info.back().allocation_id;
+  return allocation_info.back().alloc_id;
 }
 
 void TypeDB::registerAllocations(std::vector<AllocationInfo> allocations) {
   allocation_info = std::move(allocations);
   for (size_t i = 0; i < allocation_info.size(); ++i) {
-    assert(allocation_info[i].allocation_id - 1 == static_cast<allocation_id_t>(i));
+    assert(allocation_info[i].alloc_id.value() - 1 == static_cast<alloc_id_t::value_type>(i));
   }
 }
 
-const std::string& TypeDB::getTypeName(int type_id) const {
+const std::string& TypeDB::getTypeName(type_id_t type_id) const {
   if (isBuiltinType(type_id)) {
-    return BuiltinNames[type_id];
+    return BuiltinNames[type_id.value()];
   }
   if (isStructType(type_id)) {
     const auto* structInfo = getStructInfo(type_id);
@@ -137,10 +141,10 @@ const std::string& TypeDB::getTypeName(int type_id) const {
   return UnknownStructName;
 }
 
-size_t TypeDB::getTypeSize(int type_id) const {
+size_t TypeDB::getTypeSize(type_id_t type_id) const {
   if (isReservedType(type_id)) {
     if (isBuiltinType(type_id)) {
-      return BuiltinSizes[type_id];
+      return BuiltinSizes[type_id.value()];
     }
     return 0;
   }
@@ -152,7 +156,7 @@ size_t TypeDB::getTypeSize(int type_id) const {
   return 0;
 }
 
-const StructTypeInfo* TypeDB::getStructInfo(int type_id) const {
+const StructTypeInfo* TypeDB::getStructInfo(type_id_t type_id) const {
   const auto index_iter = typeid_to_list_index.find(type_id);
   if (index_iter != typeid_to_list_index.end()) {
     return &struct_info_vec[index_iter->second];
@@ -160,11 +164,11 @@ const StructTypeInfo* TypeDB::getStructInfo(int type_id) const {
   return nullptr;
 }
 
-const AllocationInfo* TypeDB::getAllocationInfo(allocation_id_t allocation_id) const {
-  if (allocation_id == 0 || allocation_id > static_cast<allocation_id_t>(allocation_info.size())) {
+const AllocationInfo* TypeDB::getAllocationInfo(alloc_id_t alloc_id) const {
+  if (alloc_id.value() == 0 || alloc_id.value() > static_cast<alloc_id_t::value_type>(allocation_info.size())) {
     return nullptr;
   }
-  return &allocation_info[allocation_id - 1];
+  return &allocation_info[alloc_id.value() - 1];
 }
 
 const std::vector<StructTypeInfo>& TypeDB::getStructList() const {
@@ -175,8 +179,8 @@ const std::vector<AllocationInfo>& TypeDB::getAllocationInfo() const {
   return allocation_info;
 }
 
-bool TypeDB::isUnknown(int type_id) const {
-  return type_id == TYPEART_UNKNOWN_TYPE;
+bool TypeDB::isUnknown(type_id_t type_id) const {
+  return type_id == type_id_t::unknown_type;
 }
 
 }  // namespace typeart

@@ -33,23 +33,23 @@ namespace typeart {
 class TypeManager final : public TypeGenerator {
   std::string file;
   TypeDB typeDB;
-  llvm::StringMap<int> structMap;
+  llvm::StringMap<type_id_t> structMap;
   size_t structCount;
 
  public:
   explicit TypeManager(std::string file);
   [[nodiscard]] std::pair<bool, std::error_code> load() override;
   [[nodiscard]] std::pair<bool, std::error_code> store() const override;
-  [[nodiscard]] int getOrRegisterType(llvm::Type* type, const llvm::DataLayout& dl) override;
-  [[nodiscard]] int getTypeID(llvm::Type* type, const llvm::DataLayout& dl) const override;
+  [[nodiscard]] type_id_t getOrRegisterType(llvm::Type* type, const llvm::DataLayout& dl) override;
+  [[nodiscard]] type_id_t getTypeID(llvm::Type* type, const llvm::DataLayout& dl) const override;
   [[nodiscard]] const TypeDatabase& getTypeDatabase() const override;
-  [[nodiscard]] int registerAllocation(int type_id, std::optional<size_t> count,
-                                       std::optional<ptrdiff_t> base_ptr_offset) override;
+  [[nodiscard]] alloc_id_t getOrRegisterAllocation(type_id_t type_id, std::optional<size_t> count,
+                                                   std::optional<ptrdiff_t> base_ptr_offset) override;
 
  private:
-  [[nodiscard]] int getOrRegisterStruct(llvm::StructType* type, const llvm::DataLayout& dl);
-  [[nodiscard]] int getOrRegisterVector(llvm::VectorType* type, const llvm::DataLayout& dl);
-  [[nodiscard]] int reserveNextId();
+  [[nodiscard]] type_id_t getOrRegisterStruct(llvm::StructType* type, const llvm::DataLayout& dl);
+  [[nodiscard]] type_id_t getOrRegisterVector(llvm::VectorType* type, const llvm::DataLayout& dl);
+  [[nodiscard]] type_id_t reserveNextId();
 };
 
 }  // namespace typeart

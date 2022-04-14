@@ -7,14 +7,14 @@ namespace typeart::runtime::allocator::config {
 
 constexpr size_t page_size = 4096;
 
-// Offset from the pointer to an allocation_id to the pointer of the
+// Offset from the pointer to an alloc_id to the pointer of the
 // corresponding count in bytes, if the count is stored within the
 // allocation.
-constexpr ptrdiff_t count_offset = std::max(sizeof(allocation_id_t), alignof(size_t));
+constexpr ptrdiff_t count_offset = std::max(sizeof(alloc_id_t), alignof(size_t));
 
 // Computes the required padding between the allocation id and the count,
 // if the count is stored in the actual allocation.
-constexpr size_t count_padding = count_offset - sizeof(allocation_id_t);
+constexpr size_t count_padding = count_offset - sizeof(alloc_id_t);
 
 namespace heap {
 constexpr size_t region_size         = 1UL << 32;  // 4GB
@@ -115,7 +115,7 @@ constexpr ptrdiff_t base_ptr_offset_for(size_t alignment, bool is_vla) {
   if (is_vla) {
     return std::max(next_power_of_two(count_offset + sizeof(size_t)), alignment);
   } else {
-    return std::max(sizeof(allocation_id_t), alignment);
+    return std::max(sizeof(alloc_id_t), alignment);
   }
 }
 
@@ -125,10 +125,10 @@ constexpr size_t get_allocation_padding(size_t alignment, bool is_vla) {
   if (is_vla) {
     return base_ptr_offset_for(alignment, is_vla) - (count_offset + sizeof(size_t));
   } else {
-    return base_ptr_offset_for(alignment, is_vla) - sizeof(allocation_id_t);
+    return base_ptr_offset_for(alignment, is_vla) - sizeof(alloc_id_t);
   }
 }
 
 }  // namespace stack
 
-}  // namespace typeart::allocator::config
+}  // namespace typeart::runtime::allocator::config

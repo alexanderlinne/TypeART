@@ -39,9 +39,27 @@ auto open_flag() {
 }
 }  // namespace compat
 
+template <>
+struct ScalarTraits<typeart::type_id_t> {
+  static void output(const typeart::type_id_t& value, void* p, llvm::raw_ostream& out) {
+    ScalarTraits<typeart::type_id_t::value_type>::output(value.value(), p, out);
+  }
+  static llvm::StringRef input(llvm::StringRef scalar, void* p, typeart::type_id_t& value) {
+    typeart::type_id_t::value_type actual_value;
+    auto result = ScalarTraits<typeart::type_id_t::value_type>::input(scalar, p, actual_value);
+    value       = actual_value;
+    return result;
+  }
+  static QuotingType mustQuote(llvm::StringRef scalar) {
+    return ScalarTraits<typeart::type_id_t::value_type>::mustQuote(scalar);
+  }
+};
+
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(typeart::type_id_t)
+
 struct AllocationInfoIO {
-  typeart::allocation_id_t allocation_id;
-  int type_id;
+  typeart::alloc_id_t::value_type alloc_id;
+  typeart::type_id_t::value_type type_id;
 
   llvm::Optional<size_t> count;
 
@@ -51,8 +69,8 @@ struct AllocationInfoIO {
 
   static AllocationInfoIO from(const typeart::AllocationInfo& info) {
     return {
-        info.allocation_id,                                                                           //
-        info.type_id,                                                                                 //
+        info.alloc_id.value(),                                                                        //
+        info.type_id.value(),                                                                         //
         info.count.has_value() ? llvm::Optional{info.count.value()} : llvm::None,                     //
         info.base_ptr_offset.has_value() ? llvm::Optional{info.base_ptr_offset.value()} : llvm::None  //
     };
@@ -60,7 +78,7 @@ struct AllocationInfoIO {
 
   typeart::AllocationInfo as_allocation_info() {
     return {
-        allocation_id,                                                                         //
+        alloc_id,                                                                              //
         type_id,                                                                               //
         count.hasValue() ? std::optional{count.getValue()} : std::nullopt,                     //
         base_ptr_offset.hasValue() ? std::optional{base_ptr_offset.getValue()} : std::nullopt  //
@@ -84,7 +102,7 @@ struct llvm::yaml::MappingTraits<TypeFile> {
 template <>
 struct llvm::yaml::MappingTraits<AllocationInfoIO> {
   static void mapping(IO& io, AllocationInfoIO& info) {
-    io.mapRequired("id", info.allocation_id);
+    io.mapRequired("id", info.alloc_id);
     io.mapRequired("type_id", info.type_id);
     io.mapOptional("count", info.count);
     io.mapOptional("base_ptr_offset", info.base_ptr_offset);

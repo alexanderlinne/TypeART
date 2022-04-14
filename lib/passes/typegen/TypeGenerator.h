@@ -29,9 +29,9 @@ namespace typeart {
 
 class TypeGenerator {
  public:
-  [[nodiscard]] virtual int getOrRegisterType(llvm::Type* type, const llvm::DataLayout& layout) = 0;
+  [[nodiscard]] virtual type_id_t getOrRegisterType(llvm::Type* type, const llvm::DataLayout& layout) = 0;
 
-  [[nodiscard]] virtual int getTypeID(llvm::Type* type, const llvm::DataLayout& layout) const = 0;
+  [[nodiscard]] virtual type_id_t getTypeID(llvm::Type* type, const llvm::DataLayout& layout) const = 0;
 
   [[nodiscard]] virtual const TypeDatabase& getTypeDatabase() const = 0;
 
@@ -39,8 +39,8 @@ class TypeGenerator {
 
   [[nodiscard]] virtual std::pair<bool, std::error_code> store() const = 0;
 
-  [[nodiscard]] virtual int registerAllocation(int type_id, std::optional<size_t> count,
-                                               std::optional<ptrdiff_t> base_ptr_offset) = 0;
+  [[nodiscard]] virtual alloc_id_t getOrRegisterAllocation(type_id_t type_id, std::optional<size_t> count,
+                                                           std::optional<ptrdiff_t> base_ptr_offset) = 0;
 
   virtual ~TypeGenerator() = default;
 };

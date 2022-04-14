@@ -13,7 +13,7 @@
 #ifndef TYPEART_ALLOCMAPWRAPPER_H
 #define TYPEART_ALLOCMAPWRAPPER_H
 
-#include "runtime/RuntimeData.h"
+#include "Types.h"
 
 #include "llvm/ADT/Optional.h"
 
@@ -64,7 +64,7 @@ struct MapOp {
   template <typename PointerMap>
   [[nodiscard]] inline static bool put(PointerMap&& xlocked_map, const void* addr, const RuntimeT::MappedType& data) {
     auto& def             = (*xlocked_map)[addr];
-    const bool overridden = (def.typeId != -1);
+    const bool overridden = (def.alloc_id != alloc_id_t::invalid);
     def                   = data;
     return overridden;
   }

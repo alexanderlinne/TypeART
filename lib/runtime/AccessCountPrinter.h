@@ -16,6 +16,7 @@
 #include "AccessCounter.h"
 #include "support/Logger.h"
 #include "support/Table.h"
+#include "tracker/Types.h"
 
 #include <fstream>
 #include <map>
@@ -30,18 +31,18 @@
 namespace typeart::runtime::softcounter {
 namespace memory {
 struct MemOverhead {
-  static constexpr auto pointerMapSize = sizeof(RuntimeT::PointerMap);  // Map overhead
+  static constexpr auto pointerMapSize = sizeof(tracker::RuntimeT::PointerMap);  // Map overhead
   static constexpr auto perNodeSizeMap =
-      64U + sizeof(RuntimeT::MapEntry);  // rough estimate, not applicable to btree; 64U is internal node size
-  static constexpr auto stackVectorSize  = sizeof(RuntimeT::Stack);       // Stack overhead
-  static constexpr auto perNodeSizeStack = sizeof(RuntimeT::StackEntry);  // Stack allocs
+      64U + sizeof(tracker::RuntimeT::MapEntry);  // rough estimate, not applicable to btree; 64U is internal node size
+  static constexpr auto stackVectorSize  = sizeof(tracker::RuntimeT::Stack);       // Stack overhead
+  static constexpr auto perNodeSizeStack = sizeof(tracker::RuntimeT::StackEntry);  // Stack allocs
   double stack{0};
   double map{0};
 };
 inline MemOverhead estimate(Counter stack_max, Counter heap_max, Counter global_max, const double scale = 1024.0) {
   MemOverhead mem;
   mem.stack = double(MemOverhead::stackVectorSize +
-                     MemOverhead::perNodeSizeStack * std::max<size_t>(RuntimeT::StackReserve, stack_max)) /
+                     MemOverhead::perNodeSizeStack * std::max<size_t>(tracker::RuntimeT::StackReserve, stack_max)) /
               scale;
   mem.map =
       double(MemOverhead::pointerMapSize + MemOverhead::perNodeSizeMap * (stack_max + heap_max + global_max)) / scale;
@@ -79,7 +80,7 @@ void serialize(const Recorder& r, std::ostringstream& buf) {
 
     t.print(buf);
 
-    std::set<int> type_id_set;
+    std::set<type_id_t> type_id_set;
     const auto fill_set = [&type_id_set](const auto& map) {
       for (const auto& [key, val] : map) {
         type_id_set.insert(key);
@@ -102,9 +103,9 @@ void serialize(const Recorder& r, std::ostringstream& buf) {
     Table type_table("Allocation type detail (heap, stack, global)");
     type_table.table_header = '#';
     for (auto type_id : type_id_set) {
-      type_table.put(Row::make(std::to_string(type_id), count(r.getHeapAlloc(), type_id),
+      type_table.put(Row::make(std::to_string(type_id.value()), count(r.getHeapAlloc(), type_id),
                                count(r.getStackAlloc(), type_id), count(r.getGlobalAlloc(), type_id),
-                               typeart_get_type_name(type_id)));
+                               typeart_get_type_name(type_id.value())));
     }
 
     type_table.print(buf);
@@ -112,8 +113,8 @@ void serialize(const Recorder& r, std::ostringstream& buf) {
     Table type_table_free("Free allocation type detail (heap, stack)");
     type_table_free.table_header = '#';
     for (auto type_id : type_id_set) {
-      type_table_free.put(Row::make(std::to_string(type_id), count(r.getHeapFree(), type_id),
-                                    count(r.getStackFree(), type_id), typeart_get_type_name(type_id)));
+      type_table_free.put(Row::make(std::to_string(type_id.value()), count(r.getHeapFree(), type_id),
+                                    count(r.getStackFree(), type_id), typeart_get_type_name(type_id.value())));
     }
 
     type_table_free.print(buf);

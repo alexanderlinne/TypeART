@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
     printf("Error not loaded type file.\n");
   }
   printf("Unknown: %i %i %i\n", database->isUnknown(0), database->isUnknown(257),
-         database->isUnknown(TYPEART_UNKNOWN_TYPE));
+         database->isUnknown(typeart::type_id_t::unknown_type));
   printf("Unknown struct name: %s\n", database->getTypeName(1000).c_str());
 
   const auto register_struct = [&database = database](int id, const std::string& name) {

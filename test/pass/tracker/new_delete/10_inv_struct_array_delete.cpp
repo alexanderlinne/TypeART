@@ -11,7 +11,7 @@ struct S1 {
 };
 
 // CHECK: invoke{{.*}} i8* @_Znam(i64 56)
-// CHECK: call void @typeart_tracker_alloc(i8* [[POINTER:%[0-9a-z]+]], i32 {{2[0-9]+}}, i64 3)
+// CHECK: call void @typeart_tracker_alloc(i8* [[POINTER:%[0-9a-z]+]], i32 {{[0-9]*}}, i64 3)
 // CHECK: [[MEMORYBLOB:%[0-9a-z]+]] = getelementptr inbounds i8, i8* [[ARRPTR:%[0-9a-z]+]], i64 -8
 // CHECK: call void @_ZdaPv(i8* [[MEMORYBLOB]])
 // CHECK-NEXT: call void @typeart_tracker_free(i8* [[ARRPTR]])
@@ -27,7 +27,7 @@ void foo() {
 }
 
 // CHECK: invoke{{.*}} i8* @_Znam(i64 40)
-// CHECK: call void @typeart_tracker_alloc(i8* [[POINTER:%[0-9a-z]+]], i32 {{2[0-9]+}}, i64 2)
+// CHECK: call void @typeart_tracker_alloc(i8* [[POINTER:%[0-9a-z]+]], i32 {{[0-9]*}}, i64 2)
 // CHECK: [[MEMORYBLOB:%[0-9a-z]+]] = getelementptr inbounds i8, i8* [[ARRPTR:%[0-9a-z]+]], i64 -8
 // CHECK: call void @_ZdaPv(i8* [[MEMORYBLOB]])
 // CHECK-NEXT: call void @typeart_tracker_free(i8* [[ARRPTR]])

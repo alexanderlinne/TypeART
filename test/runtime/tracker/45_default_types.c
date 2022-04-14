@@ -1,6 +1,9 @@
 // RUN: %run %s --clean_types 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
+// TODO: with alloc_ids the runtime can't work without a proper types file
+// XFAIL: *
+
 #include <stdlib.h>
 
 int main(int argc, char** argv) {

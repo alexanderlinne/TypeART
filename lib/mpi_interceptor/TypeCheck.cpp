@@ -26,7 +26,7 @@
 namespace typeart {
 
 Result<Buffer> Buffer::create(const void* ptr) {
-  int type_id;
+  type_id_t::value_type type_id;
   size_t count          = 0;
   auto typeart_status_v = typeart_get_type(ptr, &type_id, &count);
 
@@ -37,7 +37,7 @@ Result<Buffer> Buffer::create(const void* ptr) {
   return Buffer{0, ptr, count, type_id};
 }
 
-Buffer Buffer::create(ptrdiff_t offset, const void* ptr, size_t count, int type_id) {
+Buffer Buffer::create(ptrdiff_t offset, const void* ptr, size_t count, type_id_t::value_type type_id) {
   return Buffer{offset, ptr, count, type_id};
 }
 
@@ -137,7 +137,7 @@ Result<void> check_buffer(const Buffer& buffer, const MPIType& type, int count) 
   typeart_struct_layout struct_layout;
   auto status = typeart_resolve_type_id(buffer.type_id, &struct_layout);
 
-  if (status == TYPEART_INVALID_ID) {
+  if (status == TYPEART_INVALID_TYPE_ID) {
     auto message = fmt::format("Buffer::create received an invalid type_id {}", buffer.type_id);
     return make_internal_error<InvalidArgument>(message);
   }
@@ -168,7 +168,7 @@ Result<void> check_buffer(const Buffer& buffer, const MPIType& type, int count) 
 
     status = typeart_resolve_type_id(first_member.type_id, &struct_layout);
 
-    if (status == TYPEART_INVALID_ID) {
+    if (status == TYPEART_INVALID_TYPE_ID) {
       auto message = fmt::format("Buffer::create received an invalid type_id {}", buffer.type_id);
       return make_internal_error<InvalidArgument>(message);
     }
@@ -338,7 +338,7 @@ Result<Multipliers> check_combiner_struct(const Buffer& buffer, const MPIType& t
   typeart_struct_layout struct_layout;
   typeart_status status = typeart_resolve_type_id(buffer.type_id, &struct_layout);
 
-  if (status == TYPEART_INVALID_ID) {
+  if (status == TYPEART_INVALID_TYPE_ID) {
     auto message = fmt::format("Buffer::create received an invalid type_id {}", buffer.type_id);
     return make_internal_error<InvalidArgument>(message);
   }

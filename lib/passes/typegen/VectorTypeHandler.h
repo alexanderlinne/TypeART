@@ -13,6 +13,8 @@
 #ifndef TYPEART_VECTORTYPEHANDLER_H
 #define TYPEART_VECTORTYPEHANDLER_H
 
+#include "typelib/TypeDatabase.h"
+
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringMap.h"
 
@@ -33,7 +35,7 @@ struct VectorTypeHandler {
   // To avoid problems with padding bytes due to alignment, vector types are represented as structs rather than static
   // arrays. They are given special names and are marked with a TA_VEC flag to avoid confusion.
 
-  const llvm::StringMap<int>* m_struct_map;
+  const llvm::StringMap<type_id_t>* m_struct_map;
   const TypeDatabase* m_type_db;
 
   llvm::VectorType* type;
@@ -47,8 +49,8 @@ struct VectorTypeHandler {
   };
 
   struct ElementData {
-    int element_id{-1};
-    llvm::Type* element_type{nullptr};
+    type_id_t element_id     = type_id_t::unknown_type;
+    llvm::Type* element_type = nullptr;
     std::string element_name;
   };
 
@@ -58,11 +60,11 @@ struct VectorTypeHandler {
 
   [[nodiscard]] llvm::Optional<ElementData> getElementData() const;
 
-  [[nodiscard]] llvm::Optional<int> getElementID() const;
+  [[nodiscard]] llvm::Optional<type_id_t> getElementID() const;
 
   [[nodiscard]] std::string getName(const ElementData& data) const;
 
-  [[nodiscard]] llvm::Optional<int> getID() const;
+  [[nodiscard]] llvm::Optional<type_id_t> getID() const;
 };
 
 }  // namespace typeart

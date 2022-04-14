@@ -60,7 +60,7 @@ llvm::Function* make_function(llvm::Module& m, llvm::StringRef basename, llvm::A
 
 TypeArtFunctions::TypeArtFunctions(llvm::Module& m) {
   auto instrumentation_helper = InstrumentationHelper(m);
-  auto alloc_arg_types        = instrumentation_helper.make_parameters(IType::ptr, IType::type_id, IType::extent);
+  auto alloc_arg_types        = instrumentation_helper.make_parameters(IType::ptr, IType::alloc_id, IType::extent);
   auto free_arg_types         = instrumentation_helper.make_parameters(IType::ptr);
   auto leavescope_arg_types   = instrumentation_helper.make_parameters(IType::stack_count);
   tracker_alloc               = make_function(m, "typeart_tracker_alloc", alloc_arg_types);
@@ -74,9 +74,9 @@ TypeArtFunctions::TypeArtFunctions(llvm::Module& m) {
   tracker_free_omp         = make_function(m, "typeart_tracker_free_omp", free_arg_types);
   tracker_leave_scope_omp  = make_function(m, "typeart_tracker_leave_scope_omp", leavescope_arg_types);
 
-  auto malloc_arg_types = instrumentation_helper.make_parameters(IType::allocation_id, IType::extent, IType::extent);
+  auto malloc_arg_types = instrumentation_helper.make_parameters(IType::alloc_id, IType::extent, IType::extent);
   auto calloc_arg_types =
-      instrumentation_helper.make_parameters(IType::allocation_id, IType::extent, IType::extent, IType::extent);
+      instrumentation_helper.make_parameters(IType::alloc_id, IType::extent, IType::extent, IType::extent);
   auto ptr_type    = instrumentation_helper.getTypeFor(IType::ptr);
   allocator_malloc = make_function(m, "typeart_allocator_malloc", ptr_type, malloc_arg_types);
   allocator_calloc = make_function(m, "typeart_allocator_calloc", ptr_type, calloc_arg_types);

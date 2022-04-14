@@ -24,9 +24,10 @@ ArgumentParser::ArgumentParser(llvm::Module& m, TypeGenerator* tm)
 HeapArgList ArgumentParser::collectHeap(const MallocDataList& mallocs) {
   auto result = tracker_parser.collectHeap(mallocs);
   for (auto& data : result) {
-    const auto type_id      = llvm::dyn_cast<llvm::ConstantInt>(data.args[ArgMap::ID::type_id])->getZExtValue();
-    const auto allocationId = type_m->registerAllocation(static_cast<int>(type_id), {}, {});
-    data.args[ArgMap::ID::allocation_id] = instr_helper.getConstantFor(IType::allocation_id, allocationId);
+    const auto type_id = llvm::dyn_cast<llvm::ConstantInt>(data.args[ArgMap::ID::type_id])->getZExtValue();
+    const auto allocId =
+        type_m->getOrRegisterAllocation(static_cast<type_id_t::value_type>(type_id), {}, {});
+    data.args[ArgMap::ID::alloc_id] = instr_helper.getConstantFor(IType::alloc_id, allocId.value());
   }
   return result;
 }
@@ -51,8 +52,9 @@ StackArgList ArgumentParser::collectStack(const AllocaDataList& allocs) {
     }
     auto type_id         = llvm::dyn_cast<llvm::ConstantInt>(data.args[ArgMap::ID::type_id])->getZExtValue();
     auto base_ptr_offset = config::stack::base_ptr_offset_for(alloca->getAlignment(), data.mem_data.is_vla);
-    auto allocation_id   = type_m->registerAllocation(static_cast<int>(type_id), elementCount, base_ptr_offset);
-    data.args[ArgMap::ID::allocation_id] = instr_helper.getConstantFor(IType::allocation_id, allocation_id);
+    auto alloc_id        = type_m->getOrRegisterAllocation(static_cast<type_id_t::value_type>(type_id),
+                                                           elementCount, base_ptr_offset);
+    data.args[ArgMap::ID::alloc_id] = instr_helper.getConstantFor(IType::alloc_id, alloc_id.value());
   }
   return result;
 }

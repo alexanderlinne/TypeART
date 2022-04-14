@@ -18,7 +18,7 @@ typedef struct {
 
 // CHECK-OPT: tail call void @free
 // CHECK-OPT-NEXT: call void @typeart_tracker_free
-// CHECK-OPT: call void @typeart_tracker_alloc(i8* %{{[0-9a-z]+}}, i32 0,
+// CHECK-OPT: call void @typeart_tracker_alloc(i8* %{{[0-9a-z]+}}, i32 {{[0-9]*}},
 // CHECK-OPT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{(align (4|16)[[:space:]])?}}%{{[0-9a-z]+}},
 void setVartypes(struct_grid* pgrid, int nvars, int* vartypes /* = i32 ptr */) {
   int* new_vartypes;

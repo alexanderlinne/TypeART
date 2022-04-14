@@ -17,7 +17,7 @@ struct Secondstruct {
   float end;
 };
 
-void print_data(int type_id) {
+void print_data(type_id_value type_id) {
   const char* typeart_name = typeart_get_type_name(type_id);
   size_t size              = typeart_get_type_size(type_id);
   bool is_builtin          = typeart_is_builtin_type(type_id);
@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
   struct Datastruct data     = {0};
   struct Secondstruct data_2 = {0};
 
-  int type_id = 0;
+  type_id_value type_id = 0;
   typeart_get_type_id(&data, &type_id);
   print_data(type_id);
 

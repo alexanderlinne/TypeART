@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
   // CHECK-NEXT: Null/Zero/NullZero Addr    :   0 ,    0 ,    0
   // CHECK-NEXT: User-def. types            :   0 ,    - ,    -
   // CHECK-NEXT: Estimated memory use (KiB) :   {{[0-9]+}} ,    - ,    -
-  // CHECK-NEXT: Bytes per node map/stack   :  96 ,    8 ,    -
+  // CHECK-NEXT: Bytes per node map/stack   :  104 ,    8 ,    -
   // CHECK-NEXT: {{(#|-)+}}
   // CHECK-NEXT: Allocation type detail (heap, stack, global)
   // CHECK: {{(#|-)+}}

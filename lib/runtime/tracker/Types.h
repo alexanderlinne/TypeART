@@ -1,3 +1,4 @@
+
 // TypeART library
 //
 // Copyright (c) 2017-2022 TypeART Authors
@@ -10,8 +11,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#ifndef TYPEART_RUNTIMEDATA_H
-#define TYPEART_RUNTIMEDATA_H
+#pragma once
+
+#include "runtime/TypeResolution.h"
 
 #ifdef TYPEART_BTREE
 #ifdef TYPEART_ABSEIL
@@ -44,15 +46,7 @@
 #include <cstddef>  // size_t
 #include <vector>
 
-namespace typeart::runtime {
-
-struct PointerInfo final {
-  int typeId{-1};
-  size_t count{0};
-  const void* debug{nullptr};
-};
-
-static_assert(sizeof(PointerInfo) == 24);
+namespace typeart::runtime::tracker {
 
 struct RuntimeT {
   using Stack = std::vector<const void*>;
@@ -83,6 +77,4 @@ struct RuntimeT {
   using StackEntry = Stack::value_type;
 };
 
-}  // namespace typeart::runtime
-
-#endif  // TYPEART_RUNTIMEDATA_H
+}  // namespace typeart::runtime::tracker

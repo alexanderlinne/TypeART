@@ -4,7 +4,7 @@
 
 // RUN: %wrapper-mpicc -O1 -c %s -o %s.o
 // RUN: %wrapper-mpicc %s.o -o %s.exe
-// RUN: %mpi-exec -np 1 %s.exe 2>&1 | %filecheck %s
+// RUN: TYPEART_TYPE_FILE=%S/types.yaml %mpi-exec -np 1 %s.exe 2>&1 | %filecheck %s
 
 // REQUIRES: mpicc
 // UNSUPPORTED: sanitizer
@@ -12,12 +12,15 @@
 #include "../../lib/runtime/tracker/CallbackInterface.h"
 
 #include <mpi.h>
+#include <stdio.h>
 
 int main(int argc, char** argv) {
   MPI_Init(&argc, &argv);
-  typeart_tracker_alloc((const void*)2, 7, 1);  // OK
+  int i;
+  fprintf(stderr, "Expected pointer: %p\n", &i);
   MPI_Finalize();
   return 0;
 }
 
-// CHECK: [Trace] Alloc 0x2 7 float128 16 1
+// CHECK: R[0][Trace] Alloc [[PTR:0x[0-9a-f]+]] {{[0-9]*}} 2 int32 4 1
+// CHECK: Expected pointer: [[PTR]]

@@ -12,10 +12,10 @@ void foo(int n) {
 
 // clang-format off
 // CHECK: [[POINTER:%[0-9a-z]+]] = call noalias{{( align [0-9]+)?}} i8* @aligned_alloc(i64 64, i64 20)
-// CHECK-NEXT: call void @typeart_tracker_alloc(i8* [[POINTER]], i32 0, i64 20)
+// CHECK-NEXT: call void @typeart_tracker_alloc(i8* [[POINTER]], i32 {{[0-9]*}}, i64 20)
 // CHECK-NOT: bitcast i8* [[POINTER]] to {{.*}}*
 
 // CHECK: [[POINTER2:%[0-9a-z]+]] = call noalias{{( align [0-9]+)?}} i8* @aligned_alloc(i64 128, i64 [[SIZE:%[0-9a-z]+]])
-// CHECK-NEXT: call void @typeart_tracker_alloc(i8* [[POINTER2]], i32 0, i64 [[SIZE]])
+// CHECK-NEXT: call void @typeart_tracker_alloc(i8* [[POINTER2]], i32 {{[0-9]*}}, i64 [[SIZE]])
 // CHECK-NOT: bitcast i8* [[POINTER]] to {{.*}}*
 // clang-format on

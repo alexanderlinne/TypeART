@@ -16,8 +16,9 @@ using namespace typeart::runtime;
 
 #define o_(getter) std::cerr << recorder.getter << '\n'
 
-std::vector<std::pair<int, softcounter::Counter>> sorted_v(const std::unordered_map<int, softcounter::Counter>& map) {
-  std::vector<std::pair<int, softcounter::Counter>> sorted_elements(map.begin(), map.end());
+std::vector<std::pair<typeart::type_id_t, softcounter::Counter>> sorted_v(
+    const std::unordered_map<typeart::type_id_t, softcounter::Counter>& map) {
+  std::vector<std::pair<typeart::type_id_t, softcounter::Counter>> sorted_elements(map.begin(), map.end());
   std::sort(sorted_elements.begin(), sorted_elements.end());
   return sorted_elements;
 }
@@ -42,7 +43,7 @@ void test_heap(softcounter::AccessRecorder& recorder) {
   std::cerr << hallocs.size() << '\n';
   // CHECK: 10 2
   for (const auto& [id, count] : hallocs) {
-    std::cerr << id << " " << count << '\n';
+    std::cerr << id.value() << " " << count << '\n';
   }
 
   recorder.decHeapAlloc();
@@ -85,7 +86,7 @@ void test_stack(softcounter::AccessRecorder& recorder) {
   // CHECK: 0 1
   // CHECK: 1 1
   for (const auto& [id, count] : sallocs) {
-    std::cerr << id << " " << count << '\n';
+    std::cerr << id.value() << " " << count << '\n';
   }
 
   auto de_sallocs = sorted_v(recorder.getStackFree());
@@ -100,7 +101,7 @@ void test_stack(softcounter::AccessRecorder& recorder) {
   // CHECK: 0 1
   // CHECK: 1 1
   for (const auto& [id, count] : de_sallocs) {
-    std::cerr << id << " " << count << '\n';
+    std::cerr << id.value() << " " << count << '\n';
   }
 
   recorder.incStackAlloc(6, 1);
@@ -112,7 +113,7 @@ void test_stack(softcounter::AccessRecorder& recorder) {
   // CHECK: 1 1
   // CHECK: 6 1
   for (const auto& [id, count] : de_sallocs) {
-    std::cerr << id << " " << count << '\n';
+    std::cerr << id.value() << " " << count << '\n';
   }
 }
 
@@ -126,7 +127,7 @@ void test_global(softcounter::AccessRecorder& recorder) {
   std::cerr << alloc.size() << '\n';
   // CHECK: 6 1
   for (const auto& [id, count] : alloc) {
-    std::cerr << id << " " << count << '\n';
+    std::cerr << id.value() << " " << count << '\n';
   }
 }
 

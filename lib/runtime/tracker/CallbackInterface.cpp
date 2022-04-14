@@ -8,26 +8,27 @@
     return;                               \
   }
 
+using namespace typeart;
 using namespace typeart::runtime;
 
 extern "C" {
 
-void typeart_tracker_alloc(const void* addr, int typeId, size_t count) {
+void typeart_tracker_alloc(const void* addr, alloc_id_t::value_type alloc_id, size_t count) {
   TYPEART_RUNTIME_GUARD;
   const void* retAddr = __builtin_return_address(0);
-  Runtime::getTracker().onAlloc(addr, typeId, count, retAddr);
+  Runtime::getTracker().onAlloc(addr, alloc_id, count, retAddr);
 }
 
-void typeart_tracker_alloc_stack(const void* addr, int typeId, size_t count) {
+void typeart_tracker_alloc_stack(const void* addr, alloc_id_t::value_type alloc_id, size_t count) {
   TYPEART_RUNTIME_GUARD;
   const void* retAddr = __builtin_return_address(0);
-  Runtime::getTracker().onAllocStack(addr, typeId, count, retAddr);
+  Runtime::getTracker().onAllocStack(addr, alloc_id, count, retAddr);
 }
 
-void typeart_tracker_alloc_global(const void* addr, int typeId, size_t count) {
+void typeart_tracker_alloc_global(const void* addr, alloc_id_t::value_type alloc_id, size_t count) {
   TYPEART_RUNTIME_GUARD;
   const void* retAddr = __builtin_return_address(0);
-  Runtime::getTracker().onAllocGlobal(addr, typeId, count, retAddr);
+  Runtime::getTracker().onAllocGlobal(addr, alloc_id, count, retAddr);
 }
 
 void typeart_tracker_free(const void* addr) {
@@ -42,17 +43,17 @@ void typeart_tracker_leave_scope(int alloca_count) {
   Runtime::getTracker().onLeaveScope(alloca_count, retAddr);
 }
 
-void typeart_tracker_alloc_omp(const void* addr, int typeId, size_t count) {
+void typeart_tracker_alloc_omp(const void* addr, alloc_id_t::value_type alloc_id, size_t count) {
   TYPEART_RUNTIME_GUARD;
   const void* retAddr = __builtin_return_address(0);
-  Runtime::getTracker().onAlloc(addr, typeId, count, retAddr);
+  Runtime::getTracker().onAlloc(addr, alloc_id, count, retAddr);
   Runtime::getRecorder().incOmpContextHeap();
 }
 
-void typeart_tracker_alloc_stack_omp(const void* addr, int typeId, size_t count) {
+void typeart_tracker_alloc_stack_omp(const void* addr, alloc_id_t::value_type alloc_id, size_t count) {
   TYPEART_RUNTIME_GUARD;
   const void* retAddr = __builtin_return_address(0);
-  Runtime::getTracker().onAllocStack(addr, typeId, count, retAddr);
+  Runtime::getTracker().onAllocStack(addr, alloc_id, count, retAddr);
   Runtime::getRecorder().incOmpContextStack();
 }
 

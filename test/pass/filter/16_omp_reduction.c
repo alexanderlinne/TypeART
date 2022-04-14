@@ -25,7 +25,7 @@ void foo() {
   // check-inst: define {{.*}} @foo
   // check-inst: %loc = alloca
   // check-inst: [[POINTER:%[0-9a-z]+]] = bitcast float* %loc to i8*
-  // check-inst: call void @typeart_tracker_alloc_stack(i8* [[POINTER]], i32 5, i64 1)
+  // check-inst: call void @typeart_tracker_alloc_stack(i8* [[POINTER]], i32 {{[0-9]*}}, i64 1)
   // check-inst-not: typeart_tracker_alloc_stack_omp
   float loc = sum(array, n);
   MPI_send((void*)&loc);

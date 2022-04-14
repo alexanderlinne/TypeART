@@ -19,7 +19,8 @@ C* bar() {
 }
 
 // CHECK: [[POINTER:%[0-9a-z]+]] = call{{.*}} i8* @_ZnamSt11align_val_t(i64 40, i64 64)
-// CHECK-NEXT: call void @typeart_tracker_alloc(i8* [[POINTER]], i32 [[ID:2[5-9][0-9]]], i64 10)
+// CHECK-NEXT: call void @typeart_tracker_alloc(i8* [[POINTER]], i32 [[ID:[0-9]*]], i64 10)
 
 // CHECK: [[POINTER2:%[0-9a-z]+]] = call{{.*}} i8* @_ZnwmSt11align_val_t(i64 4, i64 128)
-// CHECK-NEXT: call void @typeart_tracker_alloc(i8* [[POINTER2]], i32 [[ID]], i64 1)
+// CHECK-NOT: call void @typeart_tracker_alloc(i8* [[POINTER2]], i32 [[ID]], i64 1)
+// CHECK-NEXT: call void @typeart_tracker_alloc(i8* [[POINTER2]], i32 {{[0-9]*}}, i64 1)

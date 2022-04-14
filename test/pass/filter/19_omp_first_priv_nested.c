@@ -25,7 +25,7 @@ void func(int* x, int* e) {
 
 void foo() {
   // check-inst: define {{.*}} @foo
-  // check-inst: call void @typeart_tracker_alloc_stack(i8* %0, i32 2, i64 1)
+  // check-inst: call void @typeart_tracker_alloc_stack(i8* %0, i32 {{[0-9]*}}, i64 1)
   int x = 1;
   int y = 2;
 #pragma omp parallel
@@ -46,7 +46,7 @@ void func_other(int* x, int* e) {
 
 void bar(int x_other) {
   // check-inst: define {{.*}} @bar
-  // check-inst: call void @typeart_tracker_alloc_stack(i8* %0, i32 2, i64 1)
+  // check-inst: call void @typeart_tracker_alloc_stack(i8* %0, i32 {{[0-9]*}}, i64 1)
   int x = x_other;
   int y = 2;
 #pragma omp parallel

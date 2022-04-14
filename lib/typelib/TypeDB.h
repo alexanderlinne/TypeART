@@ -29,32 +29,34 @@ class TypeDB final : public TypeDatabase {
 
   void registerStruct(const StructTypeInfo& struct_type) override;
 
-  int getOrCreateAllocationId(int type_id, std::optional<size_t> count,
-                              std::optional<ptrdiff_t> base_ptr_offset) override;
+  alloc_id_t getOrCreateAllocationId(type_id_t type_id, std::optional<size_t> count,
+                                     std::optional<ptrdiff_t> base_ptr_offset) override;
 
   void registerAllocations(std::vector<AllocationInfo> allocations) override;
 
-  bool isUnknown(int type_id) const override;
+  bool isUnknown(type_id_t type_id) const override;
 
-  bool isValid(int type_id) const override;
+  bool isValid(type_id_t type_id) const override;
 
-  bool isReservedType(int type_id) const override;
+  bool isValid(alloc_id_t alloc_id) const override;
 
-  bool isBuiltinType(int type_id) const override;
+  bool isReservedType(type_id_t type_id) const override;
 
-  bool isStructType(int type_id) const override;
+  bool isBuiltinType(type_id_t type_id) const override;
 
-  bool isUserDefinedType(int type_id) const override;
+  bool isStructType(type_id_t type_id) const override;
 
-  bool isVectorType(int type_id) const override;
+  bool isUserDefinedType(type_id_t type_id) const override;
 
-  const std::string& getTypeName(int type_id) const override;
+  bool isVectorType(type_id_t type_id) const override;
 
-  const StructTypeInfo* getStructInfo(int type_id) const override;
+  const std::string& getTypeName(type_id_t type_id) const override;
 
-  const AllocationInfo* getAllocationInfo(int allocation_id) const override;
+  const StructTypeInfo* getStructInfo(type_id_t type_id) const override;
 
-  size_t getTypeSize(int type_id) const override;
+  const AllocationInfo* getAllocationInfo(alloc_id_t alloc_id) const override;
+
+  size_t getTypeSize(type_id_t type_id) const override;
 
   const std::vector<StructTypeInfo>& getStructList() const override;
 
@@ -67,7 +69,7 @@ class TypeDB final : public TypeDatabase {
  private:
   std::vector<AllocationInfo> allocation_info;
   std::vector<StructTypeInfo> struct_info_vec;
-  std::unordered_map<int, int> typeid_to_list_index;
+  std::unordered_map<type_id_t, int> typeid_to_list_index;
 };
 
 }  // namespace typeart

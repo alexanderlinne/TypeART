@@ -4,11 +4,11 @@
 ; Adapted from LLVM codegen test suite
 
 ; CHECK: call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b)
-; CHECK-NEXT: call void @typeart_tracker_alloc_stack(i8* %b, i32 10, i64 17)
+; CHECK-NEXT: call void @typeart_tracker_alloc_stack(i8* %b, i32 {{[0-9]*}}, i64 17)
 
 ; CHECK: bb2:
 ; CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 -1, i8* %b2)
-; CHECK-NEXT: call void @typeart_tracker_alloc_stack(i8* %b2, i32 10, i64 16)
+; CHECK-NEXT: call void @typeart_tracker_alloc_stack(i8* %b2, i32 {{[0-9]*}}, i64 16)
 
 
 

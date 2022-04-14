@@ -14,16 +14,18 @@
 #define TYPEART_RUNTIME_H
 
 #include "AccessCounter.h"
-#include "TypeDB.h"
 #include "TypeResolution.h"
 #include "tracker/Tracker.h"
+#include "typelib/TypeDB.h"
+
+#ifdef TYPEART_USE_ALLOCATOR
+#include "allocator/Allocator.h"
+#endif
 
 #include <cstddef>
 #include <string>
 
 namespace typeart::runtime {
-
-struct PointerInfo;
 
 class Runtime {
   static thread_local size_t scope;
@@ -94,15 +96,23 @@ class Runtime {
     return {};
   }
 
-  static const AllocationInfo* getAllocationInfo(allocation_id_t allocation_id) {
+  static std::optional<PointerInfo> getPointerInfo(const void* addr) {
+#ifdef TYPEART_USE_ALLOCATOR
+    return allocator::getPointerInfo(addr);
+#else
+    return getTracker().getPointerInfo(addr);
+#endif
+  }
+
+  static const AllocationInfo* getAllocationInfo(alloc_id_t alloc_id) {
     auto result = (const AllocationInfo*)nullptr;
-    get().typeResolution.getAllocationInfo(allocation_id, &result);
+    get().typeResolution.getAllocationInfo(alloc_id, &result);
     return result;
   }
 
-  static std::string toString(const void* memAddr, int typeId, size_t count, size_t typeSize, const void* calledFrom);
-  static std::string toString(const void* memAddr, int typeId, size_t count, const void* calledFrom);
-  static std::string toString(const void* addr, const PointerInfo& info);
+  static std::string toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id,size_t count, size_t typeSize,
+                              const void* calledFrom);
+  static std::string toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id,size_t count, const void* calledFrom);
 
  private:
   Runtime();

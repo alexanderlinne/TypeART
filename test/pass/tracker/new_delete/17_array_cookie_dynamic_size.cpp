@@ -12,7 +12,7 @@ struct S1 {
 // CHECK: [[COOKIE:%[0-9a-z]+]] = bitcast i8* [[MEM]] to i64*
 // CHECK: store i64 [[COUNT:%[0-9a-z]+]], i64* [[COOKIE]], align 8
 // CHECK: [[ARR:%[0-9a-z]+]] = getelementptr inbounds i8, i8* [[MEM]], i64 8
-// CHECK: call void @typeart_tracker_alloc(i8* [[ARR]], i32 {{2[0-9]+}}, i64 [[COUNT]])
+// CHECK: call void @typeart_tracker_alloc(i8* [[ARR]], i32 {{[0-9]*}}, i64 [[COUNT]])
 // CHECK: bitcast i8* [[ARR]] to %struct.S1*
 int main() {
   volatile int elment_count = 2;

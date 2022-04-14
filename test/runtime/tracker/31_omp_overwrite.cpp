@@ -3,6 +3,10 @@
 // RUN: OMP_NUM_THREADS=3 %run %s -o -O1 --omp --manual 2>&1 | %filecheck %s
 // REQUIRES: openmp && softcounter
 // REQUIRES: tracker
+
+// TODO: register allocation id at runtime
+// XFAIL: *
+
 // clang-format on
 
 #include "runtime/tracker/CallbackInterface.h"

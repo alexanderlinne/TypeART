@@ -82,6 +82,7 @@
     },
     {
       "name": "release",
+      "hidden": true,
       "displayName": "Release config",
       "description": "Default release build options for Clang",
       "binaryDir": "${sourceDir}/build_release",
@@ -89,6 +90,18 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
+    },
+    {
+      "name": "release-allocator",
+      "displayName": "Release config w/ Allocator",
+      "description": "Release build options for Clang with Allocator instrumentation",
+      "inherits": ["clang-toolchain", "release", "allocator"]
+    },
+    {
+      "name": "release-tracker",
+      "displayName": "Release config w/ Tracker",
+      "description": "Release build options for Clang with Tracker instrumentation",
+      "inherits": ["clang-toolchain", "release", "tracker"]
     },
     {
       "name": "release-counter",
@@ -180,12 +193,12 @@
     },
     {
       "name": "ci-mpi-allocator",
-      "displayName": "CI build: MPI \\w Allocator",
+      "displayName": "CI build: MPI w/ Allocator",
       "inherits": ["ci-base", "allocator"]
     },
     {
       "name": "ci-mpi-tracker",
-      "displayName": "CI build: MPI \\w Tracker",
+      "displayName": "CI build: MPI w/ Tracker",
       "inherits": ["ci-base", "tracker"]
     },
     {

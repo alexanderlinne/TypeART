@@ -16,9 +16,9 @@
 
 int main() {
   auto db = typeart::make_database("types-missing-file.yaml");
-  printf("isValid: %i\n", db.first->isValid(256));
-  printf("isValid: %i\n", db.first->isValid(1));
-  printf("isValid: %i\n", db.first->isValid(258));
+  printf("isValid: %i\n", db.first->isValid(typeart::type_id_t{256}));
+  printf("isValid: %i\n", db.first->isValid(typeart::type_id_t{1}));
+  printf("isValid: %i\n", db.first->isValid(typeart::type_id_t{258}));
 
   return 0;
 }

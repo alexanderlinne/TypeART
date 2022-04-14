@@ -12,6 +12,8 @@
 
 #pragma once
 
+#include "typelib/TypeInterface.h"
+
 #ifdef __cplusplus
 #include <cstddef>
 #else
@@ -23,17 +25,17 @@
 extern "C" {
 #endif
 
-void typeart_tracker_alloc(const void* addr, int type_id, size_t count);
-void typeart_tracker_alloc_global(const void* addr, int type_id, size_t count);
+void typeart_tracker_alloc(const void* addr, alloc_id_value alloc_id, size_t count);
+void typeart_tracker_alloc_global(const void* addr, alloc_id_value alloc_id, size_t count);
 void typeart_tracker_free(const void* addr);
 
-void typeart_tracker_alloc_stack(const void* addr, int type_id, size_t count);
+void typeart_tracker_alloc_stack(const void* addr, alloc_id_value alloc_id, size_t count);
 void typeart_tracker_leave_scope(int alloca_count);
 
 // Called from OpenMP context
-void typeart_tracker_alloc_omp(const void* addr, int type_id, size_t count);
+void typeart_tracker_alloc_omp(const void* addr, alloc_id_value alloc_id, size_t count);
 void typeart_tracker_free_omp(const void* addr);
-void typeart_tracker_alloc_stack_omp(const void* addr, int type_id, size_t count);
+void typeart_tracker_alloc_stack_omp(const void* addr, alloc_id_value alloc_id, size_t count);
 void typeart_tracker_leave_scope_omp(int alloca_count);
 
 #ifdef __cplusplus

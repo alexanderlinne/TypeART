@@ -15,7 +15,7 @@
 
 #include "AllocMapWrapper.h"
 #include "runtime/AccessCounter.h"
-#include "runtime/RuntimeData.h"
+#include "runtime/TypeResolution.h"
 #include "typelib/TypeDB.h"
 
 #include <cstddef>
@@ -28,15 +28,20 @@ class Optional;
 namespace typeart::runtime::tracker {
 
 enum class AllocState : unsigned {
-  NO_INIT      = 1 << 0,
-  OK           = 1 << 1,
-  ADDR_SKIPPED = 1 << 2,
-  NULL_PTR     = 1 << 3,
-  ZERO_COUNT   = 1 << 4,
-  NULL_ZERO    = 1 << 5,
-  ADDR_REUSE   = 1 << 6,
-  UNKNOWN_ID   = 1 << 7
+  NO_INIT          = 1 << 0,
+  OK               = 1 << 1,
+  ADDR_SKIPPED     = 1 << 2,
+  NULL_PTR         = 1 << 3,
+  ZERO_COUNT       = 1 << 4,
+  NULL_ZERO        = 1 << 5,
+  ADDR_REUSE       = 1 << 6,
+  UNKNOWN_TYPE_ID  = 1 << 7,
+  UNKNOWN_ALLOC_ID = 1 << 8
 };
+
+inline unsigned operator&(const AllocState& lhs, const AllocState& rhs) {
+  return static_cast<unsigned>(lhs) & static_cast<unsigned>(rhs);
+}
 
 enum class FreeState : unsigned {
   NO_INIT      = 1 << 0,
@@ -54,20 +59,20 @@ class Tracker {
  public:
   Tracker(const TypeDB& db, Recorder& recorder);
 
-  void onAlloc(const void* addr, int typeID, size_t count, const void* retAddr);
+  void onAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr);
 
-  void onAllocStack(const void* addr, int typeID, size_t count, const void* retAddr);
+  void onAllocStack(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr);
 
-  void onAllocGlobal(const void* addr, int typeID, size_t count, const void* retAddr);
+  void onAllocGlobal(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr);
 
   void onFreeHeap(const void* addr, const void* retAddr);
 
   void onLeaveScope(int alloca_count, const void* retAddr);
 
-  llvm::Optional<RuntimeT::MapEntry> findBaseAlloc(const void* addr);
+  std::optional<PointerInfo> getPointerInfo(const void* addr);
 
  private:
-  AllocState doAlloc(const void* addr, int typeID, size_t count, const void* retAddr);
+  AllocState doAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr);
 
   FreeState doFreeHeap(const void* addr, const void* retAddr);
 };

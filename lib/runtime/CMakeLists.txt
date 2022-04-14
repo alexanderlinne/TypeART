@@ -38,7 +38,6 @@ set(RUNTIME_LIB_ALLOCATOR_SOURCES
 
 set(RUNTIME_LIB_SOURCES
     AccessCounter.h
-    RuntimeData.h
     RuntimeInterface.cpp
     RuntimeInterface.h
     TypeResolution.cpp
@@ -90,7 +89,7 @@ target_compile_definitions(
   PRIVATE TYPEART_LOG_LEVEL=${TYPEART_LOG_LEVEL_RT}
           $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:TYPEART_USE_ALLOCATOR>
           $<$<BOOL:${TYPEART_MPI_LOGGER}>:TYPEART_MPI_LOGGER=1>
-          $<$<BOOL:${TYPEART_SOFTCOUNTERS}>:ENABLE_SOFTCOUNTER=1>
+          $<$<BOOL:${TYPEART_SOFTCOUNTERS}>:ENABLE_SOFTCOUNTER>
           $<$<BOOL:${TYPEART_BTREE}>:TYPEART_BTREE>
           $<$<BOOL:${TYPEART_ABSEIL}>:TYPEART_ABSEIL>
           $<$<BOOL:${TYPEART_SAFEPTR}>:USE_SAFEPTR>

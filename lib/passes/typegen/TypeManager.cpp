@@ -41,45 +41,53 @@ std::unique_ptr<TypeGenerator> make_typegen(const std::string& file) {
 
 using namespace llvm;
 
-llvm::Optional<typeart_builtin_type> get_builtin_typeid(llvm::Type* type) {
+llvm::Optional<type_id_t> get_builtin_typeid(llvm::Type* type) {
   auto& c = type->getContext();
 
+  auto result = typeart_builtin_type::TYPEART_UNKNOWN_TYPE;
   switch (type->getTypeID()) {
     case llvm::Type::IntegerTyID: {
       if (type == Type::getInt8Ty(c)) {
-        return TYPEART_INT8;
+        result = TYPEART_INT8;
+      } else if (type == Type::getInt16Ty(c)) {
+        result = TYPEART_INT16;
+      } else if (type == Type::getInt32Ty(c)) {
+        result = TYPEART_INT32;
+      } else if (type == Type::getInt64Ty(c)) {
+        result = TYPEART_INT64;
+      } else {
+        result = TYPEART_UNKNOWN_TYPE;
       }
-      if (type == Type::getInt16Ty(c)) {
-        return TYPEART_INT16;
-      }
-      if (type == Type::getInt32Ty(c)) {
-        return TYPEART_INT32;
-      }
-      if (type == Type::getInt64Ty(c)) {
-        return TYPEART_INT64;
-      }
-      return TYPEART_UNKNOWN_TYPE;
+      break;
     }
     case llvm::Type::HalfTyID:
-      return TYPEART_HALF;
+      result = TYPEART_HALF;
+      break;
     case llvm::Type::FloatTyID:
-      return TYPEART_FLOAT;
+      result = TYPEART_FLOAT;
+      break;
     case llvm::Type::DoubleTyID:
-      return TYPEART_DOUBLE;
+      result = TYPEART_DOUBLE;
+      break;
     case llvm::Type::FP128TyID:
-      return TYPEART_FP128;
+      result = TYPEART_FP128;
+      break;
     case llvm::Type::X86_FP80TyID:
-      return TYPEART_X86_FP80;
+      result = TYPEART_X86_FP80;
+      break;
     case llvm::Type::PPC_FP128TyID:
-      return TYPEART_PPC_FP128;
+      result = TYPEART_PPC_FP128;
+      break;
     case llvm::Type::PointerTyID:
-      return TYPEART_POINTER;
+      result = TYPEART_POINTER;
+      break;
     default:
       return None;
   }
+  return {static_cast<type_id_t::value_type>(result)};
 }
 
-int TypeManager::getOrRegisterVector(llvm::VectorType* type, const llvm::DataLayout& dl) {
+type_id_t TypeManager::getOrRegisterVector(llvm::VectorType* type, const llvm::DataLayout& dl) {
   namespace tu = typeart::util;
 
   VectorTypeHandler handler{&structMap, &typeDB, type, dl, *this};
@@ -92,20 +100,20 @@ int TypeManager::getOrRegisterVector(llvm::VectorType* type, const llvm::DataLay
 
   auto element_data = handler.getElementData();
   if (!element_data) {
-    return TYPEART_UNKNOWN_TYPE;
+    return type_id_t::unknown_type;
   }
 
   auto vector_data = handler.getVectorData();
   if (!vector_data) {
-    return TYPEART_UNKNOWN_TYPE;
+    return type_id_t::unknown_type;
   }
 
-  const int id = reserveNextId();
+  const auto id = reserveNextId();
 
   const auto [element_id, element_type, element_name] = element_data.getValue();
   const auto [vector_name, vector_bytes, vector_size] = vector_data.getValue();
 
-  std::vector<int> memberTypeIDs{element_id};
+  std::vector<type_id_t> memberTypeIDs{element_id};
   std::vector<size_t> arraySizes{vector_size};
   std::vector<size_t> offsets{0};
 
@@ -115,7 +123,7 @@ int TypeManager::getOrRegisterVector(llvm::VectorType* type, const llvm::DataLay
   // Add padding bytes explicitly
   if (vector_bytes > usableBytes) {
     size_t padding = vector_bytes - usableBytes;
-    memberTypeIDs.push_back(TYPEART_INT8);
+    memberTypeIDs.push_back(static_cast<type_id_t::value_type>(TYPEART_INT8));
     arraySizes.push_back(padding);
     offsets.push_back(usableBytes);
   }
@@ -134,8 +142,8 @@ const TypeDatabase& TypeManager::getTypeDatabase() const {
   return typeDB;
 }
 
-int TypeManager::registerAllocation(int type_id, std::optional<size_t> count,
-                                    std::optional<ptrdiff_t> base_ptr_offset) {
+alloc_id_t TypeManager::getOrRegisterAllocation(type_id_t type_id, std::optional<size_t> count,
+                                                std::optional<ptrdiff_t> base_ptr_offset) {
   return typeDB.getOrCreateAllocationId(type_id, count, base_ptr_offset);
 }
 
@@ -161,7 +169,7 @@ std::pair<bool, std::error_code> TypeManager::store() const {
   return {!static_cast<bool>(ec), ec};
 }
 
-int TypeManager::getTypeID(llvm::Type* type, const DataLayout& dl) const {
+type_id_t TypeManager::getTypeID(llvm::Type* type, const DataLayout& dl) const {
   auto builtin_id = get_builtin_typeid(type);
   if (builtin_id) {
     return builtin_id.getValue();
@@ -199,10 +207,10 @@ int TypeManager::getTypeID(llvm::Type* type, const DataLayout& dl) const {
       break;
   }
 
-  return TYPEART_UNKNOWN_TYPE;
+  return type_id_t::unknown_type;
 }
 
-int TypeManager::getOrRegisterType(llvm::Type* type, const llvm::DataLayout& dl) {
+type_id_t TypeManager::getOrRegisterType(llvm::Type* type, const llvm::DataLayout& dl) {
   auto builtin_id = get_builtin_typeid(type);
   if (builtin_id) {
     return builtin_id.getValue();
@@ -222,10 +230,10 @@ int TypeManager::getOrRegisterType(llvm::Type* type, const llvm::DataLayout& dl)
     default:
       break;
   }
-  return TYPEART_UNKNOWN_TYPE;
+  return type_id_t::unknown_type;
 }
 
-int TypeManager::getOrRegisterStruct(llvm::StructType* type, const llvm::DataLayout& dl) {
+type_id_t TypeManager::getOrRegisterStruct(llvm::StructType* type, const llvm::DataLayout& dl) {
   namespace tu = typeart::util;
 
   StructTypeHandler handle{&structMap, &typeDB, type};
@@ -237,19 +245,19 @@ int TypeManager::getOrRegisterStruct(llvm::StructType* type, const llvm::DataLay
   const auto name = handle.getName();
 
   // Get next ID and register struct:
-  const int id = reserveNextId();
+  const auto id = reserveNextId();
 
   size_t n = type->getStructNumElements();
 
   std::vector<size_t> offsets;
   std::vector<size_t> arraySizes;
-  std::vector<int> memberTypeIDs;
+  std::vector<type_id_t> memberTypeIDs;
 
   const StructLayout* layout = dl.getStructLayout(type);
 
   for (unsigned i = 0; i < n; ++i) {
     llvm::Type* memberType = type->getStructElementType(i);
-    int memberID           = TYPEART_UNKNOWN_TYPE;
+    auto memberID          = type_id_t::unknown_type;
     size_t arraySize       = 1;
 
     if (memberType->isArrayTy()) {
@@ -290,10 +298,10 @@ int TypeManager::getOrRegisterStruct(llvm::StructType* type, const llvm::DataLay
   return id;
 }
 
-int TypeManager::reserveNextId() {
-  int id = static_cast<int>(TYPEART_NUM_RESERVED_IDS) + structCount;
+type_id_t TypeManager::reserveNextId() {
+  auto id = static_cast<size_t>(TYPEART_NUM_RESERVED_IDS) + structCount;
   structCount++;
-  return id;
+  return static_cast<type_id_t::value_type>(id);
 }
 
 }  // namespace typeart
