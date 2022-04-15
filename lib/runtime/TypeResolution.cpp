@@ -38,15 +38,15 @@ inline const void* addByteOffset(const void* addr, T offset) {
   return static_cast<const void*>(static_cast<const uint8_t*>(addr) + offset);
 }
 
-TypeResolution::TypeResolution(const TypeDB& db) : typeDB{db} {
+TypeResolution::TypeResolution(const Database& db) : db{db} {
 }
 
 const std::string& TypeResolution::getTypeName(type_id_t type_id) const {
-  return typeDB.getTypeName(type_id);
+  return db.getTypeName(type_id);
 }
 
 size_t TypeResolution::getTypeSize(type_id_t type_id) const {
-  return typeDB.getTypeSize(type_id);
+  return db.getTypeSize(type_id);
 }
 
 size_t TypeResolution::getMemberIndex(typeart_struct_layout structInfo, size_t offset) const {
@@ -79,13 +79,13 @@ TypeResolution::TypeArtStatus TypeResolution::getSubTypeInfo(const void* baseAdd
   assert(offset >= baseOffset && "Invalid offset values");
 
   size_t internalOffset   = offset - baseOffset;
-  size_t typeSize         = typeDB.getTypeSize(memberType);
+  size_t typeSize         = db.getTypeSize(memberType);
   size_t offsetInTypeSize = internalOffset / typeSize;
   size_t newOffset        = internalOffset % typeSize;
 
   // If newOffset != 0, the subtype cannot be atomic, i.e. must be a struct
   if (newOffset != 0) {
-    if (typeDB.isReservedType(memberType)) {
+    if (db.isReservedType(memberType)) {
       return TYPEART_BAD_ALIGNMENT;
     }
   }
@@ -184,13 +184,13 @@ TypeResolution::TypeArtStatus TypeResolution::getTypeInfo(const void* addr, cons
     return TYPEART_OK;
   }
 
-  if (typeDB.isBuiltinType(containingType)) {
+  if (db.isBuiltinType(containingType)) {
     // Address points to the middle of a builtin type
     return TYPEART_BAD_ALIGNMENT;
   }
 
   // Resolve struct recursively
-  const auto* structInfo = typeDB.getStructInfo(containingType);
+  const auto* structInfo = db.getStructInfo(containingType);
   if (structInfo != nullptr) {
     const void* containingTypeAddr = addByteOffset(addr, -std::ptrdiff_t(internalOffset));
     return getTypeInfoInternal(containingTypeAddr, internalOffset, *structInfo, type, count);
@@ -206,7 +206,7 @@ TypeResolution::TypeArtStatus TypeResolution::getContainingTypeInfo(const void* 
     return result;
   }
   auto type_id    = alloc_info->type_id;
-  size_t typeSize = typeDB.getTypeSize(type_id);
+  size_t typeSize = db.getTypeSize(type_id);
 
   // Check for exact match -> no further checks and offsets calculations needed
   if (ptrInfo.base_addr == addr) {
@@ -252,7 +252,7 @@ TypeResolution::TypeArtStatus TypeResolution::getBuiltinInfo(const void* addr, c
     return result;
   }
   auto type_id = alloc_info->type_id;
-  if (typeDB.isReservedType(type_id)) {
+  if (db.isReservedType(type_id)) {
     *type = static_cast<BuiltinType>(type_id.value());
     return TYPEART_OK;
   }
@@ -262,11 +262,11 @@ TypeResolution::TypeArtStatus TypeResolution::getBuiltinInfo(const void* addr, c
 TypeResolution::TypeArtStatus TypeResolution::getStructInfo(type_id_t type_id,
                                                             const StructTypeInfo** structInfo) const {
   // Requested ID must correspond to a struct
-  if (!typeDB.isStructType(type_id)) {
+  if (!db.isStructType(type_id)) {
     return TYPEART_WRONG_KIND;
   }
 
-  const auto* result = typeDB.getStructInfo(type_id);
+  const auto* result = db.getStructInfo(type_id);
 
   if (result != nullptr) {
     *structInfo = result;
@@ -277,7 +277,7 @@ TypeResolution::TypeArtStatus TypeResolution::getStructInfo(type_id_t type_id,
 
 TypeResolution::TypeArtStatus TypeResolution::getAllocationInfo(alloc_id_t alloc_id,
                                                                 const AllocationInfo** allocation_info) const {
-  auto result = typeDB.getAllocationInfo(alloc_id);
+  auto result = db.getAllocationInfo(alloc_id);
   if (result != nullptr) {
     *allocation_info = result;
     return TYPEART_OK;
@@ -290,7 +290,7 @@ std::string TypeResolution::toString(const void* memAddr, alloc_id_t alloc_id, t
                                      size_t typeSize, const void* calledFrom) const {
   std::string buf;
   llvm::raw_string_ostream s(buf);
-  const auto name = typeDB.getTypeName(type_id);
+  const auto name = db.getTypeName(type_id);
   s << memAddr << " " << alloc_id.value() << " " << type_id.value() << " " << name << " " << typeSize << " " << count
     << " (" << calledFrom << ")";
   return s.str();
@@ -298,36 +298,36 @@ std::string TypeResolution::toString(const void* memAddr, alloc_id_t alloc_id, t
 
 std::string TypeResolution::toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id, size_t count,
                                      const void* calledFrom) const {
-  const auto typeSize = typeDB.getTypeSize(type_id);
+  const auto typeSize = db.getTypeSize(type_id);
   return toString(memAddr, alloc_id, type_id, count, typeSize, calledFrom);
 }
 
 bool TypeResolution::isUnknown(type_id_t type_id) const {
-  return typeDB.isUnknown(type_id);
+  return db.isUnknown(type_id);
 }
 
 bool TypeResolution::isValid(type_id_t type_id) const {
-  return typeDB.isValid(type_id);
+  return db.isValid(type_id);
 }
 
 bool TypeResolution::isReservedType(type_id_t type_id) const {
-  return typeDB.isReservedType(type_id);
+  return db.isReservedType(type_id);
 }
 
 bool TypeResolution::isBuiltinType(type_id_t type_id) const {
-  return typeDB.isBuiltinType(type_id);
+  return db.isBuiltinType(type_id);
 }
 
 bool TypeResolution::isStructType(type_id_t type_id) const {
-  return typeDB.isStructType(type_id);
+  return db.isStructType(type_id);
 }
 
 bool TypeResolution::isUserDefinedType(type_id_t type_id) const {
-  return typeDB.isUserDefinedType(type_id);
+  return db.isUserDefinedType(type_id);
 }
 
 bool TypeResolution::isVectorType(type_id_t type_id) const {
-  return typeDB.isVectorType(type_id);
+  return db.isVectorType(type_id);
 }
 
 }  // namespace typeart::runtime

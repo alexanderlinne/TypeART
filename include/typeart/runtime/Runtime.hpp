@@ -13,7 +13,7 @@
 #ifndef TYPEART_RUNTIME_H
 #define TYPEART_RUNTIME_H
 
-#include "../typelib/TypeDB.hpp"
+#include "../db/Database.hpp"
 #include "AccessCounter.hpp"
 #include "Runtime.h"
 #include "TypeResolution.hpp"
@@ -47,7 +47,7 @@ class Runtime {
   };
 
   Initializer init;
-  TypeDB typeDB{};
+  Database db{};
   Recorder recorder{};
   TypeResolution typeResolution;
   tracker::Tracker tracker;

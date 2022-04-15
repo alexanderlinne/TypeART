@@ -13,7 +13,7 @@
 #ifndef TYPEART_ALLOCATIONTRACKING_H
 #define TYPEART_ALLOCATIONTRACKING_H
 
-#include "../../typelib/TypeDB.hpp"
+#include "../../db/Database.hpp"
 #include "../AccessCounter.hpp"
 #include "../TypeResolution.hpp"
 #include "AllocMapWrapper.hpp"
@@ -53,11 +53,11 @@ enum class FreeState : unsigned {
 
 class Tracker {
   PointerMap wrapper;
-  const TypeDB& typeDB;
+  const Database& db;
   Recorder& recorder;
 
  public:
-  Tracker(const TypeDB& db, Recorder& recorder);
+  Tracker(const Database& db, Recorder& recorder);
 
   void onAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr);
 

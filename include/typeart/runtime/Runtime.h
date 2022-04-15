@@ -13,11 +13,11 @@
 #pragma once
 
 #ifdef __cplusplus
-#include "../common/Types.hpp"
+#include "../db/Types.hpp"
 
 #include <cstddef>
 #else
-#include "../common/Types.h"
+#include "../db/Types.h"
 
 #include <stdbool.h>
 #include <stddef.h>

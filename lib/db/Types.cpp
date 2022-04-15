@@ -1,4 +1,4 @@
-#include "common/Types.hpp"
+#include "db/Types.hpp"
 
 namespace typeart {
 

@@ -13,11 +13,11 @@
 #include "runtime/tracker/Tracker.hpp"
 
 #include "CallbackInterface.h"
+#include "db/Database.hpp"
 #include "runtime/AccessCounter.hpp"
 #include "runtime/Runtime.hpp"
 #include "runtime/TypeResolution.hpp"
 #include "support/Logger.hpp"
-#include "typelib/TypeDB.hpp"
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_ostream.h"
@@ -97,16 +97,16 @@ thread_local ThreadData threadData;
 
 }  // namespace
 
-Tracker::Tracker(const TypeDB& db, Recorder& recorder) : typeDB{db}, recorder{recorder} {
+Tracker::Tracker(const Database& db, Recorder& recorder) : db{db}, recorder{recorder} {
 }
 
 void Tracker::onAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
   const auto status = doAlloc(addr, alloc_id, count, retAddr);
   if (!(status & AllocState::ADDR_SKIPPED)) {
-    recorder.incHeapAlloc(typeDB.getAllocationInfo(alloc_id)->type_id, count);
+    recorder.incHeapAlloc(db.getAllocationInfo(alloc_id)->type_id, count);
   }
   if (!(status & AllocState::UNKNOWN_ALLOC_ID)) {
-    LOG_TRACE("Alloc " << Runtime::toString(addr, alloc_id, typeDB.getAllocationInfo(alloc_id)->type_id, count, retAddr)
+    LOG_TRACE("Alloc " << Runtime::toString(addr, alloc_id, db.getAllocationInfo(alloc_id)->type_id, count, retAddr)
                        << " " << 'H');
   }
 }
@@ -115,10 +115,10 @@ void Tracker::onAllocStack(const void* addr, alloc_id_t alloc_id, size_t count, 
   const auto status = doAlloc(addr, alloc_id, count, retAddr);
   if (!(status & AllocState::ADDR_SKIPPED)) {
     threadData.stackVars.push_back(addr);
-    recorder.incStackAlloc(typeDB.getAllocationInfo(alloc_id)->type_id, count);
+    recorder.incStackAlloc(db.getAllocationInfo(alloc_id)->type_id, count);
   }
   if (!(status & AllocState::UNKNOWN_ALLOC_ID)) {
-    LOG_TRACE("Alloc " << Runtime::toString(addr, alloc_id, typeDB.getAllocationInfo(alloc_id)->type_id, count, retAddr)
+    LOG_TRACE("Alloc " << Runtime::toString(addr, alloc_id, db.getAllocationInfo(alloc_id)->type_id, count, retAddr)
                        << " " << 'S');
   }
 }
@@ -126,22 +126,22 @@ void Tracker::onAllocStack(const void* addr, alloc_id_t alloc_id, size_t count, 
 void Tracker::onAllocGlobal(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
   const auto status = doAlloc(addr, alloc_id, count, retAddr);
   if (!(status & AllocState::ADDR_SKIPPED)) {
-    recorder.incGlobalAlloc(typeDB.getAllocationInfo(alloc_id)->type_id, count);
+    recorder.incGlobalAlloc(db.getAllocationInfo(alloc_id)->type_id, count);
   }
   if (!(status & AllocState::UNKNOWN_ALLOC_ID)) {
-    LOG_TRACE("Alloc " << Runtime::toString(addr, alloc_id, typeDB.getAllocationInfo(alloc_id)->type_id, count, retAddr)
+    LOG_TRACE("Alloc " << Runtime::toString(addr, alloc_id, db.getAllocationInfo(alloc_id)->type_id, count, retAddr)
                        << " " << 'G');
   }
 }
 
 AllocState Tracker::doAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
   AllocState status = AllocState::NO_INIT;
-  if (unlikely(!typeDB.isValid(alloc_id))) {
+  if (unlikely(!db.isValid(alloc_id))) {
     status |= AllocState::UNKNOWN_ALLOC_ID | AllocState::ADDR_SKIPPED;
     LOG_ERROR("Allocation with unknown alloc_id! Skipping...");
     return status;
   }
-  auto type_id = typeDB.getAllocationInfo(alloc_id)->type_id;
+  auto type_id = db.getAllocationInfo(alloc_id)->type_id;
 
   // Calling malloc with size 0 may return a nullptr or some address that can not be written to.
   // In the second case, the allocation is tracked anyway so that onFree() does not report an error.
@@ -186,7 +186,7 @@ FreeState Tracker::doFreeHeap(const void* addr, const void* retAddr) {
     return FreeState::ADDR_SKIPPED | FreeState::UNREG_ADDR;
   }
 
-  auto type_id = typeDB.getAllocationInfo(removed->alloc_id)->type_id;
+  auto type_id = db.getAllocationInfo(removed->alloc_id)->type_id;
   LOG_TRACE("Free " << Runtime::get().toString(addr, removed->alloc_id, type_id, removed->count, removed->debug));
 
   if constexpr (!std::is_same_v<Recorder, softcounter::NoneRecorder>) {
@@ -217,10 +217,10 @@ void Tracker::onLeaveScope(int alloca_count, const void* retAddr) {
     if (unlikely(!removed)) {
       LOG_ERROR("Free on unregistered address " << addr << " (" << retAddr << ")");
     } else {
-      auto type_id = typeDB.getAllocationInfo(removed->alloc_id)->type_id;
+      auto type_id = db.getAllocationInfo(removed->alloc_id)->type_id;
       LOG_TRACE("Free " << Runtime::get().toString(addr, removed->alloc_id, type_id, removed->count, removed->debug));
       if constexpr (!std::is_same_v<Recorder, softcounter::NoneRecorder>) {
-        recorder.incStackFree(typeDB.getAllocationInfo(removed->alloc_id)->type_id, removed->count);
+        recorder.incStackFree(db.getAllocationInfo(removed->alloc_id)->type_id, removed->count);
       }
     }
   });

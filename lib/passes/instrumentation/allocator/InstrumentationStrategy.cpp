@@ -13,11 +13,11 @@
 #include "InstrumentationStrategy.h"
 
 #include "analysis/MemOpData.h"
+#include "db/Database.hpp"
 #include "runtime/allocator/Config.h"
 #include "support/Logger.hpp"
 #include "support/OmpUtil.h"
 #include "support/Util.h"
-#include "typelib/TypeDatabase.hpp"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/BasicBlock.h"

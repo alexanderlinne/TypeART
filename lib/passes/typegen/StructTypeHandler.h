@@ -13,7 +13,7 @@
 #ifndef TYPEART_STRUCTTYPEHANDLER_H
 #define TYPEART_STRUCTTYPEHANDLER_H
 
-#include "typelib/TypeDatabase.hpp"
+#include "db/Database.hpp"
 
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringMap.h"
@@ -26,11 +26,9 @@ class StructType;
 
 namespace typeart {
 
-class TypeDatabase;
-
 struct StructTypeHandler {
   const llvm::StringMap<type_id_t>* m_struct_map;
-  const TypeDatabase* m_type_db;
+  const Database* m_type_db;
   llvm::StructType* type;
 
   [[nodiscard]] static std::string getName(llvm::StructType* type);

@@ -87,3 +87,14 @@ inline bool operator!=(const alloc_id_t& lhs, const alloc_id_t& rhs) {
 std::ostream& operator<<(std::ostream& os, const alloc_id_t& alloc_id);
 
 }  // namespace typeart
+
+namespace std {
+
+template <>
+struct hash<typeart::type_id_t> {
+  std::size_t operator()(const typeart::type_id_t& type_id) const {
+    return hash<typeart::type_id_t::value_type>{}(type_id.value());
+  }
+};
+
+}  // namespace std

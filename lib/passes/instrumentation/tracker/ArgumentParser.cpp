@@ -12,7 +12,7 @@
 
 #include "ArgumentParser.h"
 
-#include "common/Types.hpp"
+#include "db/Types.hpp"
 #include "support/Logger.hpp"
 #include "support/TypeUtil.h"
 #include "support/Util.h"

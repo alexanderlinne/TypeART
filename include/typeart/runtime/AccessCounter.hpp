@@ -13,7 +13,7 @@
 #ifndef TYPEART_ACCESSCOUNTER_H
 #define TYPEART_ACCESSCOUNTER_H
 
-#include "../typelib/TypeDatabase.hpp"
+#include "../db/Database.hpp"
 #include "tracker/Types.hpp"
 
 #include <atomic>

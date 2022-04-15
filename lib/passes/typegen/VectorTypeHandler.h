@@ -13,7 +13,7 @@
 #ifndef TYPEART_VECTORTYPEHANDLER_H
 #define TYPEART_VECTORTYPEHANDLER_H
 
-#include "typelib/TypeDatabase.hpp"
+#include "db/Database.hpp"
 
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringMap.h"
@@ -28,7 +28,6 @@ class DataLayout;
 
 namespace typeart {
 
-class TypeDatabase;
 class TypeGenerator;
 
 struct VectorTypeHandler {
@@ -36,7 +35,7 @@ struct VectorTypeHandler {
   // arrays. They are given special names and are marked with a TA_VEC flag to avoid confusion.
 
   const llvm::StringMap<type_id_t>* m_struct_map;
-  const TypeDatabase* m_type_db;
+  const Database* m_type_db;
 
   llvm::VectorType* type;
   const llvm::DataLayout& dl;

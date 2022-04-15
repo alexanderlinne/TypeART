@@ -1,7 +1,6 @@
-add_subdirectory(common)
+add_subdirectory(db)
 add_subdirectory(support)
 add_subdirectory(passes)
-add_subdirectory(typelib)
 add_subdirectory(runtime)
 
 if(${TYPEART_USE_ALLOCATOR})

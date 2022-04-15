@@ -89,7 +89,7 @@ if(TYPEART_TEST_CONFIGURE_IDE)
     add_dependencies(${target} ${TYPEARTPASS_TEST_DEPENDS})
 
     target_include_directories(
-      ${target} PRIVATE ${PROJECT_SOURCE_DIR}/lib/typelib
+      ${target} PRIVATE ${PROJECT_SOURCE_DIR}/lib/db
                         ${PROJECT_SOURCE_DIR}/lib/runtime
                         ${PROJECT_SOURCE_DIR}
     )

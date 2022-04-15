@@ -43,7 +43,7 @@ set_target_properties(
 
 typeart_target_coverage_options(${TYPEART_PREFIX}_TypeGenStatic)
 
-target_link_libraries(${TYPEART_PREFIX}_TypeGenStatic typeart::TypesStatic)
+target_link_libraries(${TYPEART_PREFIX}_TypeGenStatic typeart::DatabaseStatic)
 
 target_include_directories(
   ${TYPEART_PREFIX}_TypeGenStatic

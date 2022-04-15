@@ -39,16 +39,12 @@ endif()
 
 typeart_add_format_target(
   format-sources "Formats project source files"
-  TARGETS lib/passes/*.cpp
-          lib/passes/*.h
-          lib/runtime/*.cpp
-          lib/runtime/*.h
-          lib/typelib/*.cpp
-          lib/typelib/*.h
-          lib/support/*.cpp
-          lib/support/*.h
-          lib/mpi_interceptor/*.cpp
-          lib/mpi_interceptor/*.h
+  TARGETS lib/**/*.h
+          lib/**/*.hpp
+          lib/**/*.c
+          lib/**/*.cpp
+          "include/**/*.hpp"
+          "include/**/*.h"
           demo/*.c
           demo/*.h
 )

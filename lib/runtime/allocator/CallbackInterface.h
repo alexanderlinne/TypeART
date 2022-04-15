@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "common/Types.h"
+#include "db/Types.h"
 
 #ifdef __cplusplus
 #include <cstddef>

@@ -14,7 +14,7 @@
 #define LLVM_MUST_SUPPORT_TYPEMANAGER_H
 
 #include "TypeGenerator.h"
-#include "typelib/TypeDB.hpp"
+#include "db/Database.hpp"
 
 #include "llvm/ADT/StringMap.h"
 
@@ -32,17 +32,17 @@ namespace typeart {
 
 class TypeManager final : public TypeGenerator {
   std::string file;
-  TypeDB typeDB;
+  Database db;
   llvm::StringMap<type_id_t> structMap;
   size_t structCount;
 
  public:
   explicit TypeManager(std::string file);
-  [[nodiscard]] std::pair<bool, std::error_code> load() override;
-  [[nodiscard]] std::pair<bool, std::error_code> store() const override;
+  [[nodiscard]] bool load() override;
+  [[nodiscard]] bool store() const override;
   [[nodiscard]] type_id_t getOrRegisterType(llvm::Type* type, const llvm::DataLayout& dl) override;
   [[nodiscard]] type_id_t getTypeID(llvm::Type* type, const llvm::DataLayout& dl) const override;
-  [[nodiscard]] const TypeDatabase& getTypeDatabase() const override;
+  [[nodiscard]] const Database& getDatabase() const override;
   [[nodiscard]] alloc_id_t getOrRegisterAllocation(type_id_t type_id, std::optional<size_t> count,
                                                    std::optional<ptrdiff_t> base_ptr_offset) override;
 

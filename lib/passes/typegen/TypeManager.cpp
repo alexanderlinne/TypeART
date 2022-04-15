@@ -14,11 +14,10 @@
 
 #include "StructTypeHandler.h"
 #include "VectorTypeHandler.h"
-#include "common/Types.hpp"
+#include "db/Database.hpp"
 #include "support/Logger.hpp"
 #include "support/TypeUtil.h"
 #include "support/Util.h"
-#include "typelib/TypeIO.h"
 
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
@@ -90,7 +89,7 @@ llvm::Optional<type_id_t> get_builtin_typeid(llvm::Type* type) {
 type_id_t TypeManager::getOrRegisterVector(llvm::VectorType* type, const llvm::DataLayout& dl) {
   namespace tu = typeart::util;
 
-  VectorTypeHandler handler{&structMap, &typeDB, type, dl, *this};
+  VectorTypeHandler handler{&structMap, &db, type, dl, *this};
   const auto type_id = handler.getID();
   if (type_id) {
     return type_id.getValue();
@@ -130,7 +129,7 @@ type_id_t TypeManager::getOrRegisterVector(llvm::VectorType* type, const llvm::D
 
   StructTypeInfo vecTypeInfo{id,      vector_name,   vector_bytes, memberTypeIDs.size(),
                              offsets, memberTypeIDs, arraySizes,   StructTypeFlag::LLVM_VECTOR};
-  typeDB.registerStruct(vecTypeInfo);
+  db.registerStruct(vecTypeInfo);
   structMap.insert({vector_name, id});
   return id;
 }
@@ -138,35 +137,31 @@ type_id_t TypeManager::getOrRegisterVector(llvm::VectorType* type, const llvm::D
 TypeManager::TypeManager(std::string file) : file(std::move(file)), structCount(0) {
 }
 
-const TypeDatabase& TypeManager::getTypeDatabase() const {
-  return typeDB;
+const Database& TypeManager::getDatabase() const {
+  return db;
 }
 
 alloc_id_t TypeManager::getOrRegisterAllocation(type_id_t type_id, std::optional<size_t> count,
                                                 std::optional<ptrdiff_t> base_ptr_offset) {
-  return typeDB.getOrCreateAllocationId(type_id, count, base_ptr_offset);
+  return db.getOrCreateAllocationId(type_id, count, base_ptr_offset);
 }
 
-std::pair<bool, std::error_code> TypeManager::load() {
-  //  TypeIO cio(&typeDB);
-  // std::error_code error;
-  auto loaded        = io::load(&typeDB, file);
-  std::error_code ec = loaded.getError();
-  if (ec) {
-    return {false, ec};
+bool TypeManager::load() {
+  auto database = Database::load(file);
+  if (!database.has_value()) {
+    return false;
   }
+  db = std::move(database).value();
   structMap.clear();
-  for (const auto& structInfo : typeDB.getStructList()) {
+  for (const auto& structInfo : db.getStructInfo()) {
     structMap.insert({structInfo.name, structInfo.type_id});
   }
   structCount = structMap.size();
-  return {true, ec};
+  return true;
 }
 
-std::pair<bool, std::error_code> TypeManager::store() const {
-  auto stored        = io::store(&typeDB, file);
-  std::error_code ec = stored.getError();
-  return {!static_cast<bool>(ec), ec};
+bool TypeManager::store() const {
+  return db.store(file);
 }
 
 type_id_t TypeManager::getTypeID(llvm::Type* type, const DataLayout& dl) const {
@@ -182,7 +177,7 @@ type_id_t TypeManager::getTypeID(llvm::Type* type, const DataLayout& dl) const {
     case llvm::Type::FixedVectorTyID:
 #endif
     {
-      VectorTypeHandler handle{&structMap, &typeDB, dyn_cast<VectorType>(type), dl, *this};
+      VectorTypeHandler handle{&structMap, &db, dyn_cast<VectorType>(type), dl, *this};
       const auto type_id = handle.getID();
       if (type_id) {
         return type_id.getValue();
@@ -190,7 +185,7 @@ type_id_t TypeManager::getTypeID(llvm::Type* type, const DataLayout& dl) const {
       break;
     }
     case llvm::Type::StructTyID: {
-      StructTypeHandler handle{&structMap, &typeDB, dyn_cast<StructType>(type)};
+      StructTypeHandler handle{&structMap, &db, dyn_cast<StructType>(type)};
       const auto type_id = handle.getID();
       if (type_id) {
         return type_id.getValue();
@@ -236,7 +231,7 @@ type_id_t TypeManager::getOrRegisterType(llvm::Type* type, const llvm::DataLayou
 type_id_t TypeManager::getOrRegisterStruct(llvm::StructType* type, const llvm::DataLayout& dl) {
   namespace tu = typeart::util;
 
-  StructTypeHandler handle{&structMap, &typeDB, type};
+  StructTypeHandler handle{&structMap, &db, type};
   const auto type_id = handle.getID();
   if (type_id) {
     return type_id.getValue();
@@ -292,7 +287,7 @@ type_id_t TypeManager::getOrRegisterStruct(llvm::StructType* type, const llvm::D
   size_t numBytes = layout->getSizeInBytes();
 
   StructTypeInfo structInfo{id, name, numBytes, n, offsets, memberTypeIDs, arraySizes, StructTypeFlag::USER_DEFINED};
-  typeDB.registerStruct(structInfo);
+  db.registerStruct(structInfo);
 
   structMap.insert({name, id});
   return id;

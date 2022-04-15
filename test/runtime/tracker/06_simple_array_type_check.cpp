@@ -1,11 +1,11 @@
-// RUN: %run %s 2>&1 | %filecheck %s
+// RUN: %run %s --compile_flags "-std=c++17" 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
 #include "util.h"
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <typeart/common/Types.hpp>
+#include <typeart/TypeART.hpp>
 
 template <typename T>
 void performTypeChecks(int n, typeart_builtin_type typeId) {

@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "../typelib/TypeDB.hpp"
+#include "../db/Database.hpp"
 #include "Runtime.h"
 
 #include <cstddef>
@@ -30,12 +30,12 @@ struct PointerInfo final {
 };
 
 class TypeResolution {
-  const TypeDB& typeDB;
+  const Database& db;
 
  public:
   using TypeArtStatus = typeart_status;
 
-  TypeResolution(const TypeDB& db);
+  TypeResolution(const Database& db);
 
   const std::string& getTypeName(type_id_t type_id) const;
   size_t getTypeSize(type_id_t type_id) const;

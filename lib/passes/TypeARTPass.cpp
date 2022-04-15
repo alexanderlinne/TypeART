@@ -67,11 +67,11 @@ bool TypeArtPass::doInitialization(llvm::Module& m) {
   typeManager              = make_typegen(type_filepath);
 
   LOG_DEBUG("Propagating type infos.");
-  const auto [loaded, error] = typeManager->load();
+  const auto loaded = typeManager->load();
   if (loaded) {
     LOG_DEBUG("Existing type configuration successfully loaded from " << type_filepath);
   } else {
-    LOG_DEBUG("No valid existing type configuration found: " << type_filepath << ". Reason: " << error.message());
+    LOG_DEBUG("No valid existing type configuration found: " << type_filepath);
   }
 
 #ifdef TYPEART_USE_ALLOCATOR
@@ -157,11 +157,11 @@ bool TypeArtPass::doFinalization(llvm::Module&) {
    */
   LOG_DEBUG("Writing type file to " << cl::getTypeFilepath());
 
-  const auto [stored, error] = typeManager->store();
+  const auto stored = typeManager->store();
   if (stored) {
     LOG_DEBUG("Success!");
   } else {
-    LOG_FATAL("Failed writing type config to " << cl::getTypeFilepath() << ". Reason: " << error.message());
+    LOG_FATAL("Failed writing type config to " << cl::getTypeFilepath());
   }
   if (cl::getPrintStats()) {
     auto& out = llvm::errs();

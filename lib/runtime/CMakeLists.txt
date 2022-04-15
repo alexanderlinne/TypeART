@@ -54,9 +54,8 @@ add_library(typeart::Runtime ALIAS ${TYPEART_PREFIX}_Runtime)
 
 target_link_libraries(
   ${TYPEART_PREFIX}_Runtime
-  PRIVATE typeart::TypesStatic
+  PRIVATE typeart::DatabaseStatic
           typeart::SystemStatic
-          typeart::Common
           LLVMCore
           LLVMSupport
           $<$<BOOL:${TYPEART_MPI_LOGGER}>:MPI::MPI_CXX>

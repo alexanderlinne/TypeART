@@ -13,7 +13,7 @@
 #include "runtime/Runtime.hpp"
 
 #include "AccessCountPrinter.h"
-#include "TypeIO.h"
+#include "db/Database.hpp"
 #include "runtime/AccessCounter.hpp"
 #include "support/Logger.hpp"
 #include "support/System.hpp"
@@ -29,16 +29,19 @@ namespace typeart::runtime {
 
 static constexpr const char* defaultTypeFileName = "types.yaml";
 
-Runtime::Runtime() : init(), typeResolution(typeDB), tracker(typeDB, recorder) {
+Runtime::Runtime() : init(), typeResolution(db), tracker(db, recorder) {
   LOG_TRACE("TypeART Runtime Trace");
   LOG_TRACE("*********************");
   LOG_TRACE("Operation  Address   Type   Size   Count   (CallAddr)   Stack/Heap/Global");
   LOG_TRACE("-------------------------------------------------------------------------");
 
   auto loadTypes = [this](const std::string& file, std::error_code& ec) -> bool {
-    auto loaded = io::load(&typeDB, file);
-    ec          = loaded.getError();
-    return !static_cast<bool>(ec);
+    auto database = Database::load(file);
+    if (database.has_value()) {
+      db = std::move(database).value();
+      return true;
+    }
+    return false;
   };
 
   std::error_code error;
@@ -70,7 +73,7 @@ Runtime::Runtime() : init(), typeResolution(typeDB), tracker(typeDB, recorder) {
   }
 
   std::stringstream ss;
-  const auto& typeList = typeDB.getStructList();
+  const auto& typeList = db.getStructInfo();
   for (const auto& structInfo : typeList) {
     ss << structInfo.name << ", ";
   }
