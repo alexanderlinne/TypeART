@@ -1,10 +1,9 @@
 // RUN: %run %s --compile_flags "-std=c++17" 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "runtime/RuntimeInterface.h"
-#include "typelib/TypeDatabase.h"
-
 #include <cstdio>
+#include <typeart/TypeART.h>
+#include <typeart/typelib/TypeDatabase.hpp>
 
 struct Datastruct {
   int start;

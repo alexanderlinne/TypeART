@@ -14,13 +14,13 @@
 #define TYPEART_MPI_INTERCEPTOR_ERROR_H
 
 #include "Config.h"
-#include "System.h"
-#include "runtime/TypeResolution.h"
 
 #include <memory>
 #include <mpi.h>
 #include <optional>
 #include <result.hpp>
+#include <typeart/TypeART.hpp>
+#include <typeart/support/System.hpp>
 #include <variant>
 #include <vector>
 

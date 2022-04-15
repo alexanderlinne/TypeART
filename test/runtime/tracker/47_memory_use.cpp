@@ -1,9 +1,8 @@
 // RUN: %run  %s --compile_flags "-std=c++17" 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "support/System.h"
-
 #include <cstdio>
+#include <typeart/support/System.hpp>
 
 struct Datastruct {
   int start;

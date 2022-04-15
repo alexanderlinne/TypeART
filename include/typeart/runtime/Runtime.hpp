@@ -13,13 +13,14 @@
 #ifndef TYPEART_RUNTIME_H
 #define TYPEART_RUNTIME_H
 
-#include "AccessCounter.h"
-#include "TypeResolution.h"
-#include "tracker/Tracker.h"
-#include "typelib/TypeDB.h"
+#include "../typelib/TypeDB.hpp"
+#include "AccessCounter.hpp"
+#include "Runtime.h"
+#include "TypeResolution.hpp"
+#include "tracker/Tracker.hpp"
 
 #ifdef TYPEART_USE_ALLOCATOR
-#include "allocator/Allocator.h"
+#include "allocator/Allocator.hpp"
 #endif
 
 #include <cstddef>
@@ -84,12 +85,12 @@ class Runtime {
     return get().tracker;
   }
 
-  static const TypeResolution& getTypeResolution() {
-    return get().typeResolution;
-  }
-
   static Recorder& getRecorder() {
     return get().recorder;
+  }
+
+  static TypeResolution& getTypeResolution() {
+    return get().typeResolution;
   }
 
   static ScopeGuard scopeGuard() {
@@ -110,9 +111,10 @@ class Runtime {
     return result;
   }
 
-  static std::string toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id,size_t count, size_t typeSize,
+  static std::string toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id, size_t count,
+                              size_t typeSize, const void* calledFrom);
+  static std::string toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id, size_t count,
                               const void* calledFrom);
-  static std::string toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id,size_t count, const void* calledFrom);
 
  private:
   Runtime();

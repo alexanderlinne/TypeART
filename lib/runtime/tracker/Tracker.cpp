@@ -10,14 +10,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "Tracker.h"
+#include "runtime/tracker/Tracker.hpp"
 
 #include "CallbackInterface.h"
-#include "TypeDB.h"
-#include "runtime/AccessCounter.h"
-#include "runtime/Runtime.h"
-#include "runtime/TypeResolution.h"
-#include "support/Logger.h"
+#include "runtime/AccessCounter.hpp"
+#include "runtime/Runtime.hpp"
+#include "runtime/TypeResolution.hpp"
+#include "support/Logger.hpp"
+#include "typelib/TypeDB.hpp"
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_ostream.h"

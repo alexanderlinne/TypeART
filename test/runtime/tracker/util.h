@@ -1,11 +1,10 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include "runtime/RuntimeInterface.h"
-
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <typeart/TypeART.h>
 
 int get_struct_id(int index) {
   return TYPEART_NUM_RESERVED_IDS + index;

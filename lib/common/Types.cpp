@@ -1,4 +1,4 @@
-#include "TypeDatabase.h"
+#include "common/Types.hpp"
 
 namespace typeart {
 

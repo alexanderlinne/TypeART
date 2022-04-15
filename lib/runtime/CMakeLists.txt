@@ -28,26 +28,16 @@ add_custom_command(
 
 set(RUNTIME_LIB_ALLOCATOR_SOURCES
     allocator/Allocator.cpp
-    allocator/Allocator.h
     allocator/Allocator.S
     allocator/CallbackInterface.cpp
-    allocator/CallbackInterface.h
-    allocator/Config.h
     ${TYPEART_ALLOCATOR_CONSTANTS_SOURCE}
 )
 
 set(RUNTIME_LIB_SOURCES
-    AccessCounter.h
-    RuntimeInterface.cpp
-    RuntimeInterface.h
     TypeResolution.cpp
-    TypeResolution.h
     Runtime.cpp
-    Runtime.h
     tracker/CallbackInterface.cpp
-    tracker/CallbackInterface.h
     tracker/Tracker.cpp
-    tracker/Tracker.h
     ${TYPEART_META_SOURCE}
     $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:${RUNTIME_LIB_ALLOCATOR_SOURCES}>
     $<$<BOOL:${TYPEART_MPI_LOGGER}>:../support/MPILogger.cpp>
@@ -66,6 +56,7 @@ target_link_libraries(
   ${TYPEART_PREFIX}_Runtime
   PRIVATE typeart::TypesStatic
           typeart::SystemStatic
+          typeart::Common
           LLVMCore
           LLVMSupport
           $<$<BOOL:${TYPEART_MPI_LOGGER}>:MPI::MPI_CXX>
@@ -79,7 +70,9 @@ target_link_libraries(
 target_include_directories(
   ${TYPEART_PREFIX}_Runtime
   PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
+          $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/typeart>
 )
 
 target_include_directories(${TYPEART_PREFIX}_Runtime SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
@@ -116,10 +109,6 @@ make_tidy_check(${TYPEART_PREFIX}_Runtime "${RUNTIME_LIB_SOURCES}")
 
 set(CONFIG_NAME ${PROJECT_NAME}Runtime)
 set(TARGETS_EXPORT_NAME ${CONFIG_NAME}Targets)
-
-install(FILES RuntimeInterface.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
-)
 
 install(
   TARGETS ${TYPEART_PREFIX}_Runtime

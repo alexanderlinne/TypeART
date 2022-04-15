@@ -12,7 +12,7 @@
 
 #include "InstrumentationHelper.h"
 
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"

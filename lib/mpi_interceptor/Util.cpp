@@ -12,8 +12,6 @@
 
 #include "Util.h"
 
-#include "typelib/TypeInterface.h"
-
 #include <cstdint>
 #include <cstdio>
 

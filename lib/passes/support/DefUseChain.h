@@ -13,7 +13,7 @@
 #ifndef TYPEART_DEFUSECHAIN_H
 #define TYPEART_DEFUSECHAIN_H
 
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 #include "support/Util.h"
 
 #include "llvm/IR/Instructions.h"

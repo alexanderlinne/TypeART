@@ -1,3 +1,4 @@
+add_subdirectory(common)
 add_subdirectory(support)
 add_subdirectory(passes)
 add_subdirectory(typelib)

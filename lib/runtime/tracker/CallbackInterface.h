@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "typelib/TypeInterface.h"
+#include "common/Types.h"
 
 #ifdef __cplusplus
 #include <cstddef>

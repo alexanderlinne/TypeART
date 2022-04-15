@@ -14,9 +14,7 @@
 #define TYPEART_MPI_INTERCEPTOR_TYPE_CHECK_H
 
 #include "Error.h"
-#include "System.h"
 #include "Util.h"
-#include "runtime/RuntimeInterface.h"
 
 #include <atomic>
 #include <cstddef>
@@ -24,6 +22,8 @@
 #include <mpi.h>
 #include <optional>
 #include <string>
+#include <typeart/TypeART.hpp>
+#include <typeart/support/System.hpp>
 #include <vector>
 
 namespace typeart {

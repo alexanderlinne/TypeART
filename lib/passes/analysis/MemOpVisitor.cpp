@@ -15,7 +15,7 @@
 #include "analysis/MemOpData.h"
 #include "compat/CallSite.h"
 #include "support/Error.h"
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 #include "support/TypeUtil.h"
 
 #include "llvm/ADT/None.h"

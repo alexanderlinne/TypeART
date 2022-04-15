@@ -13,7 +13,7 @@
 #ifndef TYPEART_ALLOCMAPWRAPPER_H
 #define TYPEART_ALLOCMAPWRAPPER_H
 
-#include "Types.h"
+#include "Types.hpp"
 
 #include "llvm/ADT/Optional.h"
 

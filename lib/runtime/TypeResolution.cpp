@@ -10,11 +10,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "TypeResolution.h"
+#include "runtime/TypeResolution.hpp"
 
-#include "Runtime.h"
-#include "support/Logger.h"
-#include "support/System.h"
+#include "runtime/Runtime.h"
+#include "support/Logger.hpp"
+#include "support/System.hpp"
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_ostream.h"

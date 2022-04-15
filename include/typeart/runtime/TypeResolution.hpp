@@ -12,9 +12,8 @@
 
 #pragma once
 
-#include "RuntimeInterface.h"
-#include "typelib/TypeDB.h"
-#include "typelib/TypeInterface.h"
+#include "../typelib/TypeDB.hpp"
+#include "Runtime.h"
 
 #include <cstddef>
 #include <string>
@@ -34,7 +33,6 @@ class TypeResolution {
   const TypeDB& typeDB;
 
  public:
-  using type_id_value = type_id_t::value_type;
   using TypeArtStatus = typeart_status;
 
   TypeResolution(const TypeDB& db);

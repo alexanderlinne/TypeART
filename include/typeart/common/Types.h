@@ -1,6 +1,6 @@
 // TypeART library
 //
-// Copyright (c) 2017-2022 TypeART Authors
+// Copyright (c) 2017-2021 TypeART Authors
 // Distributed under the BSD 3-Clause license.
 // (See accompanying file LICENSE.txt or copy at
 // https://opensource.org/licenses/BSD-3-Clause)
@@ -10,12 +10,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#ifndef TYPEART_TYPEINTERFACE_H
-#define TYPEART_TYPEINTERFACE_H
+#pragma once
 
 #ifdef __cplusplus
 #include <cstddef>
 #else
+#include <stdbool.h>
 #include <stddef.h>
 #endif
 
@@ -46,5 +46,3 @@ typedef enum typeart_builtin_type_t {                  // NOLINT
 #ifdef __cplusplus
 }
 #endif
-
-#endif  // TYPEART_TYPEINTERFACE_H

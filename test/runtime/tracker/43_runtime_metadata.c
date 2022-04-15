@@ -1,10 +1,9 @@
 // RUN: %run %s 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "runtime/RuntimeInterface.h"
-
 #include <stdbool.h>
 #include <stdio.h>
+#include <typeart/TypeART.h>
 
 struct Datastruct {
   int start;

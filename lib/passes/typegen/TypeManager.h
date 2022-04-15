@@ -14,7 +14,7 @@
 #define LLVM_MUST_SUPPORT_TYPEMANAGER_H
 
 #include "TypeGenerator.h"
-#include "typelib/TypeDB.h"
+#include "typelib/TypeDB.hpp"
 
 #include "llvm/ADT/StringMap.h"
 

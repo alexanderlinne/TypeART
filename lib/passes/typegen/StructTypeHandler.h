@@ -13,7 +13,7 @@
 #ifndef TYPEART_STRUCTTYPEHANDLER_H
 #define TYPEART_STRUCTTYPEHANDLER_H
 
-#include "typelib/TypeDatabase.h"
+#include "typelib/TypeDatabase.hpp"
 
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringMap.h"

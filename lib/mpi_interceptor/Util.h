@@ -13,10 +13,8 @@
 #ifndef TYPEART_MPI_INTERCEPTOR_UTIL_H
 #define TYPEART_MPI_INTERCEPTOR_UTIL_H
 
-#include "runtime/RuntimeInterface.h"
-#include "runtime/TypeResolution.h"
-
 #include <mpi.h>
+#include <typeart/TypeART.hpp>
 
 namespace typeart {
 

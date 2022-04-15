@@ -1,11 +1,11 @@
 // RUN: %run %s 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "typelib/TypeInterface.h"
 #include "util.h"
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <typeart/common/Types.hpp>
 
 template <typename T>
 void performTypeChecks(int n, typeart_builtin_type typeId) {

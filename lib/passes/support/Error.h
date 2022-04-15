@@ -10,7 +10,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"

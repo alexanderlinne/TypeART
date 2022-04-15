@@ -13,9 +13,8 @@
 #ifndef TYPEART_ACCESSCOUNTER_H
 #define TYPEART_ACCESSCOUNTER_H
 
-#include "RuntimeInterface.h"
-#include "tracker/Types.h"
-#include "typelib/TypeDatabase.h"
+#include "../typelib/TypeDatabase.hpp"
+#include "tracker/Types.hpp"
 
 #include <atomic>
 #include <cmath>

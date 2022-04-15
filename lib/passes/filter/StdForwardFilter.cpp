@@ -16,7 +16,7 @@
 #include "filter/FilterBase.h"
 #include "filter/FilterUtil.h"
 #include "filter/Matcher.h"
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Value.h"

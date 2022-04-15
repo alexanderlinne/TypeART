@@ -14,10 +14,10 @@
 
 #include "analysis/MemOpData.h"
 #include "runtime/allocator/Config.h"
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 #include "support/OmpUtil.h"
 #include "support/Util.h"
-#include "typelib/TypeDatabase.h"
+#include "typelib/TypeDatabase.hpp"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/BasicBlock.h"

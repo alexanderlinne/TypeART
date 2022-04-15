@@ -12,8 +12,10 @@ set_target_properties(
 
 target_include_directories(
   ${TYPEART_PREFIX}_SystemStatic
-  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/support>
+          $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/typeart>
 )
 
 typeart_target_compile_options(${TYPEART_PREFIX}_SystemStatic)
@@ -34,10 +36,6 @@ endif()
 
 set(CONFIG_NAME ${PROJECT_NAME}System)
 set(TARGETS_EXPORT_NAME ${CONFIG_NAME}Targets)
-
-install(FILES Table.h System.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}/support
-)
 
 install(
   TARGETS ${TYPEART_PREFIX}_SystemStatic

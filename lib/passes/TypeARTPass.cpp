@@ -17,7 +17,7 @@
 #include "instrumentation/allocator/InstrumentationStrategy.h"
 #include "instrumentation/tracker/ArgumentParser.h"
 #include "instrumentation/tracker/InstrumentationStrategy.h"
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 #include "support/Table.h"
 #include "typegen/TypeGenerator.h"
 

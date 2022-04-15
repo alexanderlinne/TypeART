@@ -9,8 +9,6 @@
 // REQUIRES: mpicc
 // UNSUPPORTED: sanitizer
 
-#include "../../lib/runtime/tracker/CallbackInterface.h"
-
 #include <mpi.h>
 #include <stdio.h>
 
@@ -18,6 +16,7 @@ int main(int argc, char** argv) {
   MPI_Init(&argc, &argv);
   int i;
   fprintf(stderr, "Expected pointer: %p\n", &i);
+  MPI_Bsend(&i, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
   MPI_Finalize();
   return 0;
 }

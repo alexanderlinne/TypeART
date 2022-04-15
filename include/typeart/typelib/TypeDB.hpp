@@ -13,7 +13,7 @@
 #ifndef LLVM_MUST_SUPPORT_TYPECONFIG_H
 #define LLVM_MUST_SUPPORT_TYPECONFIG_H
 
-#include "TypeDatabase.h"
+#include "TypeDatabase.hpp"
 
 #include <array>
 #include <cstddef>

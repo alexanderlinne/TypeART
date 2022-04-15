@@ -2,9 +2,10 @@
 #define _GNU_SOURCE
 #endif
 
+#include "runtime/allocator/Allocator.hpp"
+#include "runtime/allocator/Config.h"
+
 #include <dlfcn.h>
-#include <runtime/allocator/Allocator.h>
-#include <runtime/allocator/Config.h>
 
 extern "C" {
 void* typeart_preload_thread_start(void*, void*);

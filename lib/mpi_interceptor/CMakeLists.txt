@@ -29,11 +29,13 @@ set_property(TARGET MPITool PROPERTY CXX_STANDARD_REQUIRED TRUE)
 
 typeart_target_define_file_basename(MPITool)
 
+target_include_directories(MPITool SYSTEM
+  PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+          $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
 target_include_directories(MPITool
-  PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
-         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/support>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
 target_include_directories(MPITool

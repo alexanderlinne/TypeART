@@ -12,10 +12,9 @@
 
 #include "StructTypeHandler.h"
 
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 #include "support/Util.h"
-#include "typelib/TypeDatabase.h"
-#include "typelib/TypeInterface.h"
+#include "typelib/TypeDatabase.hpp"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"

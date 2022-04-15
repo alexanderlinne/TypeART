@@ -17,7 +17,7 @@
 #include "OmpUtil.h"
 #include "compat/CallSite.h"
 #include "support/DefUseChain.h"
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"

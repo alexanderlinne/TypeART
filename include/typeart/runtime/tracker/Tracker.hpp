@@ -13,10 +13,10 @@
 #ifndef TYPEART_ALLOCATIONTRACKING_H
 #define TYPEART_ALLOCATIONTRACKING_H
 
-#include "AllocMapWrapper.h"
-#include "runtime/AccessCounter.h"
-#include "runtime/TypeResolution.h"
-#include "typelib/TypeDB.h"
+#include "../../typelib/TypeDB.hpp"
+#include "../AccessCounter.hpp"
+#include "../TypeResolution.hpp"
+#include "AllocMapWrapper.hpp"
 
 #include <cstddef>
 

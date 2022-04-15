@@ -1,11 +1,11 @@
 // RUN: %run %s --manual 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "runtime/tracker/CallbackInterface.h"
 #include "util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <typeart/TypeART.h>
 
 int main(int argc, char** argv) {
   const void* ret_check = NULL;

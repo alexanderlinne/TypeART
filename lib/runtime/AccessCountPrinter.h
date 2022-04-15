@@ -13,10 +13,10 @@
 #ifndef TYPEART_ACCESSCOUNTPRINTER_H
 #define TYPEART_ACCESSCOUNTPRINTER_H
 
-#include "AccessCounter.h"
-#include "support/Logger.h"
+#include "runtime/AccessCounter.hpp"
+#include "runtime/tracker/Types.hpp"
+#include "support/Logger.hpp"
 #include "support/Table.h"
-#include "tracker/Types.h"
 
 #include <fstream>
 #include <map>

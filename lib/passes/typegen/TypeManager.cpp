@@ -14,11 +14,11 @@
 
 #include "StructTypeHandler.h"
 #include "VectorTypeHandler.h"
-#include "support/Logger.h"
+#include "common/Types.hpp"
+#include "support/Logger.hpp"
 #include "support/TypeUtil.h"
 #include "support/Util.h"
 #include "typelib/TypeIO.h"
-#include "typelib/TypeInterface.h"
 
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"

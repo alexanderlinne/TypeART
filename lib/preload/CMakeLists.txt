@@ -23,10 +23,9 @@ target_link_libraries(
 target_include_directories(
   ${TYPEART_PREFIX}_Preload
   PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/runtime>
-         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/typelib>
   PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/passes/support>
           $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
+          $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/typeart>
 )
 
 target_include_directories(${TYPEART_PREFIX}_Preload SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})

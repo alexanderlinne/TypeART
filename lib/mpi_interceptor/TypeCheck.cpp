@@ -13,8 +13,6 @@
 #include "TypeCheck.h"
 
 #include "Util.h"
-#include "runtime/RuntimeInterface.h"
-#include "typelib/TypeInterface.h"
 
 #include <algorithm>
 #include <fmt/core.h>

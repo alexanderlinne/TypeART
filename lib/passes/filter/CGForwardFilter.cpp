@@ -17,7 +17,7 @@
 #include "OmpUtil.h"
 #include "filter/FilterBase.h"
 #include "filter/FilterUtil.h"
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 #include "support/Util.h"
 
 #include "llvm/ADT/STLExtras.h"

@@ -12,9 +12,8 @@
 
 #include "TypeIO.h"
 
-#include "TypeDB.h"
-#include "TypeDatabase.h"
-#include "support/Logger.h"
+#include "support/Logger.hpp"
+#include "typelib/TypeDB.hpp"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"

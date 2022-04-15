@@ -1,9 +1,8 @@
 // RUN: %run %s 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "runtime/RuntimeInterface.h"
-
 #include <stdio.h>
+#include <typeart/TypeART.h>
 
 void type_check(const void* addr) {
   int id_result      = 0;

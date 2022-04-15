@@ -1,6 +1,6 @@
 // TypeART library
 //
-// Copyright (c) 2017-2022 TypeART Authors
+// Copyright (c) 2017-2021 TypeART Authors
 // Distributed under the BSD 3-Clause license.
 // (See accompanying file LICENSE.txt or copy at
 // https://opensource.org/licenses/BSD-3-Clause)
@@ -10,14 +10,15 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#ifndef TYPEART_RUNTIMEINTERFACE_H
-#define TYPEART_RUNTIMEINTERFACE_H
-
-#include "typelib/TypeInterface.h"
+#pragma once
 
 #ifdef __cplusplus
+#include "../common/Types.hpp"
+
 #include <cstddef>
 #else
+#include "../common/Types.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #endif
@@ -270,5 +271,3 @@ const char* typeart_get_llvm_version();
 #ifdef __cplusplus
 }
 #endif
-
-#endif  // TYPEART_RUNTIMEINTERFACE_H

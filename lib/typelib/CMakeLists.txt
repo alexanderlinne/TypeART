@@ -1,4 +1,4 @@
-set(TYPE_LIB_SOURCES TypeDB.cpp TypeIO.cpp TypeDatabase.cpp)
+set(TYPE_LIB_SOURCES TypeDB.cpp TypeIO.cpp)
 
 add_library(${TYPEART_PREFIX}_TypesObj OBJECT ${TYPE_LIB_SOURCES})
 
@@ -8,8 +8,10 @@ target_include_directories(${TYPEART_PREFIX}_TypesObj SYSTEM PRIVATE ${LLVM_INCL
 
 target_include_directories(
   ${TYPEART_PREFIX}_TypesObj
-  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
+          $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/typeart>
 )
 
 target_compile_definitions(${TYPEART_PREFIX}_TypesObj PRIVATE TYPEART_LOG_LEVEL=${TYPEART_LOG_LEVEL})
@@ -30,12 +32,13 @@ set_target_properties(
 )
 target_include_directories(
   ${TYPEART_PREFIX}_Types
-  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
+          $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/typeart>
 )
 
-target_link_libraries(${TYPEART_PREFIX}_Types PRIVATE LLVMCore LLVMSupport)
+target_link_libraries(${TYPEART_PREFIX}_Types PRIVATE typeart::Common LLVMCore LLVMSupport)
 
 typeart_target_coverage_options(${TYPEART_PREFIX}_Types)
 
@@ -58,10 +61,6 @@ typeart_target_coverage_options(${TYPEART_PREFIX}_TypesStatic)
 
 set(CONFIG_NAME ${PROJECT_NAME}Types)
 set(TARGETS_EXPORT_NAME ${CONFIG_NAME}Targets)
-
-install(FILES TypeInterface.h TypeDatabase.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
-)
 
 install(
   TARGETS ${TYPEART_PREFIX}_Types ${TYPEART_PREFIX}_TypesStatic

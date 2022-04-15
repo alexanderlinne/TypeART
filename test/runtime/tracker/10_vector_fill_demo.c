@@ -1,11 +1,10 @@
 // RUN: %run %s 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "runtime/RuntimeInterface.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <typeart/TypeART.h>
 
 typedef struct vector_t {
   double* vals;

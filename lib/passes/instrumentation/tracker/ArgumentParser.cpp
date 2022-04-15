@@ -12,10 +12,10 @@
 
 #include "ArgumentParser.h"
 
-#include "support/Logger.h"
+#include "common/Types.hpp"
+#include "support/Logger.hpp"
 #include "support/TypeUtil.h"
 #include "support/Util.h"
-#include "typelib/TypeInterface.h"
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"

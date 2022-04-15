@@ -1,7 +1,7 @@
-#include "Allocator.h"
+#include "runtime/allocator/Allocator.hpp"
 
-#include "../Runtime.h"
 #include "Config.h"
+#include "runtime/Runtime.hpp"
 
 #include <fmt/core.h>
 #include <fmt/ostream.h>

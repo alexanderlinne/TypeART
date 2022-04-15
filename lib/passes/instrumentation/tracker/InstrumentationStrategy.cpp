@@ -14,7 +14,7 @@
 
 #include "TransformUtil.h"
 #include "analysis/MemOpData.h"
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 #include "support/OmpUtil.h"
 #include "support/Util.h"
 

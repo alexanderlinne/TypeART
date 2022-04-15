@@ -1,10 +1,9 @@
 // RUN: %run  %s --compile_flags "-g" 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "runtime/RuntimeInterface.h"
-
 #include <stdio.h>
 #include <stdlib.h>
+#include <typeart/TypeART.h>
 
 struct Datastruct {
   int start;

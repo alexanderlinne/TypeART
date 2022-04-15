@@ -20,10 +20,10 @@ typeart_make_llvm_module(
   LINK_LIBS typeart::MemInstFinder
             typeart::TypesStatic
             typeart::TypeGenStatic
-  INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
-               ${PROJECT_SOURCE_DIR}/lib/
+            typeart::Common
+  INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/lib/
                ${PROJECT_SOURCE_DIR}/lib/passes/
-               ${CMAKE_CURRENT_SOURCE_DIR}/typegen
+               ${PROJECT_SOURCE_DIR}/include/typeart
 )
 mark_as_advanced(LLVM_TYPEART_TRANSFORMPASS_LINK_INTO_TOOLS)
 

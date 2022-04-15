@@ -1,7 +1,7 @@
 #include <mpi.h>
-#include <runtime/RuntimeInterface.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <typeart/TypeART.h>
 
 struct test {
   int a;

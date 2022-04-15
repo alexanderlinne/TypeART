@@ -10,7 +10,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "runtime/RuntimeInterface.h"
+#include "runtime/Runtime.h"
 
 namespace typeart {
 

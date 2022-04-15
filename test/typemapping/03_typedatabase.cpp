@@ -10,9 +10,8 @@
 
 // clang-format on
 
-#include "typelib/TypeDatabase.h"
-
 #include <cstdio>
+#include <typeart/typelib/TypeDatabase.hpp>
 
 int main() {
   auto db = typeart::make_database("types-missing-file.yaml");

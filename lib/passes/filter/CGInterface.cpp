@@ -12,7 +12,7 @@
 
 #include "CGInterface.h"
 
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 #include "support/Util.h"
 
 #include "llvm/ADT/Optional.h"

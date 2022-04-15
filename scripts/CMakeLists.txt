@@ -26,7 +26,7 @@ function(typeart_configure_script input output)
     set(TYPEART_RELOCATABLE 1)
   else()
     set(TYPEART_INCLUDE_DIRS
-        "-I${PROJECT_SOURCE_DIR}/lib"
+        "-I${PROJECT_SOURCE_DIR}/include"
     )
     set(TYPEART_MPI_INTERCEPT_DIR ${CMAKE_BINARY_DIR}/lib/mpi_interceptor)
     set(TYPEART_RT_DIR ${CMAKE_BINARY_DIR}/lib/runtime)

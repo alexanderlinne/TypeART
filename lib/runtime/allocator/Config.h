@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <cstddef>
-#include <typelib/TypeDatabase.h>
+#include <typelib/TypeDatabase.hpp>
 #include <unistd.h>
 
 namespace typeart::runtime::allocator::config {

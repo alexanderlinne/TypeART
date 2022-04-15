@@ -13,7 +13,7 @@
 #include "TypeARTFunctions.h"
 
 #include "InstrumentationHelper.h"
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 
 #include <string>
 

@@ -10,7 +10,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "System.h"
+#include "support/System.hpp"
 
 #include <algorithm>
 #include <cstdio>

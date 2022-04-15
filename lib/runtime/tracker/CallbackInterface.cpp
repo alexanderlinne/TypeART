@@ -1,6 +1,6 @@
 #include "CallbackInterface.h"
 
-#include "runtime/Runtime.h"
+#include "runtime/Runtime.hpp"
 
 #define TYPEART_RUNTIME_GUARD             \
   auto GUARDNAME = Runtime::scopeGuard(); \

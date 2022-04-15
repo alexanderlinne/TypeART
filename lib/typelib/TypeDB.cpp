@@ -10,11 +10,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "TypeDB.h"
+#include "typelib/TypeDB.hpp"
 
 #include "TypeIO.h"
-#include "support/Logger.h"
-#include "typelib/TypeInterface.h"
+#include "support/Logger.hpp"
 
 #include <iostream>
 #include <utility>

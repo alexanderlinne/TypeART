@@ -1,6 +1,6 @@
-// RUN: %c-to-llvm %s -I../../../lib | %apply-typeart -typeart-stack -S 2>&1 | %filecheck %s
+// RUN: %c-to-llvm %s -I../../../lib -I../../../include/typeart | %apply-typeart -typeart-stack -S 2>&1 | %filecheck %s
 
-#include "../../../lib/runtime/tracker/CallbackInterface.h"
+#include "runtime/tracker/CallbackInterface.h"
 
 int main(void) {
   int count               = 0;

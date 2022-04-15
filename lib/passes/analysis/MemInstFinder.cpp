@@ -19,7 +19,7 @@
 #include "filter/Filter.h"
 #include "filter/Matcher.h"
 #include "filter/StdForwardFilter.h"
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 #include "support/Table.h"
 #include "support/TypeUtil.h"
 #include "support/Util.h"

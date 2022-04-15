@@ -12,7 +12,6 @@
 
 #include "Logger.h"
 #include "Stats.h"
-#include "System.h"
 #include "TypeCheck.h"
 
 #include <bits/types/struct_rusage.h>
@@ -20,6 +19,7 @@
 #include <mpi.h>
 #include <optional>
 #include <sys/resource.h>
+#include <typeart/support/System.hpp>
 
 namespace typeart {
 
