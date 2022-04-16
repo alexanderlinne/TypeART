@@ -63,8 +63,11 @@ void TypeArtPass::getAnalysisUsage(llvm::AnalysisUsage& info) const {
 }
 
 bool TypeArtPass::doInitialization(llvm::Module& m) {
-  const auto type_filepath = cl::getTypeFilepath();
-  typeManager              = make_typegen(type_filepath);
+  auto type_filepath = cl::getTypeFilepath();
+  if (const char* type_file = std::getenv("TYPEART_TYPE_FILE"); type_file != nullptr) {
+    type_filepath = type_file;
+  }
+  typeManager = make_typegen(type_filepath);
 
   LOG_DEBUG("Propagating type infos.");
   const auto loaded = typeManager->load();
