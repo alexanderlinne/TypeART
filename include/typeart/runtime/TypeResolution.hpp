@@ -46,11 +46,11 @@ class TypeResolution {
                                type_id_value* subType, const void** subTypeBaseAddr, size_t* subTypeOffset,
                                size_t* subTypeCount) const;
 
-  TypeArtStatus getSubTypeInfo(const void* baseAddr, size_t offset, const StructTypeInfo& containerInfo,
+  TypeArtStatus getSubTypeInfo(const void* baseAddr, size_t offset, const StructType& containerInfo,
                                type_id_value* subType, const void** subTypeBaseAddr, size_t* subTypeOffset,
                                size_t* subTypeCount) const;
 
-  TypeArtStatus getTypeInfoInternal(const void* baseAddr, size_t offset, const StructTypeInfo& containerInfo,
+  TypeArtStatus getTypeInfoInternal(const void* baseAddr, size_t offset, const StructType& containerInfo,
                                     type_id_value* type, size_t* count) const;
 
   TypeArtStatus getTypeInfo(const void* addr, const PointerInfo& ptrInfo, type_id_value* type, size_t* count) const;
@@ -60,7 +60,7 @@ class TypeResolution {
 
   TypeArtStatus getBuiltinInfo(const void* addr, const PointerInfo& ptrInfo, BuiltinType* type) const;
 
-  TypeArtStatus getStructInfo(type_id_t type_id, const StructTypeInfo** structInfo) const;
+  TypeArtStatus getStructType(type_id_t type_id, const StructType** structInfo) const;
 
   TypeArtStatus getAllocationInfo(alloc_id_t alloc_id, const AllocationInfo** allocation_info) const;
 

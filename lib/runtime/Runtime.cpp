@@ -73,9 +73,11 @@ Runtime::Runtime() : init(), typeResolution(db), tracker(db, recorder) {
   }
 
   std::stringstream ss;
-  const auto& typeList = db.getStructInfo();
+  const auto& typeList = db.getStructTypes();
   for (const auto& structInfo : typeList) {
-    ss << structInfo.name << ", ";
+    if (structInfo.isValid()) {
+      ss << structInfo.name << ", ";
+    }
   }
   recorder.incUDefTypes(typeList.size());
   LOG_INFO("Recorded types: " << ss.str());
@@ -119,8 +121,8 @@ inline typeart_status query_type(const void* addr, int* type, size_t* count) {
 }
 
 inline typeart_status query_struct_layout(type_id_t type_id, typeart_struct_layout* struct_layout) {
-  const typeart::StructTypeInfo* struct_info;
-  typeart_status status = Runtime::getTypeResolution().getStructInfo(type_id, &struct_info);
+  const typeart::StructType* struct_info;
+  typeart_status status = Runtime::getTypeResolution().getStructType(type_id, &struct_info);
   if (status == TYPEART_OK) {
     struct_layout->type_id      = struct_info->type_id.value();
     struct_layout->name         = struct_info->name.c_str();

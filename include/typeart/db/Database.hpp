@@ -27,8 +27,8 @@ namespace typeart {
 
 enum class StructTypeFlag : int { USER_DEFINED = 1, LLVM_VECTOR = 2 };
 
-struct StructTypeInfo {
-  type_id_t type_id;
+struct StructType {
+  type_id_t type_id = type_id_t::invalid;
   std::string name;
   size_t extent;
   size_t num_members;
@@ -36,11 +36,13 @@ struct StructTypeInfo {
   std::vector<type_id_t> member_types;
   std::vector<size_t> array_sizes;
   StructTypeFlag flag;
+
+  bool isValid() const;
 };
 
 struct AllocationInfo {
   alloc_id_t alloc_id = alloc_id_t::invalid;
-  type_id_t type_id   = type_id_t::unknown_type;
+  type_id_t type_id   = type_id_t::invalid;
 
   std::optional<size_t> count;
 
@@ -59,7 +61,7 @@ class Database {
   [[nodiscard]] bool store(const std::string& file) const;
 
  public:
-  void registerStruct(const StructTypeInfo& struct_info);
+  void registerStruct(const StructType& struct_info);
 
   alloc_id_t getOrCreateAllocationId(type_id_t type_id, std::optional<size_t> count,
                                      std::optional<ptrdiff_t> base_ptr_offset);
@@ -84,8 +86,8 @@ class Database {
 
   [[nodiscard]] const std::string& getTypeName(type_id_t type_id) const;
 
-  [[nodiscard]] const StructTypeInfo* getStructInfo(type_id_t type_id) const;
-  [[nodiscard]] const std::vector<StructTypeInfo>& getStructInfo() const;
+  [[nodiscard]] const StructType* getStructType(type_id_t type_id) const;
+  [[nodiscard]] const std::vector<StructType>& getStructTypes() const;
 
   [[nodiscard]] const AllocationInfo* getAllocationInfo(alloc_id_t alloc_id) const;
 
@@ -97,8 +99,7 @@ class Database {
 
  private:
   std::vector<AllocationInfo> allocation_info;
-  std::vector<StructTypeInfo> struct_info_vec;
-  std::unordered_map<type_id_t, int> typeid_to_list_index;
+  std::vector<StructType> struct_types;
 };
 
 }  // namespace typeart

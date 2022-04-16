@@ -127,8 +127,8 @@ type_id_t TypeManager::getOrRegisterVector(llvm::VectorType* type, const llvm::D
     offsets.push_back(usableBytes);
   }
 
-  StructTypeInfo vecTypeInfo{id,      vector_name,   vector_bytes, memberTypeIDs.size(),
-                             offsets, memberTypeIDs, arraySizes,   StructTypeFlag::LLVM_VECTOR};
+  StructType vecTypeInfo{id,      vector_name,   vector_bytes, memberTypeIDs.size(),
+                         offsets, memberTypeIDs, arraySizes,   StructTypeFlag::LLVM_VECTOR};
   db.registerStruct(vecTypeInfo);
   structMap.insert({vector_name, id});
   return id;
@@ -153,8 +153,10 @@ bool TypeManager::load() {
   }
   db = std::move(database).value();
   structMap.clear();
-  for (const auto& structInfo : db.getStructInfo()) {
-    structMap.insert({structInfo.name, structInfo.type_id});
+  for (const auto& structInfo : db.getStructTypes()) {
+    if (structInfo.isValid()) {
+      structMap.insert({structInfo.name, structInfo.type_id});
+    }
   }
   structCount = structMap.size();
   return true;
@@ -185,7 +187,7 @@ type_id_t TypeManager::getTypeID(llvm::Type* type, const DataLayout& dl) const {
       break;
     }
     case llvm::Type::StructTyID: {
-      StructTypeHandler handle{&structMap, &db, dyn_cast<StructType>(type)};
+      StructTypeHandler handle{&structMap, &db, dyn_cast<llvm::StructType>(type)};
       const auto type_id = handle.getID();
       if (type_id) {
         return type_id.getValue();
@@ -221,7 +223,7 @@ type_id_t TypeManager::getOrRegisterType(llvm::Type* type, const llvm::DataLayou
       return getOrRegisterVector(dyn_cast<VectorType>(type), dl);
     }
     case llvm::Type::StructTyID:
-      return getOrRegisterStruct(dyn_cast<StructType>(type), dl);
+      return getOrRegisterStruct(dyn_cast<llvm::StructType>(type), dl);
     default:
       break;
   }
@@ -262,7 +264,7 @@ type_id_t TypeManager::getOrRegisterStruct(llvm::StructType* type, const llvm::D
     }
 
     if (memberType->isStructTy()) {
-      if (StructTypeHandler::getName(llvm::dyn_cast<StructType>(memberType)) == name) {
+      if (StructTypeHandler::getName(llvm::dyn_cast<llvm::StructType>(memberType)) == name) {
         memberID = id;
       } else {
         memberID = getOrRegisterType(memberType, dl);
@@ -286,7 +288,7 @@ type_id_t TypeManager::getOrRegisterStruct(llvm::StructType* type, const llvm::D
 
   size_t numBytes = layout->getSizeInBytes();
 
-  StructTypeInfo structInfo{id, name, numBytes, n, offsets, memberTypeIDs, arraySizes, StructTypeFlag::USER_DEFINED};
+  StructType structInfo{id, name, numBytes, n, offsets, memberTypeIDs, arraySizes, StructTypeFlag::USER_DEFINED};
   db.registerStruct(structInfo);
 
   structMap.insert({name, id});

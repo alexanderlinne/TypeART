@@ -37,6 +37,10 @@ auto open_flag() {
 
 namespace typeart {
 
+bool StructType::isValid() const {
+  return type_id != type_id_t::invalid;
+}
+
 const std::array<std::string, 11> Database::BuiltinNames = {
     "int8", "int16", "int32", "int64", "half", "float", "double", "float128", "x86_float80", "ppc_float128", "pointer"};
 
@@ -63,13 +67,13 @@ bool Database::isStructType(type_id_t type_id) const {
 }
 
 bool Database::isUserDefinedType(type_id_t type_id) const {
-  const auto* structInfo = getStructInfo(type_id);
+  const auto* structInfo = getStructType(type_id);
   return (structInfo != nullptr) &&
          ((static_cast<int>(structInfo->flag) & static_cast<int>(StructTypeFlag::USER_DEFINED)) != 0);
 }
 
 bool Database::isVectorType(type_id_t type_id) const {
-  const auto* structInfo = getStructInfo(type_id);
+  const auto* structInfo = getStructType(type_id);
   return (structInfo != nullptr) &&
          ((static_cast<int>(structInfo->flag) & static_cast<int>(StructTypeFlag::LLVM_VECTOR)) != 0);
 }
@@ -78,14 +82,19 @@ bool Database::isValid(type_id_t type_id) const {
   if (isBuiltinType(type_id)) {
     return true;
   }
-  return typeid_to_list_index.find(type_id) != typeid_to_list_index.end();
+  return static_cast<type_id_t::value_type>(struct_types.size()) > type_id.value() &&
+         struct_types[type_id.value()].type_id != type_id_t::invalid;
 }
 
 bool Database::isValid(alloc_id_t alloc_id) const {
   return alloc_id.value() > 0 && alloc_id.value() <= static_cast<alloc_id_t::value_type>(allocation_info.size());
 }
 
-void Database::registerStruct(const StructTypeInfo& struct_type) {
+void Database::registerStruct(const StructType& struct_type) {
+  if (!struct_type.isValid()) {
+    LOG_ERROR("Invalid type ID used for struct " << struct_type.name);
+    return;
+  }
   if (isValid(struct_type.type_id) || !isStructType(struct_type.type_id)) {
     if (isBuiltinType(struct_type.type_id)) {
       LOG_ERROR("Built-in type ID used for struct " << struct_type.name);
@@ -95,12 +104,14 @@ void Database::registerStruct(const StructTypeInfo& struct_type) {
       LOG_ERROR("Type ID is reserved for unknown types. Struct: " << struct_type.name);
     } else {
       LOG_ERROR("Struct type ID already registered for " << struct_type.name << ". Conflicting struct is "
-                                                         << getStructInfo(struct_type.type_id)->name);
+                                                         << getStructType(struct_type.type_id)->name);
     }
     return;
   }
-  struct_info_vec.push_back(struct_type);
-  typeid_to_list_index.insert({struct_type.type_id, struct_info_vec.size() - 1});
+  if (static_cast<type_id_t::value_type>(struct_types.size()) <= struct_type.type_id.value()) {
+    struct_types.resize(struct_type.type_id.value() + 1);
+  }
+  struct_types[struct_type.type_id.value()] = struct_type;
 }
 
 alloc_id_t Database::getOrCreateAllocationId(type_id_t type_id, std::optional<size_t> count,
@@ -132,7 +143,7 @@ const std::string& Database::getTypeName(type_id_t type_id) const {
     return BuiltinNames[type_id.value()];
   }
   if (isStructType(type_id)) {
-    const auto* structInfo = getStructInfo(type_id);
+    const auto* structInfo = getStructType(type_id);
     if (structInfo != nullptr) {
       return structInfo->name;
     }
@@ -148,23 +159,22 @@ size_t Database::getTypeSize(type_id_t type_id) const {
     return 0;
   }
 
-  const auto* structInfo = getStructInfo(type_id);
+  const auto* structInfo = getStructType(type_id);
   if (structInfo != nullptr) {
     return structInfo->extent;
   }
   return 0;
 }
 
-const StructTypeInfo* Database::getStructInfo(type_id_t type_id) const {
-  const auto index_iter = typeid_to_list_index.find(type_id);
-  if (index_iter != typeid_to_list_index.end()) {
-    return &struct_info_vec[index_iter->second];
+const StructType* Database::getStructType(type_id_t type_id) const {
+  if (isValid(type_id) && struct_types[type_id.value()].isValid()) {
+    return &struct_types[type_id.value()];
   }
   return nullptr;
 }
 
-const std::vector<StructTypeInfo>& Database::getStructInfo() const {
-  return struct_info_vec;
+const std::vector<StructType>& Database::getStructTypes() const {
+  return struct_types;
 }
 
 const AllocationInfo* Database::getAllocationInfo(alloc_id_t alloc_id) const {
@@ -229,7 +239,7 @@ struct AllocationInfoIO {
 
 struct TypeFile {
   std::vector<AllocationInfoIO> allocation_info;
-  std::vector<typeart::StructTypeInfo> struct_info;
+  std::vector<typeart::StructType> struct_info;
 };
 
 template <>
@@ -277,8 +287,8 @@ struct llvm::yaml::ScalarTraits<typeart::StructTypeFlag> {
 };
 
 template <>
-struct llvm::yaml::MappingTraits<typeart::StructTypeInfo> {
-  static void mapping(IO& io, typeart::StructTypeInfo& info) {
+struct llvm::yaml::MappingTraits<typeart::StructType> {
+  static void mapping(IO& io, typeart::StructType& info) {
     io.mapRequired("id", info.type_id);
     io.mapRequired("name", info.name);
     io.mapRequired("extent", info.extent);
@@ -290,7 +300,7 @@ struct llvm::yaml::MappingTraits<typeart::StructTypeInfo> {
   }
 };
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(typeart::StructTypeInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(typeart::StructType)
 
 namespace typeart {
 
@@ -332,8 +342,10 @@ bool Database::store(const std::string& file) const {
     return false;
   }
 
-  auto type_file        = TypeFile{};
-  type_file.struct_info = struct_info_vec;
+  auto type_file = TypeFile{};
+  type_file.struct_info.reserve(struct_types.size());
+  std::copy_if(struct_types.begin(), struct_types.end(), std::back_inserter(type_file.struct_info),
+               [](auto& info) { return info.isValid(); });
 
   type_file.allocation_info.reserve(allocation_info.size());
   std::transform(allocation_info.begin(), allocation_info.end(), std::back_inserter(type_file.allocation_info),

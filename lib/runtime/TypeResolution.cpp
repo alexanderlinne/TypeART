@@ -105,9 +105,9 @@ TypeResolution::TypeArtStatus TypeResolution::getSubTypeInfo(const void* baseAdd
 }
 
 TypeResolution::TypeArtStatus TypeResolution::getSubTypeInfo(const void* baseAddr, size_t offset,
-                                                             const StructTypeInfo& containerInfo,
-                                                             type_id_value* subType, const void** subTypeBaseAddr,
-                                                             size_t* subTypeOffset, size_t* subTypeCount) const {
+                                                             const StructType& containerInfo, type_id_value* subType,
+                                                             const void** subTypeBaseAddr, size_t* subTypeOffset,
+                                                             size_t* subTypeCount) const {
   typeart_struct_layout structLayout;
   structLayout.type_id      = containerInfo.type_id.value();
   structLayout.name         = containerInfo.name.c_str();
@@ -120,8 +120,8 @@ TypeResolution::TypeArtStatus TypeResolution::getSubTypeInfo(const void* baseAdd
 }
 
 TypeResolution::TypeArtStatus TypeResolution::getTypeInfoInternal(const void* baseAddr, size_t offset,
-                                                                  const StructTypeInfo& containerInfo,
-                                                                  type_id_value* type, size_t* count) const {
+                                                                  const StructType& containerInfo, type_id_value* type,
+                                                                  size_t* count) const {
   assert(offset < containerInfo.extent && "Something went wrong with the base address computation");
 
   TypeArtStatus status;
@@ -129,7 +129,7 @@ TypeResolution::TypeArtStatus TypeResolution::getTypeInfoInternal(const void* ba
   const void* subTypeBaseAddr;
   size_t subTypeOffset{0};
   size_t subTypeCount{0};
-  const StructTypeInfo* structInfo = &containerInfo;
+  const StructType* structInfo = &containerInfo;
 
   bool resolve{true};
 
@@ -149,7 +149,7 @@ TypeResolution::TypeArtStatus TypeResolution::getTypeInfoInternal(const void* ba
 
     // Get layout of the nested struct
     if (resolve) {
-      status = getStructInfo(subType, &structInfo);
+      status = getStructType(subType, &structInfo);
       if (status != TYPEART_OK) {
         return status;
       }
@@ -190,7 +190,7 @@ TypeResolution::TypeArtStatus TypeResolution::getTypeInfo(const void* addr, cons
   }
 
   // Resolve struct recursively
-  const auto* structInfo = db.getStructInfo(containingType);
+  const auto* structInfo = db.getStructType(containingType);
   if (structInfo != nullptr) {
     const void* containingTypeAddr = addByteOffset(addr, -std::ptrdiff_t(internalOffset));
     return getTypeInfoInternal(containingTypeAddr, internalOffset, *structInfo, type, count);
@@ -259,14 +259,13 @@ TypeResolution::TypeArtStatus TypeResolution::getBuiltinInfo(const void* addr, c
   return TYPEART_WRONG_KIND;
 }
 
-TypeResolution::TypeArtStatus TypeResolution::getStructInfo(type_id_t type_id,
-                                                            const StructTypeInfo** structInfo) const {
+TypeResolution::TypeArtStatus TypeResolution::getStructType(type_id_t type_id, const StructType** structInfo) const {
   // Requested ID must correspond to a struct
   if (!db.isStructType(type_id)) {
     return TYPEART_WRONG_KIND;
   }
 
-  const auto* result = db.getStructInfo(type_id);
+  const auto* result = db.getStructType(type_id);
 
   if (result != nullptr) {
     *structInfo = result;

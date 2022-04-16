@@ -22,6 +22,7 @@ struct type_id_t {
   using value_type = type_id_value;
 
   static const type_id_t unknown_type;
+  static const type_id_t invalid;
 
  private:
   value_type _value = TYPEART_UNKNOWN_TYPE;

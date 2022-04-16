@@ -1,4 +1,5 @@
-// RUN: %run %s --compile_flags "-std=c++17" 2>&1 | %filecheck %s
+// RUN: %run %s --compile_flags "-std=c++17" > %s.log 2>&1
+// RUN: cat %s.log | %filecheck %s
 // REQUIRES: tracker
 
 #include <cstdio>
@@ -36,10 +37,10 @@ int main(int argc, char** argv) {
   printf("Unknown struct name: %s\n", database.getTypeName(1000).c_str());
 
   const auto register_struct = [&database = database](int id, const std::string& name) {
-    typeart::StructTypeInfo struct_data{id, name};
-    const auto pre_length = database.getStructInfo().size();
+    typeart::StructType struct_data{id, name};
+    const auto pre_length = database.getStructTypes().size();
     database.registerStruct(struct_data);
-    const auto post_length = database.getStructInfo().size();
+    const auto post_length = database.getStructTypes().size();
     printf("Type register: %i %i\n", (database.getTypeName(id) == name), (pre_length == post_length));
   };
 
@@ -48,12 +49,12 @@ int main(int argc, char** argv) {
   register_struct(255, "invalid_already");
   register_struct(1000, "valid_struct");
 
-  auto* info = database.getStructInfo(1);
+  auto* info = database.getStructType(1);
   if (info != nullptr) {
     printf("Error info should be null.\n");
   }
 
-  auto* info_2 = database.getStructInfo(1000);
+  auto* info_2 = database.getStructType(1000);
   if (info_2 == nullptr) {
     printf("Error info should not be null.\n");
   } else {
