@@ -15,8 +15,13 @@
 #include "AccessCountPrinter.h"
 #include "db/Database.hpp"
 #include "runtime/AccessCounter.hpp"
+#include "runtime/tracker/Tracker.hpp"
 #include "support/Logger.hpp"
 #include "support/System.hpp"
+
+#ifdef TYPEART_USE_ALLOCATOR
+#include "allocator/Allocator.hpp"
+#endif
 
 #include <cstdlib>
 #include <iostream>
@@ -29,7 +34,7 @@ namespace typeart::runtime {
 
 static constexpr const char* defaultTypeFileName = "types.yaml";
 
-Runtime::Runtime() : init(), typeResolution(db), tracker(db, recorder) {
+Runtime::Runtime() : init(), typeResolution(db) {
   LOG_TRACE("TypeART Runtime Trace");
   LOG_TRACE("*********************");
   LOG_TRACE("Operation  Address   Type   Size   Count   (CallAddr)   Stack/Heap/Global");
@@ -99,6 +104,14 @@ Runtime::~Runtime() {
 }
 
 thread_local size_t Runtime::scope = 0;
+
+std::optional<PointerInfo> Runtime::getPointerInfo(const void* addr) {
+#ifdef TYPEART_USE_ALLOCATOR
+  return allocator::getPointerInfo(addr);
+#else
+  return tracker::Tracker::get().getPointerInfo(addr);
+#endif
+}
 
 std::string Runtime::toString(const void* addr, type_id_t type_id, size_t count, size_t typeSize,
                               const void* calledFrom) {

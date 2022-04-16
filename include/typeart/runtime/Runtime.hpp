@@ -17,11 +17,6 @@
 #include "AccessCounter.hpp"
 #include "Runtime.h"
 #include "TypeResolution.hpp"
-#include "tracker/Tracker.hpp"
-
-#ifdef TYPEART_USE_ALLOCATOR
-#include "allocator/Allocator.hpp"
-#endif
 
 #include <cstddef>
 #include <string>
@@ -50,7 +45,6 @@ class Runtime {
   Database db{};
   Recorder recorder{};
   TypeResolution typeResolution;
-  tracker::Tracker tracker;
 
  public:
   struct ScopeGuard final {
@@ -81,10 +75,6 @@ class Runtime {
     return instance;
   }
 
-  static tracker::Tracker& getTracker() {
-    return get().tracker;
-  }
-
   static Recorder& getRecorder() {
     return get().recorder;
   }
@@ -97,13 +87,7 @@ class Runtime {
     return {};
   }
 
-  static std::optional<PointerInfo> getPointerInfo(const void* addr) {
-#ifdef TYPEART_USE_ALLOCATOR
-    return allocator::getPointerInfo(addr);
-#else
-    return getTracker().getPointerInfo(addr);
-#endif
-  }
+  static std::optional<PointerInfo> getPointerInfo(const void* addr);
 
   static const AllocationInfo* getAllocationInfo(alloc_id_t alloc_id) {
     auto result = (const AllocationInfo*)nullptr;

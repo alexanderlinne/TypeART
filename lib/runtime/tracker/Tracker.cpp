@@ -97,51 +97,53 @@ thread_local ThreadData threadData;
 
 }  // namespace
 
-Tracker::Tracker(const Database& db, Recorder& recorder) : db{db}, recorder{recorder} {
+Tracker::Tracker() {
 }
 
 void Tracker::onAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
-  const auto status = doAlloc(addr, alloc_id, count, retAddr);
+  const auto alloc_info = Runtime::getAllocationInfo(alloc_id);
+  const auto status     = doAlloc(addr, alloc_id, count, retAddr);
   if (!(status & AllocState::ADDR_SKIPPED)) {
-    recorder.incHeapAlloc(db.getAllocationInfo(alloc_id)->type_id, count);
+    Runtime::getRecorder().incHeapAlloc(alloc_info->type_id, count);
   }
   if (!(status & AllocState::UNKNOWN_ALLOC_ID)) {
-    LOG_TRACE("Alloc " << Runtime::toString(addr, db.getAllocationInfo(alloc_id)->type_id, count, retAddr) << " "
-                       << 'H');
+    LOG_TRACE("Alloc " << Runtime::toString(addr, alloc_info->type_id, count, retAddr) << " " << 'H');
   }
 }
 
 void Tracker::onAllocStack(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
-  const auto status = doAlloc(addr, alloc_id, count, retAddr);
+  const auto alloc_info = Runtime::getAllocationInfo(alloc_id);
+  const auto status     = doAlloc(addr, alloc_id, count, retAddr);
   if (!(status & AllocState::ADDR_SKIPPED)) {
     threadData.stackVars.push_back(addr);
-    recorder.incStackAlloc(db.getAllocationInfo(alloc_id)->type_id, count);
+    Runtime::getRecorder().incStackAlloc(alloc_info->type_id, count);
   }
   if (!(status & AllocState::UNKNOWN_ALLOC_ID)) {
-    LOG_TRACE("Alloc " << Runtime::toString(addr, db.getAllocationInfo(alloc_id)->type_id, count, retAddr) << " "
-                       << 'S');
+    LOG_TRACE("Alloc " << Runtime::toString(addr, alloc_info->type_id, count, retAddr) << " " << 'S');
   }
 }
 
 void Tracker::onAllocGlobal(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
-  const auto status = doAlloc(addr, alloc_id, count, retAddr);
+  const auto alloc_info = Runtime::getAllocationInfo(alloc_id);
+  const auto status     = doAlloc(addr, alloc_id, count, retAddr);
   if (!(status & AllocState::ADDR_SKIPPED)) {
-    recorder.incGlobalAlloc(db.getAllocationInfo(alloc_id)->type_id, count);
+    Runtime::getRecorder().incGlobalAlloc(alloc_info->type_id, count);
   }
   if (!(status & AllocState::UNKNOWN_ALLOC_ID)) {
-    LOG_TRACE("Alloc " << Runtime::toString(addr, db.getAllocationInfo(alloc_id)->type_id, count, retAddr) << " "
-                       << 'G');
+    LOG_TRACE("Alloc " << Runtime::toString(addr, alloc_info->type_id, count, retAddr) << " " << 'G');
   }
 }
 
 AllocState Tracker::doAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
   AllocState status = AllocState::NO_INIT;
-  if (unlikely(!db.isValid(alloc_id))) {
+  auto alloc_info   = Runtime::getAllocationInfo(alloc_id);
+  if (unlikely(alloc_info == nullptr)) {
     status |= AllocState::UNKNOWN_ALLOC_ID | AllocState::ADDR_SKIPPED;
     LOG_ERROR("Allocation with unknown alloc_id! Skipping...");
     return status;
   }
-  auto type_id = db.getAllocationInfo(alloc_id)->type_id;
+  auto type_id   = alloc_info->type_id;
+  auto& recorder = Runtime::getRecorder();
 
   // Calling malloc with size 0 may return a nullptr or some address that can not be written to.
   // In the second case, the allocation is tracked anyway so that onFree() does not report an error.
@@ -189,7 +191,7 @@ FreeState Tracker::doFreeHeap(const void* addr, const void* retAddr) {
   LOG_TRACE("Free " << Runtime::get().toString(addr, *removed));
 
   if constexpr (!std::is_same_v<Recorder, softcounter::NoneRecorder>) {
-    recorder.incHeapFree(removed->type_id, removed->count);
+    Runtime::getRecorder().incHeapFree(removed->type_id, removed->count);
   }
   return FreeState::OK;
 }
@@ -197,7 +199,7 @@ FreeState Tracker::doFreeHeap(const void* addr, const void* retAddr) {
 void Tracker::onFreeHeap(const void* addr, const void* retAddr) {
   const auto status = doFreeHeap(addr, retAddr);
   if (FreeState::OK == status) {
-    recorder.decHeapAlloc();
+    Runtime::getRecorder().decHeapAlloc();
   }
 }
 
@@ -212,6 +214,7 @@ void Tracker::onLeaveScope(int alloca_count, const void* retAddr) {
   const auto start_pos = (cend - alloca_count);
   LOG_TRACE("Freeing stack (" << alloca_count << ")  " << std::distance(start_pos, threadData.stackVars.cend()))
 
+  auto& recorder = Runtime::getRecorder();
   wrapper.remove_range(start_pos, cend, [&](llvm::Optional<PointerInfo>& removed, const void* addr) {
     if (unlikely(!removed)) {
       LOG_ERROR("Free on unregistered address " << addr << " (" << retAddr << ")");

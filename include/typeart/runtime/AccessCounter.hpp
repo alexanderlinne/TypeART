@@ -14,7 +14,6 @@
 #define TYPEART_ACCESSCOUNTER_H
 
 #include "../db/Database.hpp"
-#include "tracker/Types.hpp"
 
 #include <atomic>
 #include <cmath>

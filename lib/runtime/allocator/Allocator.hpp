@@ -1,4 +1,4 @@
-#include "../TypeResolution.hpp"
+#include "runtime/TypeResolution.hpp"
 
 #include <optional>
 #include <pthread.h>
