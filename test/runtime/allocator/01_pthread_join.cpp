@@ -5,12 +5,12 @@
 // clang-format on
 
 #include "../tracker/util.h"
-#include "allocator/Allocator.h"
 
 #include <cassert>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <typeart/runtime/allocator/Allocator.hpp>
 
 using namespace typeart::runtime::allocator;
 

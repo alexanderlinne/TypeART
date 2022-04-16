@@ -111,10 +111,10 @@ class Runtime {
     return result;
   }
 
-  static std::string toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id, size_t count,
-                              size_t typeSize, const void* calledFrom);
-  static std::string toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id, size_t count,
+  static std::string toString(const void* addr, type_id_t type_id, size_t count, size_t typeSize,
                               const void* calledFrom);
+  static std::string toString(const void* addr, type_id_t type_id, size_t count, const void* calledFrom);
+  static std::string toString(const void* addr, const PointerInfo& pointer_info);
 
  private:
   Runtime();

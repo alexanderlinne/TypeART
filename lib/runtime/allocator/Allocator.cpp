@@ -93,12 +93,14 @@ struct Region {
         fmt::print(stderr, "Found invalid allocaton_id {}!\n", alloc_id);
         return {};
       }
-      auto base_ptr = (void*)((int8_t*)bucket_ptr + allocation_info->base_ptr_offset.value_or(heap::min_alignment));
-      auto count    = *(size_t*)((int8_t*)bucket_ptr + config::count_offset);
-      return PointerInfo{base_ptr, alloc_id, count, nullptr};
-    } else {
-      return {};
+      auto base_ptr   = (void*)((int8_t*)bucket_ptr + allocation_info->base_ptr_offset.value_or(heap::min_alignment));
+      auto count      = *(size_t*)((int8_t*)bucket_ptr + config::count_offset);
+      auto alloc_info = Runtime::getAllocationInfo(alloc_id);
+      if (alloc_info != nullptr) {
+        return PointerInfo{base_ptr, alloc_info->type_id, count, nullptr};
+      }
     }
+    return {};
   }
 };
 
@@ -319,10 +321,12 @@ std::optional<PointerInfo> getPointerInfo(const void* addr) {
     } else {
       count = *(size_t*)((int8_t*)bucket_ptr + config::count_offset);
     }
-    return PointerInfo{base_ptr, alloc_id, count, nullptr};
-  } else {
-    return {};
+    auto alloc_info = Runtime::getAllocationInfo(alloc_id);
+    if (alloc_info != nullptr) {
+      return PointerInfo{base_ptr, alloc_info->type_id, count, nullptr};
+    }
   }
+  return {};
 }
 
 }  // namespace stack

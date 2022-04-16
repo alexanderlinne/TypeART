@@ -24,7 +24,7 @@ using BuiltinType = typeart_builtin_type;
 
 struct PointerInfo final {
   const void* base_addr = nullptr;
-  alloc_id_t alloc_id   = alloc_id_t::invalid;
+  type_id_t type_id     = type_id_t::invalid;
   size_t count          = 0;
   const void* debug     = nullptr;
 };
@@ -64,10 +64,10 @@ class TypeResolution {
 
   TypeArtStatus getAllocationInfo(alloc_id_t alloc_id, const AllocationInfo** allocation_info) const;
 
-  std::string toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id, size_t count, size_t typeSize,
+  std::string toString(const void* addr, type_id_t type_id, size_t count, size_t typeSize,
                        const void* calledFrom) const;
-  std::string toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id, size_t count,
-                       const void* calledFrom) const;
+  std::string toString(const void* addr, type_id_t type_id, size_t count, const void* calledFrom) const;
+  std::string toString(const void* addr, const PointerInfo& pointer_info) const;
 
   bool isUnknown(type_id_t type_id) const;
   bool isValid(type_id_t type_id) const;

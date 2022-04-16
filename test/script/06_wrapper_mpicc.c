@@ -22,5 +22,5 @@ int main(int argc, char** argv) {
   return 0;
 }
 
-// CHECK: R[0][Trace] Alloc [[PTR:0x[0-9a-f]+]] {{[0-9]*}} 2 int32 4 1
+// CHECK: R[0][Trace] Alloc [[PTR:0x[0-9a-f]+]] 2 int32 4 1
 // CHECK: Expected pointer: [[PTR]]

@@ -162,12 +162,7 @@ TypeResolution::TypeArtStatus TypeResolution::getTypeInfoInternal(const void* ba
 
 TypeResolution::TypeArtStatus TypeResolution::getTypeInfo(const void* addr, const PointerInfo& ptrInfo,
                                                           type_id_value* type, size_t* count) const {
-  const AllocationInfo* alloc_info = nullptr;
-  if (auto result = getAllocationInfo(ptrInfo.alloc_id, &alloc_info); result != TYPEART_OK) {
-    return result;
-  }
-  auto type_id        = alloc_info->type_id;
-  auto containingType = type_id;
+  auto containingType = ptrInfo.type_id;
   size_t containingTypeCount{0};
   size_t internalOffset{0};
 
@@ -200,13 +195,9 @@ TypeResolution::TypeArtStatus TypeResolution::getTypeInfo(const void* addr, cons
 
 TypeResolution::TypeArtStatus TypeResolution::getContainingTypeInfo(const void* addr, const PointerInfo& ptrInfo,
                                                                     size_t* count, size_t* offset) const {
-  const auto& basePtrInfo          = ptrInfo;
-  const AllocationInfo* alloc_info = nullptr;
-  if (auto result = getAllocationInfo(basePtrInfo.alloc_id, &alloc_info); result != TYPEART_OK) {
-    return result;
-  }
-  auto type_id    = alloc_info->type_id;
-  size_t typeSize = db.getTypeSize(type_id);
+  const auto& basePtrInfo = ptrInfo;
+  auto type_id            = basePtrInfo.type_id;
+  size_t typeSize         = db.getTypeSize(type_id);
 
   // Check for exact match -> no further checks and offsets calculations needed
   if (ptrInfo.base_addr == addr) {
@@ -223,9 +214,7 @@ TypeResolution::TypeArtStatus TypeResolution::getContainingTypeInfo(const void* 
     const std::ptrdiff_t offset2base =
         static_cast<const uint8_t*>(addr) - static_cast<const uint8_t*>(basePtrInfo.base_addr);
     const auto oob_index = (offset2base / typeSize) - basePtrInfo.count + 1;
-    LOG_WARNING("Out of bounds for the lookup: ("
-                << toString(addr, ptrInfo.alloc_id, type_id, ptrInfo.count, ptrInfo.debug)
-                << ") #Elements too far: " << oob_index);
+    LOG_WARNING("Out of bounds for the lookup: (" << toString(addr, ptrInfo) << ") #Elements too far: " << oob_index);
     return TYPEART_UNKNOWN_ADDRESS;
   }
 
@@ -247,13 +236,8 @@ TypeResolution::TypeArtStatus TypeResolution::getContainingTypeInfo(const void* 
 
 TypeResolution::TypeArtStatus TypeResolution::getBuiltinInfo(const void* addr, const PointerInfo& ptrInfo,
                                                              BuiltinType* type) const {
-  const AllocationInfo* alloc_info = nullptr;
-  if (auto result = getAllocationInfo(ptrInfo.alloc_id, &alloc_info); result != TYPEART_OK) {
-    return result;
-  }
-  auto type_id = alloc_info->type_id;
-  if (db.isReservedType(type_id)) {
-    *type = static_cast<BuiltinType>(type_id.value());
+  if (db.isReservedType(ptrInfo.type_id)) {
+    *type = static_cast<BuiltinType>(ptrInfo.type_id.value());
     return TYPEART_OK;
   }
   return TYPEART_WRONG_KIND;
@@ -285,20 +269,22 @@ TypeResolution::TypeArtStatus TypeResolution::getAllocationInfo(alloc_id_t alloc
   return TYPEART_INVALID_ALLOC_ID;
 }
 
-std::string TypeResolution::toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id, size_t count,
-                                     size_t typeSize, const void* calledFrom) const {
+std::string TypeResolution::toString(const void* addr, type_id_t type_id, size_t count, size_t typeSize,
+                                     const void* calledFrom) const {
   std::string buf;
   llvm::raw_string_ostream s(buf);
   const auto name = db.getTypeName(type_id);
-  s << memAddr << " " << alloc_id.value() << " " << type_id.value() << " " << name << " " << typeSize << " " << count
-    << " (" << calledFrom << ")";
+  s << addr << " " << type_id.value() << " " << name << " " << typeSize << " " << count << " (" << calledFrom << ")";
   return s.str();
 }
 
-std::string TypeResolution::toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id, size_t count,
-                                     const void* calledFrom) const {
+std::string TypeResolution::toString(const void* addr, type_id_t type_id, size_t count, const void* calledFrom) const {
   const auto typeSize = db.getTypeSize(type_id);
-  return toString(memAddr, alloc_id, type_id, count, typeSize, calledFrom);
+  return toString(addr, type_id, count, typeSize, calledFrom);
+}
+
+std::string TypeResolution::toString(const void* addr, const PointerInfo& pointer_info) const {
+  return toString(addr, pointer_info.type_id, pointer_info.count, pointer_info.debug);
 }
 
 bool TypeResolution::isUnknown(type_id_t type_id) const {

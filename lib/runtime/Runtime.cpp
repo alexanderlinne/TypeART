@@ -100,14 +100,17 @@ Runtime::~Runtime() {
 
 thread_local size_t Runtime::scope = 0;
 
-std::string Runtime::toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id, size_t count,
-                              size_t typeSize, const void* calledFrom) {
-  return get().typeResolution.toString(memAddr, alloc_id, type_id, count, typeSize, calledFrom);
+std::string Runtime::toString(const void* addr, type_id_t type_id, size_t count, size_t typeSize,
+                              const void* calledFrom) {
+  return get().typeResolution.toString(addr, type_id, count, typeSize, calledFrom);
 }
 
-std::string Runtime::toString(const void* memAddr, alloc_id_t alloc_id, type_id_t type_id, size_t count,
-                              const void* calledFrom) {
-  return get().typeResolution.toString(memAddr, alloc_id, type_id, count, calledFrom);
+std::string Runtime::toString(const void* addr, type_id_t type_id, size_t count, const void* calledFrom) {
+  return get().typeResolution.toString(addr, type_id, count, calledFrom);
+}
+
+std::string Runtime::toString(const void* addr, const PointerInfo& pointer_info) {
+  return get().typeResolution.toString(addr, pointer_info);
 }
 
 inline typeart_status query_type(const void* addr, int* type, size_t* count) {
@@ -189,13 +192,9 @@ typeart_status typeart_get_containing_type(const void* addr, int* type, size_t* 
                                            size_t* offset) {
   auto guard = Runtime::scopeGuard();
 
-  auto pointer_info = std::optional<PointerInfo>{};
-
-  pointer_info = Runtime::getPointerInfo(addr);
+  auto pointer_info = Runtime::getPointerInfo(addr);
   if (pointer_info.has_value()) {
-    const typeart::AllocationInfo* alloc_info;
-    Runtime::getTypeResolution().getAllocationInfo(pointer_info->alloc_id, &alloc_info);
-    *type         = alloc_info->type_id.value();
+    *type         = pointer_info->type_id.value();
     *base_address = pointer_info->base_addr;
     return Runtime::getTypeResolution().getContainingTypeInfo(addr, pointer_info.value(), count, offset);
   }

@@ -44,6 +44,7 @@ struct AllocationInfo {
   alloc_id_t alloc_id = alloc_id_t::invalid;
   type_id_t type_id   = type_id_t::invalid;
 
+  // This may be used by allocations with a fixed number of elements.
   std::optional<size_t> count;
 
   // Offset from the pointer to the memory used by this allocation to the
