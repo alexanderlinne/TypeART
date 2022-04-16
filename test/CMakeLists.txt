@@ -65,7 +65,7 @@ set(TYPEARTPASS_TEST_DEPENDS typeart::TransformPass typeart::Runtime)
 add_lit_testsuite(lit-pass-test
   "Running the TYPEART support pass tests"
   ${CMAKE_CURRENT_SOURCE_DIR}
-  ARGS -v -j 1
+  ARGS -v -j 8
   PARAMS typeartpass_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
   DEPENDS ${TYPEARTPASS_TEST_DEPENDS}
 )
@@ -73,7 +73,7 @@ add_lit_testsuite(lit-pass-test
 add_test(
   NAME ctest_lit_suite
   COMMAND
-    ${LIT_COMMAND_I} -j 1 --param
+    ${LIT_COMMAND_I} -j 8 --param
     typeartpass_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
     ${CMAKE_CURRENT_SOURCE_DIR}
 )

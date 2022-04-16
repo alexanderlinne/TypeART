@@ -1,3 +1,5 @@
+// RUN: echo --- > %s.types.yaml
+// RUN: export TYPEART_TYPE_FILE="%s.types.yaml"
 // RUN: %wrapper-cc -S -O1 %s -o %s.s
 // RUN: cat %s.s 2>&1 | %filecheck %s
 

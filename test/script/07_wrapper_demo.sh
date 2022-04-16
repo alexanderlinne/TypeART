@@ -21,6 +21,7 @@ cp -R "$2"/../../demo "$1"/
 cd "$1" || exit 1
 
 make clean
+export TYPEART_TYPE_FILE="$1.types.yaml"
 MPICC="$3" make "$4"
 
 # make sure "target" worked:
