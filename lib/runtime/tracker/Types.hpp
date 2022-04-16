@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "runtime/TypeResolution.hpp"
+#include "runtime/Runtime.hpp"
 
 #ifdef TYPEART_BTREE
 #ifdef TYPEART_ABSEIL

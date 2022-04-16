@@ -15,6 +15,7 @@
 #include "AccessCountPrinter.h"
 #include "db/Database.hpp"
 #include "runtime/AccessCounter.hpp"
+#include "runtime/TypeResolution.hpp"
 #include "runtime/tracker/Tracker.hpp"
 #include "support/Logger.hpp"
 #include "support/System.hpp"

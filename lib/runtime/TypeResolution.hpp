@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include "../db/Database.hpp"
-#include "Runtime.h"
+#include "db/Database.hpp"
+#include "runtime/Runtime.hpp"
 
 #include <cstddef>
 #include <string>
@@ -21,13 +21,6 @@
 namespace typeart::runtime {
 
 using BuiltinType = typeart_builtin_type;
-
-struct PointerInfo final {
-  const void* base_addr = nullptr;
-  type_id_t type_id     = type_id_t::invalid;
-  size_t count          = 0;
-  const void* debug     = nullptr;
-};
 
 class TypeResolution {
   const Database& db;
