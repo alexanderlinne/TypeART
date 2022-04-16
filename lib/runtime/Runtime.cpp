@@ -34,78 +34,132 @@ namespace typeart::runtime {
 
 static constexpr const char* defaultTypeFileName = "types.yaml";
 
-Runtime::Runtime() : init(), typeResolution(db) {
-  LOG_TRACE("TypeART Runtime Trace");
-  LOG_TRACE("*********************");
-  LOG_TRACE("Operation  Address   Type   Size   Count   (CallAddr)   Stack/Heap/Global");
-  LOG_TRACE("-------------------------------------------------------------------------");
-
-  auto loadTypes = [this](const std::string& file, std::error_code& ec) -> bool {
-    auto database = Database::load(file);
-    if (database.has_value()) {
-      db = std::move(database).value();
-      return true;
+struct Runtime {
+  // scope must be set to true before all other members are initialized.
+  // This is achieved by adding this struct as the first member.
+  struct Initializer {
+    Initializer() {
+      scope = 1;
     }
-    return false;
+
+    void reset() const {
+      scope = initial_scope;
+    }
+
+   private:
+    size_t initial_scope = scope;
   };
 
-  std::error_code error;
-  // Try to load types from specified file first.
-  // Then look at default location.
-  const char* type_file = std::getenv("TYPEART_TYPE_FILE");
-  if (type_file == nullptr || strcmp(type_file, "") == 0) {
-    // FIXME Deprecated name
-    type_file = std::getenv("TA_TYPE_FILE");
-    if (type_file != nullptr) {
-      LOG_WARNING("Use of deprecated env var TA_TYPE_FILE.");
-    }
-  }
-  if (type_file != nullptr && strcmp(type_file, "") != 0) {
-    if (!loadTypes(type_file, error)) {
-      LOG_FATAL("Failed to load recorded types from TYPEART_TYPE_FILE=" << type_file
-                                                                        << ". Reason: " << error.message());
-      std::exit(EXIT_FAILURE);  // TODO: Error handling
-    }
-  } else {
-    if (!loadTypes(defaultTypeFileName, error)) {
-      LOG_WARNING(
-          "No type file with default name \""
-          << defaultTypeFileName
-          << "\" in current directory. Using default built-in types only. To specify a different file, edit the "
-             "TYPEART_TYPE_FILE environment variable. Reason: "
-          << error.message());
-    }
+  Initializer init;
+  Database db{};
+  Recorder recorder{};
+  TypeResolution typeResolution;
+
+ public:
+  static thread_local size_t scope;
+
+  static Runtime& get() {
+    // As opposed to a global variable, a singleton + instantiation during
+    // the first callback/query avoids some problems when
+    // preloading (especially with MUST).
+    static Runtime instance;
+    return instance;
   }
 
-  std::stringstream ss;
-  const auto& typeList = db.getStructTypes();
-  for (const auto& structInfo : typeList) {
-    if (structInfo.isValid()) {
-      ss << structInfo.name << ", ";
+  static TypeResolution& getTypeResolution() {
+    return get().typeResolution;
+  }
+
+ public:
+  Runtime() : init(), typeResolution(db) {
+    LOG_TRACE("TypeART Runtime Trace");
+    LOG_TRACE("*********************");
+    LOG_TRACE("Operation  Address   Type   Size   Count   (CallAddr)   Stack/Heap/Global");
+    LOG_TRACE("-------------------------------------------------------------------------");
+
+    auto loadTypes = [this](const std::string& file, std::error_code& ec) -> bool {
+      auto database = Database::load(file);
+      if (database.has_value()) {
+        db = std::move(database).value();
+        return true;
+      }
+      return false;
+    };
+
+    std::error_code error;
+    // Try to load types from specified file first.
+    // Then look at default location.
+    const char* type_file = std::getenv("TYPEART_TYPE_FILE");
+    if (type_file == nullptr || strcmp(type_file, "") == 0) {
+      // FIXME Deprecated name
+      type_file = std::getenv("TA_TYPE_FILE");
+      if (type_file != nullptr) {
+        LOG_WARNING("Use of deprecated env var TA_TYPE_FILE.");
+      }
+    }
+    if (type_file != nullptr && strcmp(type_file, "") != 0) {
+      if (!loadTypes(type_file, error)) {
+        LOG_FATAL("Failed to load recorded types from TYPEART_TYPE_FILE=" << type_file
+                                                                          << ". Reason: " << error.message());
+        std::exit(EXIT_FAILURE);  // TODO: Error handling
+      }
+    } else {
+      if (!loadTypes(defaultTypeFileName, error)) {
+        LOG_WARNING(
+            "No type file with default name \""
+            << defaultTypeFileName
+            << "\" in current directory. Using default built-in types only. To specify a different file, edit the "
+               "TYPEART_TYPE_FILE environment variable. Reason: "
+            << error.message());
+      }
+    }
+
+    std::stringstream ss;
+    const auto& typeList = db.getStructTypes();
+    for (const auto& structInfo : typeList) {
+      if (structInfo.isValid()) {
+        ss << structInfo.name << ", ";
+      }
+    }
+    recorder.incUDefTypes(typeList.size());
+    LOG_INFO("Recorded types: " << ss.str());
+    init.reset();
+  }
+
+  ~Runtime() {
+    scope = 1;
+
+    //  std::string stats;
+    //  llvm::raw_string_ostream stream(stats);
+
+    std::ostringstream stream;
+    softcounter::serialize(recorder, stream);
+    if (!stream.str().empty()) {
+      // llvm::errs/LOG will crash with virtual call error
+      std::cerr << stream.str();
     }
   }
-  recorder.incUDefTypes(typeList.size());
-  LOG_INFO("Recorded types: " << ss.str());
-  init.reset();
-}
-
-Runtime::~Runtime() {
-  scope = 1;
-
-  //  std::string stats;
-  //  llvm::raw_string_ostream stream(stats);
-
-  std::ostringstream stream;
-  softcounter::serialize(recorder, stream);
-  if (!stream.str().empty()) {
-    // llvm::errs/LOG will crash with virtual call error
-    std::cerr << stream.str();
-  }
-}
+};
 
 thread_local size_t Runtime::scope = 0;
 
-std::optional<PointerInfo> Runtime::getPointerInfo(const void* addr) {
+ScopeGuard::ScopeGuard() {
+  Runtime::scope += 1;
+}
+
+ScopeGuard::~ScopeGuard() {
+  Runtime::scope -= 1;
+}
+
+bool ScopeGuard::shouldTrack() const {
+  return Runtime::scope <= 1;
+}
+
+Recorder& getRecorder() {
+  return Runtime::get().recorder;
+}
+
+std::optional<PointerInfo> getPointerInfo(const void* addr) {
 #ifdef TYPEART_USE_ALLOCATOR
   return allocator::getPointerInfo(addr);
 #else
@@ -113,23 +167,28 @@ std::optional<PointerInfo> Runtime::getPointerInfo(const void* addr) {
 #endif
 }
 
-std::string Runtime::toString(const void* addr, type_id_t type_id, size_t count, size_t typeSize,
-                              const void* calledFrom) {
-  return get().typeResolution.toString(addr, type_id, count, typeSize, calledFrom);
+const AllocationInfo* getAllocationInfo(alloc_id_t alloc_id) {
+  auto result = (const AllocationInfo*)nullptr;
+  Runtime::get().typeResolution.getAllocationInfo(alloc_id, &result);
+  return result;
 }
 
-std::string Runtime::toString(const void* addr, type_id_t type_id, size_t count, const void* calledFrom) {
-  return get().typeResolution.toString(addr, type_id, count, calledFrom);
+std::string toString(const void* addr, type_id_t type_id, size_t count, size_t typeSize, const void* calledFrom) {
+  return Runtime::get().typeResolution.toString(addr, type_id, count, typeSize, calledFrom);
 }
 
-std::string Runtime::toString(const void* addr, const PointerInfo& pointer_info) {
-  return get().typeResolution.toString(addr, pointer_info);
+std::string toString(const void* addr, type_id_t type_id, size_t count, const void* calledFrom) {
+  return Runtime::get().typeResolution.toString(addr, type_id, count, calledFrom);
+}
+
+std::string toString(const void* addr, const PointerInfo& pointer_info) {
+  return Runtime::get().typeResolution.toString(addr, pointer_info);
 }
 
 inline typeart_status query_type(const void* addr, int* type, size_t* count) {
-  Runtime::getRecorder().incUsedInRequest(addr);
+  getRecorder().incUsedInRequest(addr);
 
-  auto pointer_info = Runtime::getPointerInfo(addr);
+  auto pointer_info = getPointerInfo(addr);
   if (pointer_info.has_value()) {
     return Runtime::getTypeResolution().getTypeInfo(addr, pointer_info.value(), type, count);
   }
@@ -171,9 +230,9 @@ using namespace typeart::runtime;
  */
 
 typeart_status typeart_get_builtin_type(const void* addr, BuiltinType* type) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
 
-  auto pointer_info = Runtime::getPointerInfo(addr);
+  auto pointer_info = getPointerInfo(addr);
   if (pointer_info.has_value()) {
     return Runtime::getTypeResolution().getBuiltinInfo(addr, pointer_info.value(), type);
   }
@@ -181,31 +240,31 @@ typeart_status typeart_get_builtin_type(const void* addr, BuiltinType* type) {
 }
 
 typeart_status typeart_get_type(const void* addr, int* type, size_t* count) {
-  auto guard  = Runtime::scopeGuard();
+  auto guard  = ScopeGuard{};
   auto result = query_type(addr, type, count);
   if (result == TYPEART_UNKNOWN_ADDRESS) {
-    Runtime::getRecorder().incAddrMissing(addr);
+    getRecorder().incAddrMissing(addr);
   }
   return result;
 }
 
 typeart_status typeart_get_type_length(const void* addr, size_t* count) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
   int type{0};
   return typeart_get_type(addr, &type, count);
 }
 
 typeart_status typeart_get_type_id(const void* addr, int* type_id) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
   size_t count{0};
   return typeart_get_type(addr, type_id, &count);
 }
 
 typeart_status typeart_get_containing_type(const void* addr, int* type, size_t* count, const void** base_address,
                                            size_t* offset) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
 
-  auto pointer_info = Runtime::getPointerInfo(addr);
+  auto pointer_info = getPointerInfo(addr);
   if (pointer_info.has_value()) {
     *type         = pointer_info->type_id.value();
     *base_address = pointer_info->base_addr;
@@ -217,13 +276,13 @@ typeart_status typeart_get_containing_type(const void* addr, int* type, size_t* 
 typeart_status typeart_get_subtype(const void* base_addr, size_t offset, typeart_struct_layout container_layout,
                                    int* subtype_id, const void** subtype_base_addr, size_t* subtype_offset,
                                    size_t* subtype_count) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
   return Runtime::getTypeResolution().getSubTypeInfo(base_addr, offset, container_layout, subtype_id, subtype_base_addr,
                                                      subtype_offset, subtype_count);
 }
 
 typeart_status typeart_resolve_type_addr(const void* addr, typeart_struct_layout* struct_layout) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
   type_id_t::value_type type_id{0};
   size_t size{0};
   auto status = typeart_get_type(addr, &type_id, &size);
@@ -234,14 +293,14 @@ typeart_status typeart_resolve_type_addr(const void* addr, typeart_struct_layout
 }
 
 typeart_status typeart_resolve_type_id(int type_id, typeart_struct_layout* struct_layout) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
   return query_struct_layout(type_id, struct_layout);
 }
 
 typeart_status typeart_get_return_address(const void* addr, const void** return_addr) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
 
-  auto pointer_info = Runtime::getPointerInfo(addr);
+  auto pointer_info = getPointerInfo(addr);
   if (pointer_info) {
     *return_addr = pointer_info->debug;
     return TYPEART_OK;
@@ -251,7 +310,7 @@ typeart_status typeart_get_return_address(const void* addr, const void** return_
 }
 
 typeart_status_t typeart_get_source_location(const void* addr, char** file, char** function, char** line) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
 
   auto source_loc = typeart::SourceLocation::create(addr);
 
@@ -271,41 +330,41 @@ typeart_status_t typeart_get_source_location(const void* addr, char** file, char
 }
 
 const char* typeart_get_type_name(int type_id) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
   return Runtime::getTypeResolution().getTypeName(type_id).c_str();
 }
 
 bool typeart_is_vector_type(int type_id) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
   return Runtime::getTypeResolution().isVectorType(type_id);
 }
 
 bool typeart_is_valid_type(int type_id) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
   return Runtime::getTypeResolution().isValid(type_id);
 }
 
 bool typeart_is_reserved_type(int type_id) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
   return Runtime::getTypeResolution().isReservedType(type_id);
 }
 
 bool typeart_is_builtin_type(int type_id) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
   return Runtime::getTypeResolution().isBuiltinType(type_id);
 }
 
 bool typeart_is_struct_type(int type_id) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
   return Runtime::getTypeResolution().isStructType(type_id);
 }
 
 bool typeart_is_userdefined_type(int type_id) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
   return Runtime::getTypeResolution().isUserDefinedType(type_id);
 }
 
 size_t typeart_get_type_size(int type_id) {
-  auto guard = Runtime::scopeGuard();
+  auto guard = ScopeGuard{};
   return Runtime::getTypeResolution().getTypeSize(type_id);
 }

@@ -2,6 +2,7 @@
 
 #include "Config.h"
 #include "runtime/Runtime.hpp"
+#include "runtime/tracker/Tracker.hpp"
 
 #include <fmt/core.h>
 #include <fmt/ostream.h>
@@ -88,14 +89,14 @@ struct Region {
     if (addr >= begin && addr < end) {
       auto bucket_ptr      = (void*)((uintptr_t)addr & ~(allocation_size - 1));
       auto alloc_id        = *(alloc_id_t*)bucket_ptr;
-      auto allocation_info = Runtime::getAllocationInfo(alloc_id);
+      auto allocation_info = runtime::getAllocationInfo(alloc_id);
       if (allocation_info == nullptr) {
         fmt::print(stderr, "Found invalid allocaton_id {}!\n", alloc_id);
         return {};
       }
       auto base_ptr   = (void*)((int8_t*)bucket_ptr + allocation_info->base_ptr_offset.value_or(heap::min_alignment));
       auto count      = *(size_t*)((int8_t*)bucket_ptr + config::count_offset);
-      auto alloc_info = Runtime::getAllocationInfo(alloc_id);
+      auto alloc_info = runtime::getAllocationInfo(alloc_id);
       if (alloc_info != nullptr) {
         return PointerInfo{base_ptr, alloc_info->type_id, count, nullptr};
       }
@@ -304,7 +305,7 @@ std::optional<PointerInfo> getPointerInfo(const void* addr) {
     const auto allocation_size = allocation_size_for(addr);
     auto bucket_ptr            = (void*)((uintptr_t)addr & ~(allocation_size - 1));
     auto alloc_id              = *(alloc_id_t*)bucket_ptr;
-    auto allocation_info       = Runtime::getAllocationInfo(alloc_id);
+    auto allocation_info       = runtime::getAllocationInfo(alloc_id);
     if (allocation_info == nullptr) {
       fmt::print(stderr, "Found invalid allocaton_id {}!\n", alloc_id);
       return {};
@@ -321,7 +322,7 @@ std::optional<PointerInfo> getPointerInfo(const void* addr) {
     } else {
       count = *(size_t*)((int8_t*)bucket_ptr + config::count_offset);
     }
-    auto alloc_info = Runtime::getAllocationInfo(alloc_id);
+    auto alloc_info = runtime::getAllocationInfo(alloc_id);
     if (alloc_info != nullptr) {
       return PointerInfo{base_ptr, alloc_info->type_id, count, nullptr};
     }
@@ -338,7 +339,7 @@ std::optional<PointerInfo> getPointerInfo(const void* addr) {
   if (auto result = stack::getPointerInfo(addr); result.has_value()) {
     return result;
   }
-  return Runtime::getTracker().getPointerInfo(addr);
+  return runtime::tracker::Tracker::get().getPointerInfo(addr);
 }
 
 }  // namespace typeart::runtime::allocator
