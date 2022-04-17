@@ -16,7 +16,6 @@
 #include "AllocMapWrapper.hpp"
 #include "db/Database.hpp"
 #include "runtime/AccessCounter.hpp"
-#include "runtime/TypeResolution.hpp"
 
 #include <cstddef>
 
@@ -60,10 +59,12 @@ class Tracker {
     return instance;
   }
 
- public:
+ private:
   Tracker();
 
+ public:
   void onAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr);
+  void onAlloc(const void* addr, type_id_t type_id, size_t count, const void* retAddr);
 
   void onAllocStack(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr);
 
@@ -77,6 +78,7 @@ class Tracker {
 
  private:
   AllocState doAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr);
+  AllocState doAlloc(const void* addr, type_id_t type_id, size_t count, const void* retAddr);
 
   FreeState doFreeHeap(const void* addr, const void* retAddr);
 };

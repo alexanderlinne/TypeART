@@ -8,12 +8,12 @@
 #include <typeart/TypeART.h>
 
 int main(int argc, char** argv) {
-  const void* ret_check = NULL;
-  const void* addr      = 1;
+  const void* addr = 1;
 
-  typeart_get_return_address(addr, &ret_check);
-  if (ret_check != NULL) {
-    fprintf(stderr, "[Error] Ret address mismatch expected NULL but have %p\n", ret_check);
+  typeart_pointer_info pointer_info;
+  typeart_get_pointer_info(addr, &pointer_info);
+  if (pointer_info.return_addr != NULL) {
+    fprintf(stderr, "[Error] Ret address mismatch expected NULL but have %p\n", pointer_info.return_addr);
   }
   return 0;
 }

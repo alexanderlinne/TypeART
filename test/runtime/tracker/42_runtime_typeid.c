@@ -33,13 +33,12 @@ int main(int argc, char** argv) {
   struct Datastruct data     = {0};
   struct Secondstruct data_2 = {0};
 
-  type_id_value type_id = 0;
-  typeart_get_type_id(&data, &type_id);
-  print_data(type_id);
+  typeart_pointer_info pointer_info;
+  typeart_get_pointer_info(&data, &pointer_info);
+  print_data(pointer_info.type_id);
 
-  type_id = 0;
-  typeart_get_type_id(&data_2, &type_id);
-  print_data(type_id);
+  typeart_get_pointer_info(&data_2, &pointer_info);
+  print_data(pointer_info.type_id);
 
   return data.start + data_2.start;
 }

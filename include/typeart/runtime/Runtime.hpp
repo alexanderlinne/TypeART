@@ -23,14 +23,39 @@
 namespace typeart::runtime {
 
 struct PointerInfo final {
+  // The base address of the whole allocation.
   const void* base_addr = nullptr;
-  type_id_t type_id     = type_id_t::invalid;
-  size_t count          = 0;
-  const void* debug     = nullptr;
+
+  // The type id of of the allocation or the allocation's element type.
+  type_id_t type_id = type_id_t::invalid;
+
+  // The element count of the allocation w.r.t. the address this instance was
+  // queried with. (e.g. the element count of a subarray)
+  size_t count = 0;
+
+  // The return address recorded on allocation, if available.
+  const void* debug = nullptr;
 };
 
-std::optional<PointerInfo> getPointerInfo(const void* addr);
-const AllocationInfo* getAllocationInfo(alloc_id_t alloc_id);
+std::ostream& operator<<(std::ostream& os, const PointerInfo& pointer_info);
+
+typeart_status getPointerInfo(const void* addr, PointerInfo& result);
+typeart_status getContainingInfo(const void* addr, PointerInfo& result, size_t* offset);
+
+typeart_status getStructType(const void* addr, const StructType** structInfo);
+typeart_status getStructType(type_id_t type_id, const StructType** structInfo);
+typeart_status getSubTypeInfo(const void* baseAddr, size_t offset, const StructType& outer_type,
+                              PointerInfo& subtype_pointer_info, size_t* subtype_offset);
+
+const std::string& getTypeName(type_id_t type_id);
+size_t getTypeSize(type_id_t type_id);
+bool isUnknown(type_id_t type_id);
+bool isValid(type_id_t type_id);
+bool isReservedType(type_id_t type_id);
+bool isBuiltinType(type_id_t type_id);
+bool isStructType(type_id_t type_id);
+bool isUserDefinedType(type_id_t type_id);
+bool isVectorType(type_id_t type_id);
 
 struct ScopeGuard final {
   ScopeGuard();
@@ -46,11 +71,7 @@ struct ScopeGuard final {
 };
 
 Recorder& getRecorder();
-ScopeGuard scopeGuard();
-
-std::string toString(const void* addr, type_id_t type_id, size_t count, size_t typeSize, const void* calledFrom);
-std::string toString(const void* addr, type_id_t type_id, size_t count, const void* calledFrom);
-std::string toString(const void* addr, const PointerInfo& pointer_info);
+const AllocationInfo* getAllocationInfo(alloc_id_t alloc_id);
 
 }  // namespace typeart::runtime
 

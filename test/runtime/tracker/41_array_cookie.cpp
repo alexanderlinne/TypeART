@@ -10,13 +10,12 @@ struct S1 {
 
 int main() {
   const auto check = [&](auto* addr, size_t elems) {
-    int id_result{-1};
-    size_t count_check{0};
-    typeart_status status = typeart_get_type(reinterpret_cast<const void*>(addr), &id_result, &count_check);
+    typeart_pointer_info pointer_info;
+    typeart_status status = typeart_get_pointer_info(reinterpret_cast<const void*>(addr), &pointer_info);
 
     if (status == TYPEART_OK) {
-      if (count_check != elems) {
-        fprintf(stderr, "[Error]: Count not expected: %zu. Expected: %zu.\n", count_check, elems);
+      if (pointer_info.count != elems) {
+        fprintf(stderr, "[Error]: Count not expected: %zu. Expected: %zu.\n", pointer_info.count, elems);
       }
     } else {
       fprintf(stderr, "[Check]: Status: %i with #elem %zu.\n", status, elems);

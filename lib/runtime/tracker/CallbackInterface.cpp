@@ -17,7 +17,7 @@ extern "C" {
 void typeart_tracker_alloc(const void* addr, alloc_id_t::value_type alloc_id, size_t count) {
   TYPEART_RUNTIME_GUARD;
   const void* retAddr = __builtin_return_address(0);
-  tracker::Tracker::get().onAlloc(addr, alloc_id, count, retAddr);
+  tracker::Tracker::get().onAlloc(addr, alloc_id_t{alloc_id}, count, retAddr);
 }
 
 void typeart_tracker_alloc_stack(const void* addr, alloc_id_t::value_type alloc_id, size_t count) {
@@ -47,7 +47,7 @@ void typeart_tracker_leave_scope(int alloca_count) {
 void typeart_tracker_alloc_omp(const void* addr, alloc_id_t::value_type alloc_id, size_t count) {
   TYPEART_RUNTIME_GUARD;
   const void* retAddr = __builtin_return_address(0);
-  tracker::Tracker::get().onAlloc(addr, alloc_id, count, retAddr);
+  tracker::Tracker::get().onAlloc(addr, alloc_id_t{alloc_id}, count, retAddr);
   runtime::getRecorder().incOmpContextHeap();
 }
 

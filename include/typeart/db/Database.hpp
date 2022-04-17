@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include "../runtime/Runtime.h"
 #include "Types.hpp"
 
 #include <memory>
@@ -38,6 +39,8 @@ struct StructType {
   StructTypeFlag flag;
 
   bool isValid() const;
+
+  operator typeart_struct_layout() const;
 };
 
 struct AllocationInfo {

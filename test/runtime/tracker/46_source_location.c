@@ -12,21 +12,20 @@ struct Datastruct {
 };
 
 const void* check_addr(void* ptr) {
-  const void* addr;
-
-  if (typeart_get_return_address(ptr, &addr) != TYPEART_OK) {
+  typeart_pointer_info pointer_info;
+  if (typeart_get_pointer_info(ptr, &pointer_info) != TYPEART_OK) {
     fprintf(stderr, "Error getting return address.\n");
     return NULL;
   }
 
-  if (addr == NULL) {
+  if (pointer_info.return_addr == NULL) {
     fprintf(stderr, "Error return address NULL.\n");
     return NULL;
   }
 
   fprintf(stderr, "Address check OK.\n");
 
-  return addr;
+  return pointer_info.return_addr;
 }
 
 int main(int argc, char** argv) {

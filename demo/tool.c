@@ -40,27 +40,26 @@ void analyseBuffer(const void* buf, int count, MPI_Datatype type) {
 
     printf("Basetype(%s, addr=%p, size=%i , count=%i)\n", type_name, buf, size, count);
 
-    type_id_value type_id;
-    size_t count_check;
-    typeart_status status = typeart_get_type(buf, &type_id, &count_check);
+    typeart_pointer_info pointer_info;
+    typeart_status status = typeart_get_pointer_info(buf, &pointer_info);
 
     if (status == TYPEART_OK) {
       // If the address corresponds to a struct, fetch the type of the first member
-      while (type_id >= TYPEART_NUM_RESERVED_IDS) {
+      while (pointer_info.type_id >= TYPEART_NUM_RESERVED_IDS) {
         typeart_struct_layout struct_layout;
-        typeart_resolve_type_id(type_id, &struct_layout);
-        type_id = struct_layout.member_types[0];
+        typeart_resolve_type_id(pointer_info.type_id, &struct_layout);
+        pointer_info.type_id = struct_layout.member_types[0];
       }
 
       // fprintf(stderr, "Type id=%d, name=%s\n", type_info.id, typeart_get_type_name(type_info.id));
 
-      if (isCompatible(type, type_id)) {
+      if (isCompatible(type, pointer_info.type_id)) {
         // printf("Types are compatible\n");
       } else {
-        const char* recorded_name = typeart_get_type_name(type_id);
+        const char* recorded_name = typeart_get_type_name(pointer_info.type_id);
 
-        fprintf(stdout, "[Demo] Error: Incompatible buffer of type %d (%s) - expected %s instead\n", type_id,
-                recorded_name, type_name);
+        fprintf(stdout, "[Demo] Error: Incompatible buffer of type %d (%s) - expected %s instead\n",
+                pointer_info.type_id, recorded_name, type_name);
       }
 
     } else {

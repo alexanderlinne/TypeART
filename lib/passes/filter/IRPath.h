@@ -14,6 +14,7 @@
 #define TYPEART_IRPATH_H
 
 #include "compat/CallSite.h"
+#include "support/Logger.hpp"
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -21,6 +22,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <ostream>
 #include <unordered_map>
 #include <vector>
 
@@ -76,7 +78,7 @@ struct IRPath {
   }
 };
 
-inline llvm::raw_ostream& operator<<(llvm::raw_ostream& os, const IRPath& p) {
+inline std::ostream& operator<<(std::ostream& os, const IRPath& p) {
   const auto& vec = p.path;
   if (vec.empty()) {
     os << "path = [ ]";
@@ -196,7 +198,7 @@ struct CallsitePath {
   }
 };
 
-inline llvm::raw_ostream& operator<<(llvm::raw_ostream& os, const CallsitePath::Node& n) {
+inline std::ostream& operator<<(std::ostream& os, const CallsitePath::Node& n) {
   auto f = n.first;
   if (f != nullptr) {
     os << f->getName();
@@ -207,7 +209,7 @@ inline llvm::raw_ostream& operator<<(llvm::raw_ostream& os, const CallsitePath::
   return os;
 }
 
-inline llvm::raw_ostream& operator<<(llvm::raw_ostream& os, const CallsitePath& p) {
+inline std::ostream& operator<<(std::ostream& os, const CallsitePath& p) {
   const auto& vec = p.intermediatePath;
   if (vec.empty()) {
     os << "func_path = [";

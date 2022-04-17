@@ -34,7 +34,6 @@ set(RUNTIME_LIB_ALLOCATOR_SOURCES
 )
 
 set(RUNTIME_LIB_SOURCES
-    TypeResolution.cpp
     Runtime.cpp
     tracker/CallbackInterface.cpp
     tracker/Tracker.cpp

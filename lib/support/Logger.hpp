@@ -13,7 +13,9 @@
 #ifndef LIB_LOGGER_H_
 #define LIB_LOGGER_H_
 
-#include "llvm/Support/raw_ostream.h"
+#include <llvm/IR/Value.h>
+#include <llvm/Support/raw_ostream.h>
+#include <sstream>
 
 #ifndef TYPEART_LOG_LEVEL
 /*
@@ -41,11 +43,28 @@ inline void typeart_log(const std::string& msg) {
 #endif
 }  // namespace typeart::detail
 
+namespace llvm {
+
+inline std::ostream& operator<<(std::ostream& os, const llvm::Value& value) {
+  std::string buffer;
+  llvm::raw_string_ostream ss(buffer);
+  ss << value;
+  os << ss.str();
+  return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const llvm::StringRef& str) {
+  os << str.str();
+  return os;
+}
+
+}  // namespace llvm
+
 // clang-format off
 #define OO_LOG_LEVEL_MSG(LEVEL_NUM, LEVEL, MSG)                                                                   \
   if ((LEVEL_NUM) <= TYPEART_LOG_LEVEL) {                                                                                 \
     std::string logging_message;                                                                                  \
-    llvm::raw_string_ostream rso(logging_message);                                                                \
+    std::stringstream rso(logging_message);                                                                \
     rso << (LEVEL) << LOG_BASENAME_FILE << ":" << __func__ << ":" << __LINE__ << ":" << MSG << "\n"; /* NOLINT */ \
     typeart::detail::typeart_log(rso.str());                                                                      \
   }
@@ -53,7 +72,7 @@ inline void typeart_log(const std::string& msg) {
 #define OO_LOG_LEVEL_MSG_BARE(LEVEL_NUM, LEVEL, MSG)   \
   if ((LEVEL_NUM) <= TYPEART_LOG_LEVEL) {                      \
     std::string logging_message;                       \
-    llvm::raw_string_ostream rso(logging_message);     \
+    std::stringstream rso(logging_message);     \
     rso << (LEVEL) << " " << MSG << "\n"; /* NOLINT */ \
     typeart::detail::typeart_log(rso.str());           \
   }

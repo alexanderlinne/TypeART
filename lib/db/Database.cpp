@@ -41,6 +41,18 @@ bool StructType::isValid() const {
   return type_id != type_id_t::invalid;
 }
 
+StructType::operator typeart_struct_layout() const {
+  typeart_struct_layout struct_layout;
+  struct_layout.type_id      = type_id.value();
+  struct_layout.name         = name.c_str();
+  struct_layout.num_members  = num_members;
+  struct_layout.extent       = extent;
+  struct_layout.offsets      = &offsets[0];
+  struct_layout.member_types = reinterpret_cast<const type_id_t::value_type*>(&member_types[0]);
+  struct_layout.count        = &array_sizes[0];
+  return struct_layout;
+}
+
 const std::array<std::string, 11> Database::BuiltinNames = {
     "int8", "int16", "int32", "int64", "half", "float", "double", "float128", "x86_float80", "ppc_float128", "pointer"};
 

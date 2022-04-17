@@ -23,9 +23,9 @@ void free_vector(vector v) {
 }
 
 int fill_vector(void* values, int count, vector* v) {
-  int type;
-  typeart_status result = typeart_get_type_id(values, &type);
-  if (result == TYPEART_OK && type == TYPEART_DOUBLE) {
+  typeart_pointer_info pointer_info;
+  typeart_status result = typeart_get_pointer_info(values, &pointer_info);
+  if (result == TYPEART_OK && pointer_info.type_id == TYPEART_DOUBLE) {
     memcpy(v->vals, values, count);
     v->size = count;
     fprintf(stderr, "Success\n");

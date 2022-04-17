@@ -11,23 +11,22 @@ int get_struct_id(int index) {
 }
 
 void check(void* addr, int id, int expected_count, int resolveStructs) {
-  int id_result;
-  size_t count_check;
-  typeart_status status = typeart_get_type(addr, &id_result, &count_check);
+  typeart_pointer_info pointer_info;
+  typeart_status status = typeart_get_pointer_info(addr, &pointer_info);
   if (status == TYPEART_OK) {
     if (resolveStructs) {
       // If the address corresponds to a struct, fetch the type of the first member
-      while (id_result >= TYPEART_NUM_RESERVED_IDS) {
+      while (pointer_info.type_id >= TYPEART_NUM_RESERVED_IDS) {
         typeart_struct_layout struct_layout;
-        typeart_resolve_type_id(id_result, &struct_layout);
-        id_result   = struct_layout.member_types[0];
-        count_check = struct_layout.count[0];
+        typeart_resolve_type_id(pointer_info.type_id, &struct_layout);
+        pointer_info.type_id = struct_layout.member_types[0];
+        pointer_info.count   = struct_layout.count[0];
       }
     }
 
-    if (id_result == id) {
-      if (count_check != expected_count) {
-        fprintf(stderr, "Error: Count mismatch (%zu)\n", count_check);
+    if (pointer_info.type_id == id) {
+      if (pointer_info.count != expected_count) {
+        fprintf(stderr, "Error: Count mismatch (%zu)\n", pointer_info.count);
       } else {
         fprintf(stderr, "Ok\n");
       }
@@ -51,17 +50,16 @@ void check(void* addr, int id, int expected_count, int resolveStructs) {
 }
 
 void check_struct(void* addr, const char* name, int expected_count) {
-  int id;
-  size_t count_check;
-  typeart_status status = typeart_get_type(addr, &id, &count_check);
+  typeart_pointer_info pointer_info;
+  typeart_status status = typeart_get_pointer_info(addr, &pointer_info);
   if (status == TYPEART_OK) {
-    if (id >= TYPEART_NUM_RESERVED_IDS) {
+    if (pointer_info.type_id >= TYPEART_NUM_RESERVED_IDS) {
       typeart_struct_layout struct_layout;
-      typeart_resolve_type_id(id, &struct_layout);
-      if (strcmp(typeart_get_type_name(id), struct_layout.name) != 0) {
+      typeart_resolve_type_id(pointer_info.type_id, &struct_layout);
+      if (strcmp(typeart_get_type_name(pointer_info.type_id), struct_layout.name) != 0) {
         fprintf(stderr, "Error: Name mismatch\n");
-      } else if (expected_count != count_check) {
-        fprintf(stderr, "Error: Count mismatch (%zu)\n", count_check);
+      } else if (expected_count != pointer_info.count) {
+        fprintf(stderr, "Error: Count mismatch (%zu)\n", pointer_info.count);
       } else {
         fprintf(stderr, "Ok\n");
       }

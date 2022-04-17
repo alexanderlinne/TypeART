@@ -24,15 +24,14 @@
 namespace typeart {
 
 Result<Buffer> Buffer::create(const void* ptr) {
-  type_id_t::value_type type_id;
-  size_t count          = 0;
-  auto typeart_status_v = typeart_get_type(ptr, &type_id, &count);
+  typeart_pointer_info pointer_info;
+  auto typeart_status_v = typeart_get_pointer_info(ptr, &pointer_info);
 
   if (typeart_status_v != TYPEART_OK) {
     return make_internal_error<TypeARTError>(error_message_for(typeart_status_v));
   }
 
-  return Buffer{0, ptr, count, type_id};
+  return Buffer{0, ptr, pointer_info.count, pointer_info.type_id};
 }
 
 Buffer Buffer::create(ptrdiff_t offset, const void* ptr, size_t count, type_id_t::value_type type_id) {
