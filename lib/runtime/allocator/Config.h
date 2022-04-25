@@ -10,11 +10,11 @@ constexpr size_t page_size = 4096;
 // Offset from the pointer to an alloc_id to the pointer of the
 // corresponding count in bytes, if the count is stored within the
 // allocation.
-constexpr ptrdiff_t count_offset = std::max(sizeof(alloc_id_t), alignof(size_t));
+constexpr ptrdiff_t count_offset = -(sizeof(size_t) + std::max(sizeof(alloc_id_t), alignof(size_t)));
 
 // Computes the required padding between the allocation id and the count,
 // if the count is stored in the actual allocation.
-constexpr size_t count_padding = count_offset - sizeof(alloc_id_t);
+constexpr size_t count_padding = -count_offset - sizeof(alloc_id_t) - sizeof(size_t);
 
 namespace heap {
 constexpr size_t region_size         = 1UL << 32;  // 4GB
@@ -111,21 +111,11 @@ constexpr size_t region_offset_for(size_t size) {
 
 // Computes the offset in bytes between a pointer to an allocation id and the
 // pointer to the corresponding user data.
-constexpr ptrdiff_t base_ptr_offset_for(size_t alignment, bool is_vla) {
+constexpr ptrdiff_t metadata_byte_size(bool is_vla) {
   if (is_vla) {
-    return std::max(next_power_of_two(count_offset + sizeof(size_t)), alignment);
+    return count_offset + sizeof(size_t);
   } else {
-    return std::max(sizeof(alloc_id_t), alignment);
-  }
-}
-
-// Computes the required number of padding bytes between the instrumented data
-// and the start of the users data.
-constexpr size_t get_allocation_padding(size_t alignment, bool is_vla) {
-  if (is_vla) {
-    return base_ptr_offset_for(alignment, is_vla) - (count_offset + sizeof(size_t));
-  } else {
-    return base_ptr_offset_for(alignment, is_vla) - sizeof(alloc_id_t);
+    return sizeof(alloc_id_t);
   }
 }
 

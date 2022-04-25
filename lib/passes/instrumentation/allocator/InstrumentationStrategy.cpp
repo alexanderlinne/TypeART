@@ -42,8 +42,9 @@ class Value;
 
 namespace typeart::instrumentation::allocator {
 
-InstrumentationStrategy::InstrumentationStrategy(llvm::Module& m)
+InstrumentationStrategy::InstrumentationStrategy(cl::InstrumentationMode mode, llvm::Module& m)
     : instrumentation::InstrumentationStrategy(),
+      mode(mode),
       type_art_functions(m),
       instr_helper(m),
       tracker_instrumentation(m, false) {
@@ -92,29 +93,43 @@ size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
         continue;
     }
 
+    auto replace_call_base = [&builder](llvm::CallBase* original, llvm::Function* replacement,
+                                        llvm::ArrayRef<llvm::Value*> args) {
+      auto replacement_call = (llvm::Value*)nullptr;
+      if (auto invoke_inst = llvm::dyn_cast<llvm::InvokeInst>(original)) {
+        const auto normal = invoke_inst->getNormalDest();
+        const auto unwind = invoke_inst->getUnwindDest();
+        replacement_call  = builder.CreateInvoke(replacement, normal, unwind, args);
+      } else if (auto call_inst = llvm::dyn_cast<llvm::CallInst>(original)) {
+        replacement_call = builder.CreateCall(replacement, args);
+      } else if (auto call_br_inst = llvm::dyn_cast<llvm::CallBrInst>(original)) {
+        const auto def      = call_br_inst->getDefaultDest();
+        const auto indirect = call_br_inst->getIndirectDests();
+        replacement_call    = builder.CreateCallBr(replacement, def, indirect, args);
+      } else {
+        llvm::errs() << "Unexpected CallBase subtype:\n";
+        original->print(llvm::errs());
+        llvm::errs() << "\n";
+        abort();
+      }
+      original->replaceAllUsesWith(replacement_call);
+      original->eraseFromParent();
+    };
+
+    static std::map<std::string, llvm::Function*> function_map = {
+        {"malloc", type_art_functions.allocator_malloc},
+        {"_Znwm", type_art_functions.allocator__Znwm},
+        {"_Znam", type_art_functions.allocator__Znam},
+    };
+
     auto function_name = malloc_call->getCalledFunction()->getName();
-    if (function_name == "malloc") {
-      auto size           = malloc_call->getArgOperand(0);
-      auto typeart_malloc = builder.CreateCall(type_art_functions.allocator_malloc, {alloc_id, element_count, size});
-      malloc_call->replaceAllUsesWith(typeart_malloc);
-      malloc_call->eraseFromParent();
+    if (function_name == "malloc" || function_name == "_Znwm" || function_name == "_Znam") {
+      auto size = malloc_call->getArgOperand(0);
+      replace_call_base(malloc_call, function_map[function_name], {alloc_id, element_count, size});
     } else if (function_name == "calloc") {
       auto num  = malloc_call->getArgOperand(0);
       auto size = malloc_call->getArgOperand(1);
-      auto typeart_calloc =
-          builder.CreateCall(type_art_functions.allocator_calloc, {alloc_id, element_count, num, size});
-      malloc_call->replaceAllUsesWith(typeart_calloc);
-      malloc_call->eraseFromParent();
-    } else if (function_name == "_Znwm") {
-      auto size          = malloc_call->getArgOperand(0);
-      auto typeart__Znwm = builder.CreateCall(type_art_functions.allocator__Znwm, {alloc_id, element_count, size});
-      malloc_call->replaceAllUsesWith(typeart__Znwm);
-      malloc_call->eraseFromParent();
-    } else if (function_name == "_Znam") {
-      auto size          = malloc_call->getArgOperand(0);
-      auto typeart__Znam = builder.CreateCall(type_art_functions.allocator__Znam, {alloc_id, element_count, size});
-      malloc_call->replaceAllUsesWith(typeart__Znam);
-      malloc_call->eraseFromParent();
+      replace_call_base(malloc_call, type_art_functions.allocator_calloc, {alloc_id, element_count, num, size});
     } else {
       malloc_call->print(llvm::errs());
       fprintf(stderr, "\nUnknown malloc function %s\n", function_name.str().c_str());
@@ -161,79 +176,81 @@ std::string typeNameFor(llvm::Type* ty) {
   return {};
 }
 
-size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
-  namespace config         = typeart::runtime::allocator::config;
-  const auto alloc_id_type = instr_helper.getTypeFor(IType::alloc_id);
-  const auto count_type    = instr_helper.getTypeFor(IType::extent);
-  for (const auto& [sdata, args] : stack) {
-    auto* alloca                = args.get_as<llvm::AllocaInst>(ArgMap::ID::pointer);
-    auto& ctx                   = alloca->getContext();
-    const auto& dl              = alloca->getModule()->getDataLayout();
-    const auto allocated_type   = alloca->getAllocatedType();
-    const auto alloca_byte_size = dl.getTypeAllocSize(allocated_type).getFixedSize();
-    const auto alignment        = alloca->getAlignment();
-    const auto required_size    = alloca_byte_size + config::stack::base_ptr_offset_for(alignment, sdata.is_vla);
-    const auto allocation_size  = config::stack::allocation_size_for(required_size);
+llvm::AllocaInst* InstrumentationStrategy::createWrapperAlloca(llvm::AllocaInst* alloca, bool is_vla) {
+  namespace config          = typeart::runtime::allocator::config;
+  const auto alloc_id_type  = instr_helper.getTypeFor(IType::alloc_id);
+  const auto count_type     = instr_helper.getTypeFor(IType::extent);
+  auto& ctx                 = alloca->getContext();
+  const auto& dl            = alloca->getModule()->getDataLayout();
+  const auto allocated_type = alloca->getAllocatedType();
+  const auto required_size =
+      dl.getTypeAllocSize(allocated_type).getFixedSize() + config::stack::metadata_byte_size(is_vla);
+  const auto allocation_size = config::stack::allocation_size_for(required_size);
+  auto name         = fmt::format("Typeart_Wrapper_{}_Align_{}{}", typeNameFor(allocated_type), alloca->getAlignment(),
+                          is_vla ? "_VLA" : "");
+  auto wrapper_type = alloca->getModule()->getTypeByName(name);
+  if (wrapper_type == nullptr) {
+    const auto alloca_padding_type = llvm::ArrayType::get(llvm::Type::getInt8Ty(ctx), allocation_size - required_size);
+    if (is_vla) {
+      const auto count_padding_type = llvm::ArrayType::get(llvm::Type::getInt8Ty(ctx), config::count_padding);
+      wrapper_type                  = llvm::StructType::create(
+                           {allocated_type, alloca_padding_type, count_type, count_padding_type, alloc_id_type}, name,
+                           /* packed = */ true);
+    } else {
+      wrapper_type = llvm::StructType::create({allocated_type, alloca_padding_type, alloc_id_type}, name,
+                                              /* packed = */ true);
+    }
+  }
+  auto required_alignment = config::stack::alignment_for(allocation_size);
+  assert(required_alignment >= alloca->getAlignment());
+  llvm::IRBuilder<> IRB(alloca->getNextNode());
+  auto wrapper_alloca = IRB.CreateAlloca(wrapper_type);
+  wrapper_alloca->setAlignment(llvm::MaybeAlign{required_alignment});
+  return wrapper_alloca;
+}
 
-    // Create a struct data type for the stack allocation
-    auto wrapper_type = (llvm::Type*)nullptr;
-    auto name         = fmt::format("Typeart_Wrapper_{}_Align_{}{}", typeNameFor(allocated_type), alignment,
-                            sdata.is_vla ? "_VLA" : "");
-    wrapper_type      = alloca->getModule()->getTypeByName(name);
-    if (wrapper_type == nullptr) {
+size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
+  namespace config = typeart::runtime::allocator::config;
+  for (const auto& [sdata, args] : stack) {
+    auto* alloca   = args.get_as<llvm::AllocaInst>(ArgMap::ID::pointer);
+    auto& ctx      = alloca->getContext();
+    const auto& dl = alloca->getModule()->getDataLayout();
+    if (mode == cl::InstrumentationMode::before_optimization || mode == cl::InstrumentationMode::combined) {
+      llvm::IRBuilder<> IRB(alloca->getNextNode());
+      auto allocIdConst         = args.get_value(ArgMap::ID::alloc_id);
+      auto elementCountConst    = args.get_value(ArgMap::ID::element_count);
+      const auto wrapper_alloca = createWrapperAlloca(alloca, sdata.is_vla);
+
+      const auto alloc_id = IRB.CreateStructGEP(wrapper_alloca, sdata.is_vla ? 4 : 2);
+      IRB.CreateStore(allocIdConst, alloc_id);
+
       if (sdata.is_vla) {
-        const auto count_padding      = llvm::ArrayType::get(llvm::Type::getInt8Ty(ctx), config::count_padding);
-        const auto allocation_padding = llvm::ArrayType::get(
-            llvm::Type::getInt8Ty(ctx), config::stack::get_allocation_padding(alignment, sdata.is_vla));
-        wrapper_type = llvm::StructType::create(
-            {alloc_id_type, count_padding, count_type, allocation_padding, allocated_type}, name,
-            /* packed = */ true);
-      } else {
-        const auto allocation_padding = llvm::ArrayType::get(
-            llvm::Type::getInt8Ty(ctx), config::stack::get_allocation_padding(alignment, sdata.is_vla));
-        wrapper_type = llvm::StructType::create({alloc_id_type, allocation_padding, allocated_type}, name,
-                                                /* packed = */ true);
+        const auto element_count = IRB.CreateStructGEP(wrapper_alloca, 2);
+        IRB.CreateStore(elementCountConst, element_count);
+      }
+
+      const auto user_data = IRB.CreateStructGEP(wrapper_alloca, 0);
+      alloca->replaceAllUsesWith(user_data);
+      if (alloca->isTerminator()) {
+        abort();
+      }
+      alloca->eraseFromParent();
+      alloca = wrapper_alloca;
+    }
+    if (mode == cl::InstrumentationMode::after_optimization || mode == cl::InstrumentationMode::combined) {
+      const auto allocated_type = alloca->getAllocatedType();
+      if (allocated_type->getStructName().startswith("Typeart_Wrapper_")) {
+        auto byte_size = dl.getTypeAllocSize(allocated_type).getFixedSize();
+        llvm::IRBuilder<> IRB(alloca->getNextNode());
+        const auto casted_wrapper = (llvm::Instruction*)IRB.CreateBitCast(alloca, llvm::Type::getInt8PtrTy(ctx));
+        const auto offset_casted  = IRB.CreateGEP(
+             casted_wrapper,
+             llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), config::stack::region_offset_for(byte_size)));
+        auto offset_wrapper = IRB.CreateBitCast(offset_casted, allocated_type->getPointerTo());
+        alloca->replaceAllUsesWith(offset_wrapper);
+        casted_wrapper->setOperand(0, alloca);
       }
     }
-
-    llvm::IRBuilder<> IRB(alloca->getNextNode());
-
-    auto allocIdConst      = args.get_value(ArgMap::ID::alloc_id);
-    auto elementCountConst = args.get_value(ArgMap::ID::element_count);
-
-    auto wrapper_alloca = IRB.CreateAlloca(wrapper_type);
-
-    auto byte_size          = dl.getTypeAllocSize(wrapper_type).getFixedSize();
-    auto required_alignment = config::stack::alignment_for(allocation_size);
-    wrapper_alloca->setAlignment(llvm::MaybeAlign{alignment >= required_alignment ? alignment : required_alignment});
-
-    auto offset_name =
-        fmt::format("typeart_stack_region_offset_for_size_{}", config::stack::allocation_size_for(byte_size));
-    auto offset = alloca->getModule()->getNamedGlobal(offset_name);
-    if (offset == nullptr) {
-      offset = llvm::dyn_cast<llvm::GlobalVariable>(
-          alloca->getModule()->getOrInsertGlobal(offset_name, llvm::Type::getInt64Ty(ctx)));
-      offset->setLinkage(llvm::GlobalValue::ExternalLinkage);
-      offset->setConstant(true);
-    }
-
-    auto offset_wrapper = IRB.CreateBitCast(wrapper_alloca, llvm::Type::getInt8PtrTy(ctx));
-    auto offset_value   = IRB.CreateLoad(offset);
-    offset_wrapper      = IRB.CreateGEP(offset_wrapper, offset_value);
-    offset_wrapper      = IRB.CreateBitCast(offset_wrapper, wrapper_type->getPointerTo());
-
-    const auto alloc_id = IRB.CreateStructGEP(offset_wrapper, 0);
-    IRB.CreateStore(allocIdConst, alloc_id);
-
-    if (sdata.is_vla) {
-      const auto element_count = IRB.CreateStructGEP(offset_wrapper, 2);
-      IRB.CreateStore(elementCountConst, element_count);
-    }
-
-    const auto user_data_idx = llvm::dyn_cast<llvm::StructType>(wrapper_type)->getNumElements() - 1;
-    const auto user_data     = IRB.CreateStructGEP(offset_wrapper, user_data_idx);
-    alloca->replaceAllUsesWith(user_data);
-    alloca->eraseFromParent();
   }
 
   return stack.size();

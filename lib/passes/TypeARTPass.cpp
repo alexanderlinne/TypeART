@@ -78,8 +78,9 @@ bool TypeArtPass::doInitialization(llvm::Module& m) {
   }
 
 #ifdef TYPEART_USE_ALLOCATOR
-  auto parser   = std::make_unique<instrumentation::allocator::ArgumentParser>(m, typeManager.get());
-  auto strategy = std::make_unique<instrumentation::allocator::InstrumentationStrategy>(m);
+  auto parser = std::make_unique<instrumentation::allocator::ArgumentParser>(m, typeManager.get());
+  auto strategy =
+      std::make_unique<instrumentation::allocator::InstrumentationStrategy>(cl::getInstrumentationMode(), m);
 #else
   auto parser = std::make_unique<instrumentation::tracker::ArgumentParser>(m, typeManager.get());
   auto strategy =
@@ -178,6 +179,9 @@ void TypeArtPass::addPreinitCall(llvm::Module& m) {
   auto string_arr_ty = llvm::Type::getInt8PtrTy(ctx)->getPointerTo();
   auto function_ty   = llvm::FunctionType::get(llvm::Type::getVoidTy(ctx),
                                                {llvm::Type::getInt32Ty(ctx), string_arr_ty, string_arr_ty}, false);
+  if (m.getFunction("typeart_allocator_setup_main_stack") != nullptr) {
+    return;
+  }
   auto preinit_function =
       llvm::Function::Create(function_ty, llvm::Function::ExternalLinkage, "typeart_allocator_setup_main_stack", m);
   m.getOrInsertGlobal("typeart_preinit", function_ty->getPointerTo());

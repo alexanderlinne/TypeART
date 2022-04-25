@@ -304,27 +304,21 @@ std::optional<PointerInfo> getPointerInfo(const void* addr) {
   if (addr >= mapped_begin && addr < mapped_end) {
     const auto allocation_size = allocation_size_for(addr);
     auto bucket_ptr            = (void*)((uintptr_t)addr & ~(allocation_size - 1));
-    auto alloc_id              = *(alloc_id_t*)bucket_ptr;
+    auto alloc_id              = *(alloc_id_t*)((int8_t*)bucket_ptr + allocation_size - sizeof(alloc_id_value));
     auto allocation_info       = runtime::getAllocationInfo(alloc_id);
     if (allocation_info == nullptr) {
       fmt::print(stderr, "Found invalid allocaton_id {}!\n", alloc_id);
       return {};
     }
-    if (!allocation_info->base_ptr_offset.has_value()) {
-      fmt::print(stderr, "Missing base pointer offset for stack allocation at {} with allocation id {}!\n", addr,
-                 alloc_id);
-      return {};
-    }
-    auto base_ptr = (void*)((int8_t*)bucket_ptr + allocation_info->base_ptr_offset.value());
-    auto count    = size_t{0};
+    auto count = size_t{0};
     if (allocation_info->count.has_value()) {
       count = allocation_info->count.value();
     } else {
-      count = *(size_t*)((int8_t*)bucket_ptr + config::count_offset);
+      count = *(size_t*)((int8_t*)&alloc_id + config::count_offset);
     }
     auto alloc_info = runtime::getAllocationInfo(alloc_id);
     if (alloc_info != nullptr) {
-      return PointerInfo{base_ptr, alloc_info->type_id, count, nullptr};
+      return PointerInfo{bucket_ptr, alloc_info->type_id, count, nullptr};
     }
   }
   return {};

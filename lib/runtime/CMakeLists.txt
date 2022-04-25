@@ -16,21 +16,10 @@ add_custom_command(
   COMMENT "Generates TypeART meta data API."
 )
 
-set(TYPEART_ALLOCATOR_CONSTANTS_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/AllocatorConstants.cpp)
-
-add_custom_command(
-  OUTPUT ${TYPEART_ALLOCATOR_CONSTANTS_SOURCE}
-  COMMAND ${Python3_EXECUTABLE} allocator/create_constants.py ${TYPEART_ALLOCATOR_CONSTANTS_SOURCE}
-  MAIN_DEPENDENCY allocator/create_constants.py
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  COMMENT "Generate Allocator Constants"
-)
-
 set(RUNTIME_LIB_ALLOCATOR_SOURCES
     allocator/Allocator.cpp
     allocator/Allocator.S
     allocator/CallbackInterface.cpp
-    ${TYPEART_ALLOCATOR_CONSTANTS_SOURCE}
 )
 
 set(RUNTIME_LIB_SOURCES
