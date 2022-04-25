@@ -159,8 +159,12 @@ Region* region_for(const void* addr) {
   return &regions[index_for(addr)];
 }
 
+bool is_instrumented(const void* addr) {
+  return begin <= addr && addr < end;
+}
+
 std::optional<PointerInfo> getPointerInfo(const void* addr) {
-  if (addr >= begin && addr < end) {
+  if (is_instrumented(addr)) {
     return region_for(addr)->getPointerInfo(addr);
   }
   return {};
@@ -182,6 +186,24 @@ void* malloc(alloc_id_t alloc_id, size_t count, size_t size) {
   *(alloc_id_t*)allocation                               = alloc_id;
   *(size_t*)((int8_t*)allocation + config::count_offset) = count;
   return (int8_t*)allocation + heap::min_alignment;
+}
+
+void* realloc(alloc_id_t alloc_id, size_t count, void* ptr, size_t new_size) {
+  const auto required_size       = new_size + heap::min_alignment;
+  const auto region              = heap::region_for(required_size);
+  const auto old_allocation_size = region->allocation_size;
+  const auto old_data_size       = old_allocation_size - heap::min_alignment;
+  if (heap::is_instrumented(ptr) && required_size <= old_allocation_size) {
+    return ptr;
+  }
+  const auto result = malloc(alloc_id, count, new_size);
+  memcpy(result, ptr, old_data_size);
+  if (heap::is_instrumented(ptr)) {
+    free(ptr);
+  } else {
+    ::free(ptr);
+  }
+  return result;
 }
 
 bool free(void* addr) {

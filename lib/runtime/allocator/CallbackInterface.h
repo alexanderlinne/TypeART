@@ -26,6 +26,7 @@ extern "C" {
 #endif
 
 void* typeart_allocator_malloc(alloc_id_value alloc_id, size_t count, size_t size);
+void* typeart_allocator_realloc(alloc_id_value alloc_id, size_t count, void* ptr, size_t new_size);
 void* typeart_allocator__Znwm(alloc_id_value alloc_id, size_t count, size_t size);
 void* typeart_allocator__Znam(alloc_id_value alloc_id, size_t count, size_t size);
 int typeart_allocator_free(void*);

@@ -117,19 +117,18 @@ size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
     };
 
     static std::map<std::string, llvm::Function*> function_map = {
-        {"malloc", type_art_functions.allocator_malloc},
-        {"_Znwm", type_art_functions.allocator__Znwm},
+        {"malloc", type_art_functions.allocator_malloc}, {"realloc", type_art_functions.allocator_realloc},
+        {"calloc", type_art_functions.allocator_calloc}, {"_Znwm", type_art_functions.allocator__Znwm},
         {"_Znam", type_art_functions.allocator__Znam},
     };
 
     auto function_name = malloc_call->getCalledFunction()->getName();
     if (function_name == "malloc" || function_name == "_Znwm" || function_name == "_Znam") {
-      auto size = malloc_call->getArgOperand(0);
-      replace_call_base(malloc_call, function_map[function_name], {alloc_id, element_count, size});
-    } else if (function_name == "calloc") {
-      auto num  = malloc_call->getArgOperand(0);
-      auto size = malloc_call->getArgOperand(1);
-      replace_call_base(malloc_call, type_art_functions.allocator_calloc, {alloc_id, element_count, num, size});
+      replace_call_base(malloc_call, function_map[function_name],
+                        {alloc_id, element_count, malloc_call->getArgOperand(0)});
+    } else if (function_name == "calloc" || function_name == "realloc") {
+      replace_call_base(malloc_call, function_map[function_name],
+                        {alloc_id, element_count, malloc_call->getArgOperand(0), malloc_call->getArgOperand(1)});
     } else {
       malloc_call->print(llvm::errs());
       fprintf(stderr, "\nUnknown malloc function %s\n", function_name.str().c_str());

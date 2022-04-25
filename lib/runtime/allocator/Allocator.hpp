@@ -6,6 +6,7 @@
 namespace typeart::runtime::allocator {
 
 void* malloc(alloc_id_t alloc_id, size_t count, size_t size);
+void* realloc(alloc_id_t alloc_id, size_t count, void* ptr, size_t new_size);
 bool free(void* addr);
 
 std::optional<PointerInfo> getPointerInfo(const void* addr);
