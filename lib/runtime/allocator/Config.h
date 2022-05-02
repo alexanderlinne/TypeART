@@ -7,16 +7,13 @@ namespace typeart::runtime::allocator::config {
 
 constexpr size_t page_size = 4096;
 
+namespace heap {
+
 // Offset from the pointer to an alloc_id to the pointer of the
 // corresponding count in bytes, if the count is stored within the
 // allocation.
-constexpr ptrdiff_t count_offset = -(sizeof(size_t) + std::max(sizeof(alloc_id_t), alignof(size_t)));
+constexpr ptrdiff_t count_offset = std::max(sizeof(alloc_id_t), alignof(size_t));
 
-// Computes the required padding between the allocation id and the count,
-// if the count is stored in the actual allocation.
-constexpr size_t count_padding = -count_offset - sizeof(alloc_id_t) - sizeof(size_t);
-
-namespace heap {
 constexpr size_t region_size         = 1UL << 32;  // 4GB
 constexpr size_t min_allocation_size = 1UL << 5;   // 32B
 constexpr size_t max_allocation_size = 1UL << 30;  // 1GB
@@ -54,6 +51,15 @@ static_assert(min_allocation_size > sizeof(int));
 }  // namespace heap
 
 namespace stack {
+
+// Offset from the pointer to an alloc_id to the pointer of the
+// corresponding count in bytes, if the count is stored within the
+// allocation.
+constexpr ptrdiff_t count_offset = -(sizeof(size_t) + std::max(sizeof(alloc_id_t), alignof(size_t)));
+
+// Computes the required padding between the allocation id and the count,
+// if the count is stored in the actual allocation.
+constexpr size_t count_padding = -count_offset - sizeof(alloc_id_t) - sizeof(size_t);
 
 constexpr size_t thread_count        = 16;
 constexpr size_t stack_size          = 1UL << 24;  // 16MB

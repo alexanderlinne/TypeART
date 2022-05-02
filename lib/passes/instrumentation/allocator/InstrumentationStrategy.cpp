@@ -191,7 +191,7 @@ llvm::AllocaInst* InstrumentationStrategy::createWrapperAlloca(llvm::AllocaInst*
   if (wrapper_type == nullptr) {
     const auto alloca_padding_type = llvm::ArrayType::get(llvm::Type::getInt8Ty(ctx), allocation_size - required_size);
     if (is_vla) {
-      const auto count_padding_type = llvm::ArrayType::get(llvm::Type::getInt8Ty(ctx), config::count_padding);
+      const auto count_padding_type = llvm::ArrayType::get(llvm::Type::getInt8Ty(ctx), config::stack::count_padding);
       wrapper_type                  = llvm::StructType::create(
                            {allocated_type, alloca_padding_type, count_type, count_padding_type, alloc_id_type}, name,
                            /* packed = */ true);

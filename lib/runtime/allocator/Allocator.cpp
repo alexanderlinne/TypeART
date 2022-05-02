@@ -8,6 +8,7 @@
 #include <fmt/ostream.h>
 #include <mutex>
 #include <set>
+#include <stdlib.h>
 #include <sys/mman.h>
 
 // We require to be on a 64bit architecture
@@ -94,8 +95,8 @@ struct Region {
         fmt::print(stderr, "Found invalid allocaton_id {}!\n", alloc_id);
         return {};
       }
-      auto base_ptr   = (void*)((int8_t*)bucket_ptr + allocation_info->base_ptr_offset.value_or(heap::min_alignment));
-      auto count      = *(size_t*)((int8_t*)bucket_ptr + config::count_offset);
+      auto base_ptr   = (void*)((int8_t*)bucket_ptr + heap::min_alignment);
+      auto count      = *(size_t*)((int8_t*)bucket_ptr + config::heap::count_offset);
       auto alloc_info = runtime::getAllocationInfo(alloc_id);
       if (alloc_info != nullptr) {
         return PointerInfo{base_ptr, alloc_info->type_id, count, nullptr};
@@ -148,7 +149,7 @@ size_t index_for(const void* addr) {
 
 Region* region_for(size_t size) {
   const auto index = index_for(size);
-  if (index >= regions_end) {
+  if (index + regions_begin >= regions_end) {
     return nullptr;
   } else {
     return &regions[index];
@@ -179,38 +180,49 @@ void* malloc(alloc_id_t alloc_id, size_t count, size_t size) {
   auto required_size = size + heap::min_alignment;
   auto region        = heap::region_for(required_size);
   if (!region) {
+    fmt::print(stderr, "[Error] unsupported allocation size {}!\n", size);
     return ::malloc(size);
   }
   assert(required_size <= region->allocation_size);
-  auto allocation                                        = (size_t*)region->allocate();
-  *(alloc_id_t*)allocation                               = alloc_id;
-  *(size_t*)((int8_t*)allocation + config::count_offset) = count;
-  return (int8_t*)allocation + heap::min_alignment;
+  auto allocation = region->allocate();
+  if (allocation == nullptr) {
+    fmt::print(stderr, "[Error] size {}, allocation size {} returned a nullptr, falling back to system malloc!\n", size,
+               region->allocation_size);
+    return ::malloc(size);
+  }
+  *(alloc_id_t*)allocation                                     = alloc_id;
+  *(size_t*)((int8_t*)allocation + config::heap::count_offset) = count;
+  return (void*)((int8_t*)allocation + heap::min_alignment);
 }
 
 void* realloc(alloc_id_t alloc_id, size_t count, void* ptr, size_t new_size) {
+  if (ptr == nullptr) {
+    return malloc(alloc_id, count, new_size);
+  }
+  if (!heap::is_instrumented(ptr)) {
+    return ::realloc(ptr, new_size);
+  }
   const auto required_size       = new_size + heap::min_alignment;
-  const auto region              = heap::region_for(required_size);
-  const auto old_allocation_size = region->allocation_size;
+  const auto old_region          = heap::region_for(ptr);
+  const auto old_allocation_size = old_region->allocation_size;
   const auto old_data_size       = old_allocation_size - heap::min_alignment;
   if (heap::is_instrumented(ptr) && required_size <= old_allocation_size) {
+    *(size_t*)((uint8_t*)ptr - sizeof(size_t)) = count;
     return ptr;
   }
   const auto result = malloc(alloc_id, count, new_size);
-  memcpy(result, ptr, old_data_size);
-  if (heap::is_instrumented(ptr)) {
-    free(ptr);
-  } else {
-    ::free(ptr);
+  if (result != nullptr) {
+    memcpy(result, ptr, old_data_size);
   }
+  free(ptr);
   return result;
 }
 
 bool free(void* addr) {
   if (!heap::initialized) {
-    return heap::begin <= addr && addr < heap::end;
+    return heap::is_instrumented(addr);
   }
-  if (heap::begin <= addr && addr < heap::end) {
+  if (heap::is_instrumented(addr)) {
     heap::region_for(addr)->free(addr);
     return true;
   } else {
@@ -336,7 +348,7 @@ std::optional<PointerInfo> getPointerInfo(const void* addr) {
     if (allocation_info->count.has_value()) {
       count = allocation_info->count.value();
     } else {
-      count = *(size_t*)((int8_t*)&alloc_id + config::count_offset);
+      count = *(size_t*)((int8_t*)bucket_ptr + config::stack::count_offset);
     }
     auto alloc_info = runtime::getAllocationInfo(alloc_id);
     if (alloc_info != nullptr) {
