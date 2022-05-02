@@ -4,10 +4,11 @@
 #include "runtime/Runtime.hpp"
 #include "runtime/tracker/Tracker.hpp"
 
+#include <atomic>
 #include <fmt/core.h>
 #include <fmt/ostream.h>
 #include <mutex>
-#include <set>
+#include <queue>
 #include <stdlib.h>
 #include <sys/mman.h>
 
@@ -42,30 +43,30 @@ constexpr size_t virtual_memory_size = region_count * region_size + max_allocati
 
 struct Region {
   void* begin;
-  void* free_begin;
+  std::atomic<int8_t*> free_begin;
   void* end;
   size_t allocation_size;
-  std::set<void*> free_list;
+  std::queue<void*> free_queue;
   std::mutex mutex;
 
   void initialize(void* new_begin, void* new_end, size_t new_allocation_size) {
     begin           = new_begin;
-    free_begin      = new_begin;
+    free_begin      = (int8_t*)new_begin;
     end             = new_end;
     allocation_size = new_allocation_size;
   }
 
   void* allocate() {
-    std::lock_guard _lock(mutex);
-
-    if (!free_list.empty()) {
-      const auto result = *free_list.begin();
-      free_list.erase(free_list.begin());
-      return result;
+    {
+      std::lock_guard _lock(mutex);
+      if (!free_queue.empty()) {
+        const auto result = free_queue.front();
+        free_queue.pop();
+        return result;
+      }
     }
 
-    const auto result = free_begin;
-    free_begin        = (int8_t*)free_begin + allocation_size;
+    const auto result = free_begin.fetch_add(allocation_size);
     if (free_begin >= end) {
       return nullptr;
     }
@@ -74,16 +75,12 @@ struct Region {
 
   void free(void* addr) {
     addr = (int8_t*)addr - min_alignment;
-    std::lock_guard _lock(mutex);
     if (((uintptr_t)addr & (allocation_size - 1)) != 0 || addr >= free_begin) {
       fmt::print(stderr, "TypeART: free on invalid pointer");
       abort();
     }
-    if (free_list.find(addr) != free_list.end()) {
-      fmt::print(stderr, "TypeART: double free");
-      abort();
-    }
-    free_list.insert(addr);
+    std::lock_guard _lock(mutex);
+    free_queue.push(addr);
   }
 
   std::optional<PointerInfo> getPointerInfo(const void* addr) {
