@@ -25,6 +25,7 @@ extern "C" {
 
 typedef int alloc_id_value;
 typedef int type_id_value;
+typedef int meta_id_value;
 
 typedef enum typeart_builtin_type_t {                  // NOLINT
   TYPEART_INT8             = 0,                        //  8 bit signed integer

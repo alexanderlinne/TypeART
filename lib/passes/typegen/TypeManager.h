@@ -15,6 +15,7 @@
 
 #include "TypeGenerator.h"
 #include "db/Database.hpp"
+#include "db/LLVMMetadataConverter.hpp"
 
 #include "llvm/ADT/StringMap.h"
 
@@ -33,6 +34,7 @@ namespace typeart {
 class TypeManager final : public TypeGenerator {
   std::string file;
   Database db;
+  std::unique_ptr<meta::LLVMMetadataConverter> converter;
   llvm::StringMap<type_id_t> structMap;
   size_t structCount;
 
@@ -42,9 +44,9 @@ class TypeManager final : public TypeGenerator {
   [[nodiscard]] bool store() const override;
   [[nodiscard]] type_id_t getOrRegisterType(llvm::Type* type, const llvm::DataLayout& dl) override;
   [[nodiscard]] type_id_t getTypeID(llvm::Type* type, const llvm::DataLayout& dl) const override;
+  [[nodiscard]] Database& getDatabase() override;
+  [[nodiscard]] meta::LLVMMetadataConverter& getConverter() override;
   [[nodiscard]] const Database& getDatabase() const override;
-  [[nodiscard]] alloc_id_t getOrRegisterAllocation(type_id_t type_id, std::optional<size_t> count,
-                                                   std::optional<ptrdiff_t> base_ptr_offset) override;
 
  private:
   [[nodiscard]] type_id_t getOrRegisterStruct(llvm::StructType* type, const llvm::DataLayout& dl);

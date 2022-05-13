@@ -127,7 +127,8 @@ HeapArgList ArgumentParser::collectHeap(const MallocDataList& mallocs) {
         continue;
     }
 
-    const auto allocId      = type_m->getOrRegisterAllocation(typeId, {}, {});
+    const auto meta         = type_m->getConverter().createHeapAllocation(mdata.type, mdata.location);
+    const auto allocId      = type_m->getDatabase().getOrCreateAllocationId(typeId, meta->get_id(), {});
     const auto allocIdConst = instr_helper.getConstantFor(IType::alloc_id, allocId.value());
 
     arg_map[ArgMap::ID::pointer]       = pointer;
@@ -176,6 +177,7 @@ StackArgList ArgumentParser::collectStack(const AllocaDataList& allocs) {
   list.reserve(allocs.size());
   const llvm::DataLayout& dl = module->getDataLayout();
 
+  std::optional<size_t> constantArraySize = {};
   for (const AllocaData& adata : allocs) {
     ArgMap arg_map;
     auto alloca           = adata.alloca;
@@ -193,7 +195,8 @@ StackArgList ArgumentParser::collectStack(const AllocaDataList& allocs) {
         arraySize   = arraySize * tu::getArrayLengthFlattened(elementType);
         elementType = tu::getArrayElementType(elementType);
       }
-      numElementsVal = instr_helper.getConstantFor(IType::extent, arraySize);
+      constantArraySize = arraySize;
+      numElementsVal    = instr_helper.getConstantFor(IType::extent, arraySize);
     }
 
     // unsigned typeSize = tu::getTypeSizeInBytes(elementType, dl);
@@ -205,7 +208,8 @@ StackArgList ArgumentParser::collectStack(const AllocaDataList& allocs) {
     }
 
     auto* typeIdConst       = instr_helper.getConstantFor(IType::type_id, typeId.value());
-    const auto allocId      = type_m->getOrRegisterAllocation(typeId, {}, {});
+    const auto meta         = type_m->getConverter().createStackAllocation(adata.local_variable, adata.location);
+    const auto allocId      = type_m->getDatabase().getOrCreateAllocationId(typeId, meta->get_id(), constantArraySize);
     const auto allocIdConst = instr_helper.getConstantFor(IType::alloc_id, allocId.value());
 
     arg_map[ArgMap::ID::pointer]       = alloca;
@@ -245,7 +249,7 @@ GlobalArgList ArgumentParser::collectGlobal(const GlobalDataList& globals) {
     auto* numElementsConst = instr_helper.getConstantFor(IType::extent, numElements);
     // auto globalPtr         = IRB.CreateBitOrPointerCast(global, instr.getTypeFor(IType::ptr));
 
-    const auto allocId      = type_m->getOrRegisterAllocation(typeId, {}, {});
+    const auto allocId      = type_m->getDatabase().getOrCreateAllocationId(typeId, meta_id_t::invalid, {});
     const auto allocIdConst = instr_helper.getConstantFor(IType::alloc_id, allocId.value());
 
     arg_map[ArgMap::ID::pointer]       = global;

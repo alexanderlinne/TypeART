@@ -17,8 +17,8 @@ typedef struct {
 void foo() {
   // check-inst: define {{.*}} @foo
   // check-inst: %x = alloca
-  // check-inst: %0 = bitcast %struct.X* %x to i8*
-  // check-inst: call void @typeart_tracker_alloc_stack(i8* %0, i32 {{[0-9]+}}, i64 1)
+  // check-inst: %[[VALUE:[0-9]*]] = bitcast %struct.X* %x to i8*
+  // check-inst: call void @typeart_tracker_alloc_stack(i8* %[[VALUE]], i32 {{[0-9]+}}, i64 1)
   X x;
 #pragma omp parallel
   {

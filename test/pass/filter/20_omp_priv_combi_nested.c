@@ -36,10 +36,10 @@ void func(int* x, int* e) {
 
 void foo() {
   // check-inst: define {{.*}} @foo
-  // check-inst: call void @typeart_tracker_alloc_stack(i8* %0, i32 {{[0-9]*}}, i64 1)
+  // check-inst: call void @typeart_tracker_alloc_stack(i8* %{{[0-9]}}, i32 {{[0-9]*}}, i64 1)
 
   // check-opt-inst: define {{.*}} @foo
-  // check-opt-inst: call void @typeart_tracker_alloc_stack(i8* %0, i32 {{[0-9]*}}, i64 1)
+  // check-opt-inst: call void @typeart_tracker_alloc_stack(i8* %{{[0-9]}}, i32 {{[0-9]*}}, i64 1)
   int x = 1;
   int y = 2;
 #pragma omp parallel

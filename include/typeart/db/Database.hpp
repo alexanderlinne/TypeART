@@ -15,6 +15,7 @@
 #include "../runtime/Runtime.h"
 #include "Types.hpp"
 
+#include <map>
 #include <memory>
 #include <optional>
 #include <ostream>
@@ -46,17 +47,10 @@ struct StructType {
 struct AllocationInfo {
   alloc_id_t alloc_id = alloc_id_t::invalid;
   type_id_t type_id   = type_id_t::invalid;
+  meta_id_t meta_id   = meta_id_t::invalid;
 
   // This may be used by allocations with a fixed number of elements.
   std::optional<size_t> count;
-
-  // Offset from the pointer to the memory used by this allocation to the
-  // pointer returned to the user.
-  // Note: for heap allocations, the actual value is ignored and only
-  // used as a hint, that the allocation has a non-standard offset.
-  // As the actual offset may not be statically known it is stored
-  // within the actual allocation.
-  std::optional<ptrdiff_t> base_ptr_offset;
 };
 
 class Database {
@@ -67,8 +61,7 @@ class Database {
  public:
   void registerStruct(const StructType& struct_info);
 
-  alloc_id_t getOrCreateAllocationId(type_id_t type_id, std::optional<size_t> count,
-                                     std::optional<ptrdiff_t> base_ptr_offset);
+  [[nodiscard]] alloc_id_t getOrCreateAllocationId(type_id_t type_id, meta_id_t meta_id, std::optional<size_t> count);
 
   void registerAllocations(std::vector<AllocationInfo> allocation_info);
 
@@ -95,6 +88,15 @@ class Database {
 
   [[nodiscard]] const AllocationInfo* getAllocationInfo(alloc_id_t alloc_id) const;
 
+  [[nodiscard]] meta_id_t reserveMetaId();
+  [[nodiscard]] std::optional<meta::Ref<meta::Meta>> registerMeta(std::unique_ptr<meta::Meta> meta);
+  [[nodiscard]] bool registerMeta(std::vector<std::unique_ptr<meta::Meta>> meta);
+  [[nodiscard]] meta::Ref<meta::Meta> addMeta(std::unique_ptr<meta::Meta> meta);
+
+  [[nodiscard]] meta::Meta* lookupMeta(meta::Meta* meta);
+  [[nodiscard]] meta::Meta* getMetaInfo(meta_id_t meta_id);
+  [[nodiscard]] const meta::Meta* getMetaInfo(meta_id_t meta_id) const;
+
   [[nodiscard]] size_t getTypeSize(type_id_t type_id) const;
 
   static const std::array<std::string, 11> BuiltinNames;
@@ -102,8 +104,14 @@ class Database {
   static const std::string UnknownStructName;
 
  private:
+  [[nodiscard]] meta::Ref<meta::Meta> storeMeta(std::unique_ptr<meta::Meta> meta);
+
+ private:
   std::vector<AllocationInfo> allocation_info;
   std::vector<StructType> struct_types;
+  std::unordered_map<std::string, meta::String*> string_store;
+  std::unordered_map<meta::Meta*, meta_id_t> meta_to_id;
+  std::vector<std::unique_ptr<meta::Meta>> meta_info;
 };
 
 }  // namespace typeart

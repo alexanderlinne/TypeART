@@ -16,9 +16,9 @@
 int main() {
   auto database = typeart::Database::load("types-missing-file.yaml");
   if (database) {
-    printf("hasValue: 0\n");
-  } else {
     printf("hasValue: 1\n");
+  } else {
+    printf("hasValue: 0\n");
   }
   typeart::Database db;
   printf("isValid: %i\n", db.isValid(typeart::type_id_t{256}));
@@ -28,10 +28,12 @@ int main() {
   return 0;
 }
 
-// CHECK: 0
-// CHECK-NEXT: 1
-// CHECK-NEXT: 0
+// CHECK: hasValue: 0
+// CHECK: isValid: 0
+// CHECK-NEXT: isValid: 1
+// CHECK-NEXT: isValid: 0
 
-// RUNTIME-LINK: 0
-// RUNTIME-LINK-NEXT: 1
-// RUNTIME-LINK-NEXT: 0
+// RUNTIME-LINK: hasValue: 0
+// RUNTIME-LINK: isValid: 0
+// RUNTIME-LINK-NEXT: isValid: 1
+// RUNTIME-LINK-NEXT: isValid: 0

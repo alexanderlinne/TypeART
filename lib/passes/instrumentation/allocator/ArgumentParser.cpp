@@ -22,13 +22,7 @@ ArgumentParser::ArgumentParser(llvm::Module& m, TypeGenerator* tm)
 }
 
 HeapArgList ArgumentParser::collectHeap(const MallocDataList& mallocs) {
-  auto result = tracker_parser.collectHeap(mallocs);
-  for (auto& data : result) {
-    const auto type_id = llvm::dyn_cast<llvm::ConstantInt>(data.args[ArgMap::ID::type_id])->getZExtValue();
-    const auto allocId = type_m->getOrRegisterAllocation(static_cast<type_id_t::value_type>(type_id), {}, {});
-    data.args[ArgMap::ID::alloc_id] = instr_helper.getConstantFor(IType::alloc_id, allocId.value());
-  }
-  return result;
+  return tracker_parser.collectHeap(mallocs);
 }
 
 FreeArgList ArgumentParser::collectFree(const FreeDataList& frees) {
@@ -36,24 +30,7 @@ FreeArgList ArgumentParser::collectFree(const FreeDataList& frees) {
 }
 
 StackArgList ArgumentParser::collectStack(const AllocaDataList& allocs) {
-  namespace config = typeart::runtime::allocator::config;
-  auto result      = tracker_parser.collectStack(allocs);
-  for (auto& data : result) {
-    const auto& alloca     = data.mem_data.alloca;
-    const auto elementType = alloca->getAllocatedType();
-    auto elementCount      = std::optional<size_t>{};
-    if (!data.mem_data.is_vla) {
-      size_t arraySize = data.mem_data.array_size;
-      if (elementType->isArrayTy()) {
-        arraySize = arraySize * typeart::util::type::getArrayLengthFlattened(elementType);
-      }
-      elementCount = {arraySize};
-    }
-    auto type_id  = llvm::dyn_cast<llvm::ConstantInt>(data.args[ArgMap::ID::type_id])->getZExtValue();
-    auto alloc_id = type_m->getOrRegisterAllocation(static_cast<type_id_t::value_type>(type_id), elementCount, {});
-    data.args[ArgMap::ID::alloc_id] = instr_helper.getConstantFor(IType::alloc_id, alloc_id.value());
-  }
-  return result;
+  return tracker_parser.collectStack(allocs);
 }
 
 GlobalArgList ArgumentParser::collectGlobal(const GlobalDataList& globals) {

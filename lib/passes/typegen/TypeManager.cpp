@@ -134,16 +134,20 @@ type_id_t TypeManager::getOrRegisterVector(llvm::VectorType* type, const llvm::D
   return id;
 }
 
-TypeManager::TypeManager(std::string file) : file(std::move(file)), structCount(0) {
+TypeManager::TypeManager(std::string file)
+    : file(std::move(file)), converter(std::make_unique<meta::LLVMMetadataConverter>(db)), structCount(0) {
+}
+
+Database& TypeManager::getDatabase() {
+  return db;
+}
+
+[[nodiscard]] meta::LLVMMetadataConverter& TypeManager::getConverter() {
+  return *converter.get();
 }
 
 const Database& TypeManager::getDatabase() const {
   return db;
-}
-
-alloc_id_t TypeManager::getOrRegisterAllocation(type_id_t type_id, std::optional<size_t> count,
-                                                std::optional<ptrdiff_t> base_ptr_offset) {
-  return db.getOrCreateAllocationId(type_id, count, base_ptr_offset);
 }
 
 bool TypeManager::load() {
@@ -151,7 +155,8 @@ bool TypeManager::load() {
   if (!database.has_value()) {
     return false;
   }
-  db = std::move(database).value();
+  db        = std::move(database).value();
+  converter = std::make_unique<meta::LLVMMetadataConverter>(db);
   structMap.clear();
   for (const auto& structInfo : db.getStructTypes()) {
     if (structInfo.isValid()) {

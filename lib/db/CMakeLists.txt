@@ -1,4 +1,4 @@
-set(DATABASE_LIB_SOURCES Database.cpp Types.cpp)
+set(DATABASE_LIB_SOURCES Database.cpp LLVMMetadataConverter.cpp Types.cpp YAML.cpp)
 
 add_library(${TYPEART_PREFIX}_DatabaseObj OBJECT ${DATABASE_LIB_SOURCES})
 
@@ -13,6 +13,8 @@ target_include_directories(
   PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
           $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/typeart>
 )
+
+target_link_libraries(${TYPEART_PREFIX}_DatabaseObj PRIVATE typeart::SystemStatic fmt::fmt)
 
 target_compile_definitions(${TYPEART_PREFIX}_DatabaseObj PRIVATE TYPEART_LOG_LEVEL=${TYPEART_LOG_LEVEL})
 
@@ -38,7 +40,7 @@ target_include_directories(
           $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/typeart>
 )
 
-target_link_libraries(${TYPEART_PREFIX}_Database PRIVATE LLVMCore LLVMSupport)
+target_link_libraries(${TYPEART_PREFIX}_Database PRIVATE fmt::fmt typeart::SystemStatic LLVMCore LLVMSupport)
 
 typeart_target_coverage_options(${TYPEART_PREFIX}_Database)
 
@@ -56,6 +58,8 @@ target_include_directories(
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
 )
+
+target_link_libraries(${TYPEART_PREFIX}_DatabaseStatic PRIVATE typeart::SystemStatic)
 
 typeart_target_coverage_options(${TYPEART_PREFIX}_DatabaseStatic)
 

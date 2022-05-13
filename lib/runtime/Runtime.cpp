@@ -119,10 +119,10 @@ class Runtime {
     const auto& typeList = db.getStructTypes();
     for (const auto& structInfo : typeList) {
       if (structInfo.isValid()) {
+        recorder.incUDefTypes(1);
         ss << structInfo.name << ", ";
       }
     }
-    recorder.incUDefTypes(typeList.size());
     LOG_INFO("Recorded types: " << ss.str());
     init.reset();
   }

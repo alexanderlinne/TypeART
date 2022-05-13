@@ -38,16 +38,23 @@ llvm::Function* make_function(llvm::Module& m, llvm::StringRef name, llvm::Type*
       }
     }
   };
-  const auto setFunctionLinkageExternal = [](llvm::Function* f) { f->setLinkage(GlobalValue::ExternalLinkage); };
-  const bool function_already_declared  = m.getFunction(name) != nullptr;
-  const auto function_type              = llvm::FunctionType::get(result_type, arg_types, false);
-  auto function_callee                  = m.getOrInsertFunction(name, function_type);
-  Function* result                      = nullptr;
+  const bool function_already_declared = m.getFunction(name) != nullptr;
+  const auto function_type             = llvm::FunctionType::get(result_type, arg_types, false);
+  auto function_callee                 = m.getOrInsertFunction(name, function_type);
+  Function* result                     = nullptr;
   if (function_already_declared) {
     result = dyn_cast<Function>(function_callee.getCallee()->stripPointerCasts());
+
+    // If the TypeART functions declarations are included, DISubprogram Metadata
+    // is generated for those declarations. If the a program is compiled with
+    // debug info and one of the instrumented calls does not have a debug location
+    // attached, the LLVM Verifier will error with the message:
+    // "inlinable function call in a function with debug info must have a !dbg location"
+    // We therefore remove all Metadata from existing declarations.
+    result->clearMetadata();
   } else {
     result = dyn_cast<Function>(function_callee.getCallee());
-    setFunctionLinkageExternal(result);
+    result->setLinkage(GlobalValue::ExternalLinkage);
   }
   addOptimizerAttributes(result);
   return result;

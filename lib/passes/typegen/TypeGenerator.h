@@ -14,6 +14,7 @@
 #define TYPEART_TYPEGENERATOR_H
 
 #include "db/Database.hpp"
+#include "db/LLVMMetadataConverter.hpp"
 
 #include <memory>
 #include <string>
@@ -33,14 +34,13 @@ class TypeGenerator {
 
   [[nodiscard]] virtual type_id_t getTypeID(llvm::Type* type, const llvm::DataLayout& layout) const = 0;
 
-  [[nodiscard]] virtual const Database& getDatabase() const = 0;
+  [[nodiscard]] virtual Database& getDatabase()                     = 0;
+  [[nodiscard]] virtual const Database& getDatabase() const         = 0;
+  [[nodiscard]] virtual meta::LLVMMetadataConverter& getConverter() = 0;
 
   [[nodiscard]] virtual bool load() = 0;
 
   [[nodiscard]] virtual bool store() const = 0;
-
-  [[nodiscard]] virtual alloc_id_t getOrRegisterAllocation(type_id_t type_id, std::optional<size_t> count,
-                                                           std::optional<ptrdiff_t> base_ptr_offset) = 0;
 
   virtual ~TypeGenerator() = default;
 };

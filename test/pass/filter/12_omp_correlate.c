@@ -37,15 +37,15 @@ void foo() {
 
 // Standard filter
 // CHECK: > Stack Memory
-// CHECK-NEXT: Alloca                 :  12.00
-// CHECK-NEXT: Stack call filtered %  :  91.67
+// CHECK-NEXT: Alloca                 :  20.00
+// CHECK-NEXT: Stack call filtered %  :  95.00
 
 // with opt only "d" in foo is tracked
 // CHECK-opt: > Stack Memory
-// CHECK-opt-NEXT: Alloca                 :  5.00
-// CHECK-opt-NEXT: Stack call filtered %  :  80.00
+// CHECK-opt-NEXT: Alloca                 :  6.00
+// CHECK-opt-NEXT: Stack call filtered %  :  83.33
 
 // CG experimental filter
 // CHECK-exp-cg: > Stack Memory
-// CHECK-exp-cg-NEXT: Alloca                 :  5.00
-// CHECK-exp-cg-NEXT: Stack call filtered %  :  80.00
+// CHECK-exp-cg-NEXT: Alloca                 :  6.00
+// CHECK-exp-cg-NEXT: Stack call filtered %  :  83.33

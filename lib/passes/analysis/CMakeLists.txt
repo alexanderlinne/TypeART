@@ -1,4 +1,5 @@
 set(MEM_PASS_SOURCES
+  DebugInfoFinder.cpp
   MemInstFinder.cpp
   MemOpVisitor.cpp
   ../support/TypeUtil.cpp

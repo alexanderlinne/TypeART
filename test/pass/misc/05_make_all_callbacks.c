@@ -1,4 +1,5 @@
-// RUN: %c-to-llvm %s -I../../../lib -I../../../include/typeart | %apply-typeart -typeart-stack -S 2>&1 | %filecheck %s
+// RUN: %c-to-llvm -I../../../lib -I../../../include/typeart %s | %apply-typeart -typeart-stack -S > %s.log 2>&1
+// RUN: cat %s.log | %filecheck %s
 
 #include "runtime/tracker/CallbackInterface.h"
 
