@@ -222,7 +222,7 @@ function toolchain_init() {
 
 function source_to_llvm() {
   $compiler ${omp_flags} ${typeart_includes} ${typeart_san_flags} \
-    -O1 -g ${compile_flags} -Xclang -disable-llvm-passes -S -emit-llvm "${source_file}" -o -
+    -O1 -g -std=c++17 ${compile_flags} -Xclang -disable-llvm-passes -S -emit-llvm "${source_file}" -o -
 }
 
 function apply_typeart() {
@@ -248,7 +248,7 @@ function apply_typeart_optim() {
 function make_no_optim() {
   # Order: heap and stack/global together, no optimization pass
   source_to_llvm 2>&1 >"${source_file}.ll"
-  apply_typeart 2>&1 >"${source_file}.ta.ll"
+  # apply_typeart 2>&1 >"${source_file}.ta.ll"
   if [ $skip_typeart == 0 ]; then
     if [ $show_ir == 0 ]; then
       apply_typeart | $llc_tool -x=ir ${llc_flags} -o "${object_file}"
@@ -270,8 +270,8 @@ function make_no_optim() {
 function make_with_optim() {
   # Order: heap, optimize, alloca with additional args.
   source_to_llvm 2>&1 >"${source_file}.ll"
-  apply_typeart 2>&1 >"${source_file}.ta.ll"
-  apply_typeart_optim 2>&1 >"${source_file}.ta_opt.ll"
+  # apply_typeart 2>&1 >"${source_file}.ta.ll"
+  # apply_typeart_optim 2>&1 >"${source_file}.ta_opt.ll"
   if [ $skip_typeart == 0 ]; then
     if [ $show_ir == 0 ]; then
       apply_typeart_optim | $llc_tool -x=ir ${llc_flags} -o "${object_file}"
@@ -325,6 +325,7 @@ function execute() {
     fi
   else
     echo -e Executing with runtime lib
+    echo -e "command: LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${typeart_lib_dir}" LD_PRELOAD="${typeart_preload}" TYPEART_TYPE_FILE=${types_file} ${command}"
     LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${typeart_lib_dir}" LD_PRELOAD="${typeart_preload}" TYPEART_TYPE_FILE=${types_file} ${command}
   fi
 }

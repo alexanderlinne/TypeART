@@ -1,4 +1,3 @@
-add_subdirectory(typegen)
 add_subdirectory(filter)
 add_subdirectory(analysis)
 
@@ -19,7 +18,6 @@ typeart_make_llvm_module(
   ${TYPEART_PREFIX}_TransformPass "${PASS_SOURCES}"
   LINK_LIBS typeart::MemInstFinder
             typeart::DatabaseStatic
-            typeart::TypeGenStatic
   INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/lib/
                ${PROJECT_SOURCE_DIR}/lib/passes/
                ${PROJECT_SOURCE_DIR}/include/typeart
@@ -37,6 +35,7 @@ add_library(typeart::TransformPass ALIAS ${TYPEART_PREFIX}_TransformPass)
 target_link_libraries(
   ${TYPEART_PREFIX}_TransformPass
   PRIVATE fmt::fmt
+          typeart::SystemStatic 
 )
 
 target_compile_definitions(

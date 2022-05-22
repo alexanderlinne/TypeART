@@ -60,13 +60,13 @@ FilterAnalysis CGFilterImpl::precheck(Value* in, Function* start, const FPath& f
     // These conditions (temp alloc and alloca reaches task)
     // are only interesting if filter just started (aka fpath is empty)
     if (isTempAlloc(in)) {
-      LOG_DEBUG("Alloca is a temporary " << *in);
+      LOG_DEBUG("Alloca is a temporary {}", *in);
       return FilterAnalysis::Filter;
     }
 
     if (llvm::AllocaInst* alloc = llvm::dyn_cast<AllocaInst>(in)) {
       if (alloc->getAllocatedType()->isStructTy() && omp::OmpContext::allocaReachesTask(alloc)) {
-        LOG_DEBUG("Alloca reaches task call " << *alloc)
+        LOG_DEBUG("Alloca reaches task call {}", *alloc);
         return FilterAnalysis::Filter;
       }
     }
@@ -76,7 +76,7 @@ FilterAnalysis CGFilterImpl::precheck(Value* in, Function* start, const FPath& f
       llvm::any_of(analysis.calls.decl, [](const auto& csite) { return omp::OmpContext::isOmpTaskRelated(csite); });
   if (has_omp_task) {
     // FIXME we cannot handle complex data flow of tasks at this point, hence, this check
-    LOG_DEBUG("Keep value " << *in << ". Detected omp task call.");
+    LOG_DEBUG("Keep value {}. Detected omp task call.", *in);
     return FilterAnalysis::Keep;
   }
 

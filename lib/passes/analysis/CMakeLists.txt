@@ -15,7 +15,7 @@ set_target_properties(
 
 add_library(typeart::MemInstFinder ALIAS ${TYPEART_PREFIX}_MemInstFinder)
 
-target_link_libraries(${TYPEART_PREFIX}_MemInstFinder PUBLIC typeart::MemOpFilter)
+target_link_libraries(${TYPEART_PREFIX}_MemInstFinder PUBLIC typeart::MemOpFilter typeart::SystemStatic)
 
 target_compile_options(${TYPEART_PREFIX}_MemInstFinder PRIVATE "-fno-rtti")
 

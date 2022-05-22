@@ -40,8 +40,6 @@ llvm::Type* InstrumentationHelper::getTypeFor(IType id) {
       return Type::getInt8PtrTy(c);
     case IType::extent:
       return Type::getInt64Ty(c);
-    case IType::type_id:
-      return Type::getInt32Ty(c);
     case IType::stack_count:
       return Type::getInt32Ty(c);
     case IType::alloc_id:

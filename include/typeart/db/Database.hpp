@@ -12,7 +12,6 @@
 
 #pragma once
 
-#include "../runtime/Runtime.h"
 #include "Types.hpp"
 
 #include <map>
@@ -27,26 +26,40 @@
 
 namespace typeart {
 
-enum class StructTypeFlag : int { USER_DEFINED = 1, LLVM_VECTOR = 2 };
+struct alloc_id_t {
+  using value_type = alloc_id_value;
 
-struct StructType {
-  type_id_t type_id = type_id_t::invalid;
-  std::string name;
-  size_t extent;
-  size_t num_members;
-  std::vector<size_t> offsets;
-  std::vector<type_id_t> member_types;
-  std::vector<size_t> array_sizes;
-  StructTypeFlag flag;
+  static const alloc_id_t invalid;
 
-  bool isValid() const;
+ private:
+  value_type _value = 0;
 
-  operator typeart_struct_layout() const;
+ public:
+  alloc_id_t() = default;
+
+  alloc_id_t(value_type value) : _value(value) {
+  }
+
+  template <class T>
+  alloc_id_t(T t) = delete;
+
+  value_type value() const {
+    return _value;
+  }
 };
+
+inline bool operator==(const alloc_id_t& lhs, const alloc_id_t& rhs) {
+  return lhs.value() == rhs.value();
+}
+
+inline bool operator!=(const alloc_id_t& lhs, const alloc_id_t& rhs) {
+  return !(lhs == rhs);
+}
+
+std::ostream& operator<<(std::ostream& os, const alloc_id_t& alloc_id);
 
 struct AllocationInfo {
   alloc_id_t alloc_id = alloc_id_t::invalid;
-  type_id_t type_id   = type_id_t::invalid;
   meta_id_t meta_id   = meta_id_t::invalid;
 
   // This may be used by allocations with a fixed number of elements.
@@ -56,61 +69,47 @@ struct AllocationInfo {
 class Database {
  public:
   [[nodiscard]] static std::optional<Database> load(const std::string& file);
-  [[nodiscard]] bool store(const std::string& file) const;
+  [[nodiscard]] bool store(const std::string& file);
 
  public:
-  void registerStruct(const StructType& struct_info);
+  Database();
+  ~Database();
 
-  [[nodiscard]] alloc_id_t getOrCreateAllocationId(type_id_t type_id, meta_id_t meta_id, std::optional<size_t> count);
+  Database(const Database&) = delete;
+  Database& operator=(const Database&) = delete;
+
+  Database(Database&&) = default;
+  Database& operator=(Database&&) = default;
+
+  [[nodiscard]] alloc_id_t getOrCreateAllocationId(meta_id_t meta_id, std::optional<size_t> count);
 
   void registerAllocations(std::vector<AllocationInfo> allocation_info);
-
-  [[nodiscard]] bool isUnknown(type_id_t type_id) const;
-
-  [[nodiscard]] bool isValid(type_id_t type_id) const;
-
-  [[nodiscard]] bool isValid(alloc_id_t alloc_id) const;
-
-  [[nodiscard]] bool isReservedType(type_id_t type_id) const;
-
-  [[nodiscard]] bool isBuiltinType(type_id_t type_id) const;
-
-  [[nodiscard]] bool isStructType(type_id_t type_id) const;
-
-  [[nodiscard]] bool isUserDefinedType(type_id_t type_id) const;
-
-  [[nodiscard]] bool isVectorType(type_id_t type_id) const;
-
-  [[nodiscard]] const std::string& getTypeName(type_id_t type_id) const;
-
-  [[nodiscard]] const StructType* getStructType(type_id_t type_id) const;
-  [[nodiscard]] const std::vector<StructType>& getStructTypes() const;
-
   [[nodiscard]] const AllocationInfo* getAllocationInfo(alloc_id_t alloc_id) const;
 
-  [[nodiscard]] meta_id_t reserveMetaId();
-  [[nodiscard]] std::optional<meta::Ref<meta::Meta>> registerMeta(std::unique_ptr<meta::Meta> meta);
+  [[nodiscard]] meta::Meta* registerMeta(std::unique_ptr<meta::Meta> meta);
   [[nodiscard]] bool registerMeta(std::vector<std::unique_ptr<meta::Meta>> meta);
-  [[nodiscard]] meta::Ref<meta::Meta> addMeta(std::unique_ptr<meta::Meta> meta);
+  [[nodiscard]] meta::Meta* addMeta(std::unique_ptr<meta::Meta> meta);
+  void removeOrphanedMeta();
 
-  [[nodiscard]] meta::Meta* lookupMeta(meta::Meta* meta);
   [[nodiscard]] meta::Meta* getMetaInfo(meta_id_t meta_id);
   [[nodiscard]] const meta::Meta* getMetaInfo(meta_id_t meta_id) const;
 
-  [[nodiscard]] size_t getTypeSize(type_id_t type_id) const;
-
-  static const std::array<std::string, 11> BuiltinNames;
-  static const std::array<size_t, 11> BuiltinSizes;
-  static const std::string UnknownStructName;
+ private:
+  [[nodiscard]] meta_id_t reserveMetaId();
+  [[nodiscard]] meta::Meta* lookupMeta(const meta::Meta& meta);
+  [[nodiscard]] meta::Meta* findIsomorphicMeta(const meta::Meta& meta);
+  void replaceWeakRefs(const meta::Meta* current, meta::Meta* value);
+  [[nodiscard]] meta::Meta* storeMeta(std::unique_ptr<meta::Meta> meta);
 
  private:
-  [[nodiscard]] meta::Ref<meta::Meta> storeMeta(std::unique_ptr<meta::Meta> meta);
+  struct IsomorphismCheckBuffers {
+    std::vector<std::pair<const meta::Meta*, const meta::Meta*>> parents;
+    std::unordered_map<const meta::Meta*, const meta::Meta*> weak_mappings;
+  };
+  static thread_local IsomorphismCheckBuffers buffers;
 
- private:
   std::vector<AllocationInfo> allocation_info;
-  std::vector<StructType> struct_types;
   std::unordered_map<std::string, meta::String*> string_store;
-  std::unordered_map<meta::Meta*, meta_id_t> meta_to_id;
   std::vector<std::unique_ptr<meta::Meta>> meta_info;
 };
 

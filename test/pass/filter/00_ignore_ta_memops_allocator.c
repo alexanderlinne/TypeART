@@ -6,7 +6,7 @@
 
 #include <stdlib.h>
 
-extern double* a;
+double* a;
 
 int main(int argc, char** argv) {
   int n = argc * 2;

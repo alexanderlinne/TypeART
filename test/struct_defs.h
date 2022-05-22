@@ -46,14 +46,14 @@ typedef struct s_ptr_to_self_t {
 
 typedef struct s_struct_member_t {
   int a;                        // 0
-  s_ptr_to_self b;              // 4
+  s_ptr_to_self_t b;            // 4
   struct s_struct_member_t* c;  // 20
 } s_struct_member;              // 32
 
 typedef struct s_aos_t {
-  int a;                  // 0
-  s_struct_member b[2];   // 8
-  s_struct_member* c[3];  // 72
-} s_aos;                  // 96
+  int a;                    // 0
+  s_struct_member_t b[2];   // 8
+  s_struct_member_t* c[3];  // 72
+} s_aos;                    // 96
 
 #endif

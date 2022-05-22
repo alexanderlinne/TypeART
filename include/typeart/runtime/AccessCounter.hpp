@@ -13,7 +13,7 @@
 #ifndef TYPEART_ACCESSCOUNTER_H
 #define TYPEART_ACCESSCOUNTER_H
 
-#include "../db/Database.hpp"
+#include "../db/Types.hpp"
 
 #include <atomic>
 #include <cmath>
@@ -184,14 +184,14 @@ class ThreadRecorder {
 
 class AccessRecorder {
  public:
-  using TypeCountMap      = std::unordered_map<type_id_t, Counter>;
+  using TypeCountMap      = std::unordered_map<const meta::di::Type*, Counter>;
   using AddressSet        = std::unordered_set<const void*>;
   using MutexT            = std::shared_mutex;
   using ThreadRecorderMap = std::unordered_map<std::thread::id, thread::ThreadRecorder>;
 
   ~AccessRecorder() = default;
 
-  inline void incHeapAlloc(type_id_t typeId, size_t count) {
+  inline void incHeapAlloc(const meta::HeapAllocation* alloc, size_t count) {
     ++curHeapAllocs;
 
     // Always check here for max
@@ -209,40 +209,40 @@ class AccessRecorder {
     }
 
     std::lock_guard lock(heapAllocMutex);
-    ++heapAlloc[typeId];
+    ++heapAlloc[&alloc->get_type()];
   }
 
-  inline void incStackAlloc(type_id_t typeId, size_t count) {
+  inline void incStackAlloc(const meta::StackAllocation* alloc, size_t count) {
     {
       std::lock_guard threadRecorderGuard(threadRecorderMutex);
       getCurrentThreadRecorder().incStackAlloc(count);
     }
 
     std::lock_guard lock(stackAllocMutex);
-    ++stackAlloc[typeId];
+    ++stackAlloc[&alloc->get_type()];
   }
 
-  inline void incGlobalAlloc(type_id_t typeId, size_t count) {
+  inline void incGlobalAlloc(const meta::GlobalAllocation* alloc, size_t count) {
     ++globalAllocs;
     if (count > 1) {
       ++globalArray;
     }
 
     std::lock_guard lock(globalAllocMutex);
-    ++globalAlloc[typeId];
+    ++globalAlloc[&alloc->get_type()];
   }
 
-  inline void incStackFree(type_id_t typeId, size_t count) {
+  inline void incStackFree(const meta::StackAllocation* alloc, size_t count) {
     {
       std::lock_guard threadRecorderGuard(threadRecorderMutex);
       getCurrentThreadRecorder().incStackFree(count);
     }
 
     std::lock_guard lock(stackFreeMutex);
-    ++stackFree[typeId];
+    ++stackFree[&alloc->get_type()];
   }
 
-  inline void incHeapFree(type_id_t typeId, size_t count) {
+  inline void incHeapFree(const meta::HeapAllocation* alloc, size_t count) {
     ++heapAllocsFree;
     if (count > 1) {
       ++heapArrayFree;
@@ -254,7 +254,7 @@ class AccessRecorder {
     }
 
     std::lock_guard lock(heapFreeMutex);
-    ++heapFree[typeId];
+    ++heapFree[&alloc->get_type()];
   }
 
   inline void decHeapAlloc() {
@@ -529,11 +529,11 @@ class AccessRecorder {
  */
 class NoneRecorder {
  public:
-  [[maybe_unused]] inline void incHeapAlloc(type_id_t, size_t) {
+  [[maybe_unused]] inline void incHeapAlloc(const meta::HeapAllocation*, size_t) {
   }
-  [[maybe_unused]] inline void incStackAlloc(type_id_t, size_t) {
+  [[maybe_unused]] inline void incStackAlloc(const meta::StackAllocation*, size_t) {
   }
-  [[maybe_unused]] inline void incGlobalAlloc(type_id_t, size_t) {
+  [[maybe_unused]] inline void incGlobalAlloc(const meta::GlobalAllocation*, size_t) {
   }
   [[maybe_unused]] inline void incUsedInRequest(const void*) {
   }
@@ -545,9 +545,9 @@ class NoneRecorder {
   }
   [[maybe_unused]] inline void incAddrMissing(const void*) {
   }
-  [[maybe_unused]] inline void incStackFree(type_id_t, size_t) {
+  [[maybe_unused]] inline void incStackFree(const meta::StackAllocation*, size_t) {
   }
-  [[maybe_unused]] inline void incHeapFree(type_id_t, size_t) {
+  [[maybe_unused]] inline void incHeapFree(const meta::HeapAllocation*, size_t) {
   }
   [[maybe_unused]] inline void incNullAddr() {
   }

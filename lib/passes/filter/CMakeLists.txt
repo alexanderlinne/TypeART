@@ -25,6 +25,8 @@ add_library(typeart::MemOpFilter ALIAS ${TYPEART_PREFIX}_MemOpFilter)
 # https://lists.llvm.org/pipermail/llvm-dev/2018-July/124534.html
 # target_link_libraries(${TYPEART_PREFIX}_MemOpFilter PUBLIC LLVMCore LLVMSupport )
 
+target_link_libraries(${TYPEART_PREFIX}_MemOpFilter PRIVATE typeart::SystemStatic)
+
 target_compile_definitions(${TYPEART_PREFIX}_MemOpFilter PRIVATE TYPEART_LOG_LEVEL=${TYPEART_LOG_LEVEL})
 
 set_target_properties(${TYPEART_PREFIX}_MemOpFilter PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -35,6 +37,7 @@ target_include_directories(
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
          $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/passes>
          $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
+         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/typeart>
 )
 
 target_include_directories(${TYPEART_PREFIX}_MemOpFilter SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})

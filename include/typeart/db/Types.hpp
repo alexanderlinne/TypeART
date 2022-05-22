@@ -16,11 +16,11 @@
 #include "Types.h"
 
 #include <cassert>
-#include <iostream>
+#include <iosfwd>
 #include <limits>
 #include <memory>
 #include <optional>
-#include <ostream>
+#include <queue>
 #include <type_traits>
 #include <variant>
 #include <vector>
@@ -45,125 +45,104 @@ class Metadata;
     }                                                                                        \
   }
 
-#define META_MEMBER(TYPE, NAME)           \
- private:                                 \
-  TYPE _##NAME;                           \
-                                          \
- public:                                  \
-  inline const TYPE& get_##NAME() const { \
-    return _##NAME;                       \
-  }                                       \
-  inline TYPE& get_##NAME() {             \
-    return _##NAME;                       \
-  }                                       \
-  inline void set_##NAME(TYPE value) {    \
-    _##NAME = std::move(value);           \
-  }
-
 #define META_REF(INDEX, TYPE, NAME)                 \
  public:                                            \
-  inline TYPE* get_##NAME() const {                 \
-    return dyn_cast<TYPE>(_refs[INDEX].get_meta()); \
+  inline const TYPE& get_##NAME() const {           \
+    return *get_##NAME##_raw();                     \
   }                                                 \
   inline Ref<TYPE> get_##NAME##_raw() const {       \
-    return dyn_cast<TYPE>(_refs[INDEX]);            \
+    return dyn_cast<TYPE>(refs[INDEX]);             \
   }                                                 \
   inline void set_##NAME##_raw(Ref<TYPE> new_ref) { \
-    _refs[INDEX] = new_ref;                         \
+    refs[INDEX] = new_ref;                          \
+  }
+
+#define META_REF_OVERRIDE(INDEX, TYPE, NAME)        \
+ public:                                            \
+  inline const TYPE& get_##NAME() const override {  \
+    return *get_##NAME##_raw();                     \
+  }                                                 \
+  inline Ref<TYPE> get_##NAME##_raw() const {       \
+    return dyn_cast<TYPE>(refs[INDEX]);             \
+  }                                                 \
+  inline void set_##NAME##_raw(Ref<TYPE> new_ref) { \
+    refs[INDEX] = new_ref;                          \
+  }
+
+#define META_STRING(INDEX, NAME)                      \
+ public:                                              \
+  inline const std::string& get_##NAME() const {      \
+    return get_##NAME##_raw()->get_data();            \
+  }                                                   \
+  inline Ref<String> get_##NAME##_raw() const {       \
+    return dyn_cast<String>(refs[INDEX]);             \
+  }                                                   \
+  inline void set_##NAME##_raw(Ref<String> new_ref) { \
+    refs[INDEX] = new_ref;                            \
+  }
+
+#define META_INTEGER(INDEX, TYPE, NAME)                       \
+ public:                                                      \
+  inline TYPE get_##NAME() const {                            \
+    return static_cast<TYPE>(get_##NAME##_raw()->get_data()); \
+  }                                                           \
+  inline Ref<Integer> get_##NAME##_raw() const {              \
+    return dyn_cast<Integer>(refs[INDEX]);                    \
+  }                                                           \
+  inline void set_##NAME##_raw(Ref<Integer> new_ref) {        \
+    refs[INDEX] = new_ref;                                    \
+  }
+
+#define META_INTEGER_OVERRIDE(INDEX, TYPE, NAME)              \
+ public:                                                      \
+  inline TYPE get_##NAME() const override {                   \
+    return static_cast<TYPE>(get_##NAME##_raw()->get_data()); \
+  }                                                           \
+  inline Ref<Integer> get_##NAME##_raw() const {              \
+    return dyn_cast<Integer>(refs[INDEX]);                    \
+  }                                                           \
+  inline void set_##NAME##_raw(Ref<Integer> new_ref) {        \
+    refs[INDEX] = new_ref;                                    \
   }
 
 #define META_TUPLE(INDEX, TYPE, NAME)                                                         \
  public:                                                                                      \
   inline Ref<TYPE> get_##NAME(size_t idx) const {                                             \
-    auto meta = dyn_cast<Tuple>(_refs[INDEX]).get_meta();                                     \
+    auto meta = dyn_cast<Tuple>(refs[INDEX]).get();                                           \
     if (!meta) {                                                                              \
       fprintf(stderr, "Cannot get tuple element from Meta instance with unresolved Refs!\n"); \
       abort;                                                                                  \
     }                                                                                         \
     return dyn_cast<TYPE>(meta->get_refs()[idx]);                                             \
   }                                                                                           \
-  inline Tuple* get_##NAME##s() const {                                                       \
-    return dyn_cast<Tuple>(_refs[INDEX].get_meta());                                          \
+  inline const Tuple& get_##NAME##s() const {                                                 \
+    auto result = dyn_cast<Tuple>(refs[INDEX].get());                                         \
+    assert(result != nullptr);                                                                \
+    return *result;                                                                           \
   }                                                                                           \
   inline Ref<Meta> get_##NAME##s_raw() {                                                      \
-    return _refs[INDEX];                                                                      \
+    return refs[INDEX];                                                                       \
   }                                                                                           \
-  inline void set_##NAME##s_raw(Ref<Tuple> refs) {                                            \
-    _refs[INDEX] = refs;                                                                      \
+  inline void set_##NAME##s_raw(Ref<Tuple> ref) {                                             \
+    refs[INDEX] = ref;                                                                        \
   }
 
 namespace typeart {
 
+template <typename ReturnType, typename... Lambdas>
+struct lambda_visitor : public Lambdas... {
+  using return_type = ReturnType;
+
+  lambda_visitor(Lambdas... lambdas) : Lambdas(lambdas)... {
+  }
+};
+
+template <typename ReturnType, typename... Lambdas>
+lambda_visitor<ReturnType, Lambdas...> make_lambda_visitor(Lambdas... lambdas) {
+  return {lambdas...};
+}
+
 class Database;
-
-struct type_id_t {
-  using value_type = type_id_value;
-
-  static const type_id_t unknown_type;
-  static const type_id_t invalid;
-
- private:
-  value_type _value = TYPEART_UNKNOWN_TYPE;
-
- public:
-  type_id_t() = default;
-
-  type_id_t(value_type value) : _value(value) {
-  }
-
-  template <class T>
-  type_id_t(T t) = delete;
-
-  value_type value() const {
-    return _value;
-  }
-};
-
-inline bool operator==(const type_id_t& lhs, const type_id_t& rhs) {
-  return lhs.value() == rhs.value();
-}
-
-inline bool operator!=(const type_id_t& lhs, const type_id_t& rhs) {
-  return !(lhs == rhs);
-}
-
-inline bool operator<(const type_id_t& lhs, const type_id_t& rhs) {
-  return lhs.value() < rhs.value();
-}
-
-std::ostream& operator<<(std::ostream& os, const type_id_t& alloc_id);
-
-struct alloc_id_t {
-  using value_type = alloc_id_value;
-
-  static const alloc_id_t invalid;
-
- private:
-  value_type _value = 0;
-
- public:
-  alloc_id_t() = default;
-
-  alloc_id_t(value_type value) : _value(value) {
-  }
-
-  template <class T>
-  alloc_id_t(T t) = delete;
-
-  value_type value() const {
-    return _value;
-  }
-};
-
-inline bool operator==(const alloc_id_t& lhs, const alloc_id_t& rhs) {
-  return lhs.value() == rhs.value();
-}
-
-inline bool operator!=(const alloc_id_t& lhs, const alloc_id_t& rhs) {
-  return !(lhs == rhs);
-}
-
-std::ostream& operator<<(std::ostream& os, const alloc_id_t& alloc_id);
 
 struct meta_id_t {
   using value_type = meta_id_value;
@@ -199,12 +178,17 @@ namespace meta {
 
 enum class Kind {
   Unknown,
+  GlobalOrBuiltin,
   CompileUnit,
   File,
   Subprogram,
   Namespace,
+  VoidType,
   BasicType,
-  CompositeType,
+  StructureType,
+  UnionType,
+  ArrayType,
+  EnumerationType,
   DerivedType,
   SubroutineType,
   Location,
@@ -218,10 +202,12 @@ enum class Kind {
   LexicalBlockFile,
   Enumerator,
   String,
+  Integer,
   Tuple,
 };
 
 std::ostream& operator<<(std::ostream& os, const Kind& kind);
+std::istream& operator>>(std::istream& is, std::optional<Kind>& value);
 
 class Meta;
 
@@ -250,21 +236,12 @@ class Ref {
   Ref(meta_id_t id, Kind kind, bool is_weak = false) : kind(kind), _is_weak(is_weak), ref(id) {
   }
 
-  template <class _MetaClass = MetaClass, class = std::enable_if_t<detail::is_leaf_class<_MetaClass>::value>>
-  Ref(MetaClass* ptr) : Ref(ptr, MetaClass::META_KIND) {
-  }
-
-  Ref(MetaClass* ptr, Kind kind, bool is_weak = false) : kind(kind), _is_weak(is_weak) {
-    if (ptr != nullptr) {
-      ref = ptr;
-    } else {
-      ref = meta_id_t::invalid;
-    }
+  Ref(MetaClass& meta, bool is_weak = false) : kind(meta.get_kind()), _is_weak(is_weak), ref(&meta) {
   }
 
   template <class OtherMeta, class = std::enable_if_t<std::is_base_of_v<MetaClass, OtherMeta>>>
   Ref(const Ref<OtherMeta>& other) : kind(other.get_kind()), _is_weak(other.is_weak()) {
-    if (auto ptr = other.get_meta(); ptr != nullptr) {
+    if (auto ptr = other.get(); ptr != nullptr) {
       ref = ptr;
     } else {
       ref = other.get_id();
@@ -275,14 +252,24 @@ class Ref {
     return _is_weak;
   }
 
-  void set_weak(bool weak) {
-    _is_weak = weak;
+  Ref<MetaClass> as_weak_ref() const& {
+    if (ref.index() == 0) {
+      return {std::get<0>(ref), kind, true};
+    } else {
+      return {*std::get<1>(ref), true};
+    }
+  }
+
+  Ref<MetaClass> as_weak_ref() && {
+    _is_weak = true;
+    return *this;
   }
 
   Kind get_kind() const {
     return kind;
   }
 
+  template <class _MetaClass = MetaClass, class = std::enable_if_t<!std::is_const_v<_MetaClass>>>
   void set_id(meta_id_t new_id) {
     if (ref.index() == 0) {
       ref = new_id;
@@ -295,21 +282,16 @@ class Ref {
     if (ref.index() == 0) {
       return std::get<0>(ref);
     } else {
-      auto ptr = std::get<1>(ref);
-      return ptr != nullptr ? ptr->get_id() : meta_id_t::invalid;
+      return std::get<1>(ref)->get_id();
     }
   }
 
-  void set_meta(MetaClass* meta) {
-    if (meta != nullptr) {
-      kind = meta->get_kind();
-      ref  = meta;
-    } else {
-      ref = meta_id_t::invalid;
-    }
+  void set(MetaClass& meta) {
+    kind = meta.get_kind();
+    ref  = &meta;
   }
 
-  MetaClass* get_meta() const {
+  MetaClass* get() const {
     if (ref.index() == 0) {
       return nullptr;
     } else {
@@ -318,31 +300,33 @@ class Ref {
   }
 
   inline MetaClass* operator->() const {
-    return get_meta();
+    return get();
   }
 
   inline MetaClass& operator*() const {
-    return *get_meta();
+    return *get();
   }
 
   inline bool is_valid() const {
-    return !(get_id() == meta_id_t::invalid && get_kind() == Kind::Unknown);
+    return get_id() != meta_id_t::invalid && get_kind() != Kind::Unknown;
   }
 };
 
 template <class MetaClass>
 inline bool operator==(const Ref<MetaClass>& lhs, const Ref<MetaClass>& rhs) {
-  return lhs.get_kind() == rhs.get_kind() && (lhs.is_weak() || rhs.is_weak() || lhs.get_id() == rhs.get_id());
+  return lhs.get_kind() == rhs.get_kind() && lhs.get_id() == rhs.get_id();
 }
 
 class Meta {
-  Kind _kind;
-  META_MEMBER(meta_id_t, id)
+  Kind kind;
+  bool retained;
+  meta_id_t id;
 
  protected:
-  std::vector<Ref<Meta>> _refs;
+  std::vector<Ref<Meta>> refs;
 
-  inline Meta(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs) : _kind(kind), _id(id), _refs(std::move(refs)) {
+  inline Meta(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs)
+      : kind(kind), retained(false), id(id), refs(std::move(refs)) {
   }
 
  public:
@@ -352,18 +336,62 @@ class Meta {
 
   virtual ~Meta();
 
+  inline bool isa(Kind expected_kind) const {
+    return kind == expected_kind;
+  }
+
   inline Kind get_kind() const {
-    return _kind;
+    return kind;
+  }
+
+  inline bool is_retained() const {
+    return retained;
+  }
+
+  inline void set_retained(bool new_retained) {
+    retained = new_retained;
+  }
+
+  inline meta_id_t get_id() const {
+    return id;
+  }
+
+  inline void set_id(meta_id_t new_id) {
+    id = new_id;
   }
 
   inline const std::vector<Ref<Meta>>& get_refs() const {
-    return _refs;
+    return refs;
   }
 
   inline std::vector<Ref<Meta>>& get_refs() {
-    return _refs;
+    return refs;
   }
+
+  bool contains_weak_refs() const;
 };
+
+std::unique_ptr<Meta> make_meta(Kind kind, std::vector<Ref<Meta>> refs);
+
+template <typename Visitor>
+bool visit_meta(Ref<const Meta> init, Visitor&& visitor) {
+  auto worklist = std::queue<Ref<const Meta>>{};
+  worklist.push(init);
+  while (!worklist.empty()) {
+    auto current = worklist.front();
+    worklist.pop();
+    if (visitor(current)) {
+      if (!current.is_weak()) {
+        for (const auto& ref : current->get_refs()) {
+          worklist.emplace(ref);
+        }
+      }
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
 
 template <class To, class = std::enable_if_t<std::is_base_of_v<Meta, To>>>
 To* dyn_cast(Meta* meta) {
@@ -378,14 +406,14 @@ const To* dyn_cast(const Meta* meta) {
   if (meta == nullptr) {
     return nullptr;
   }
-  return To::classof(meta->get_kind()) ? static_cast<To*>(meta) : nullptr;
+  return To::classof(meta->get_kind()) ? static_cast<const To*>(meta) : nullptr;
 }
 
 template <class To, class = std::enable_if_t<std::is_base_of_v<Meta, To>>>
 Ref<To> dyn_cast(const Ref<Meta>& ref) {
-  if (auto ptr = ref.get_meta(); ptr != nullptr) {
+  if (auto ptr = ref.get(); ptr != nullptr) {
     if (auto casted = dyn_cast<To>(ptr); casted != nullptr) {
-      return {casted, ref.get_kind(), ref.is_weak()};
+      return {*casted, ref.is_weak()};
     }
   } else {
     if (To::classof(ref.get_kind())) {
@@ -395,19 +423,59 @@ Ref<To> dyn_cast(const Ref<Meta>& ref) {
   return {};
 }
 
-class String final : public Meta {
-  META_CLASS(Meta, String, 0)
-  META_MEMBER(std::string, data)
+class Integer final : public Meta {
+  META_CLASS(Meta, Integer, 0)
+  int64_t data;
 
  public:
-  inline String(meta_id_t id, std::string data) : Meta(id, Kind::String, {}), _data(std::move(data)) {
+  inline Integer(meta_id_t id, int64_t data) : Meta(id, Kind::Integer, {}), data(data) {
+  }
+
+  inline int64_t get_data() const {
+    return data;
+  }
+
+  inline void set_data(int64_t new_data) {
+    data = new_data;
+  }
+
+  virtual ~Integer();
+};
+
+class String final : public Meta {
+  META_CLASS(Meta, String, 0)
+  std::string data;
+
+ public:
+  inline String(meta_id_t id, std::string data) : Meta(id, Kind::String, {}), data(std::move(data)) {
+  }
+
+  inline const std::string& get_data() const {
+    return data;
+  }
+
+  inline void set_data(std::string new_data) {
+    data = std::move(new_data);
   }
 
   virtual ~String();
 };
 
-inline bool operator==(const String& lhs, const String& rhs) {
-  return lhs.get_refs() == rhs.get_refs() && lhs.get_data() == rhs.get_data();
+inline bool operator==(const Meta& lhs, const Meta& rhs) {
+  if (lhs.get_kind() != rhs.get_kind()) {
+    return false;
+  }
+  if (lhs.get_id() == rhs.get_id()) {
+    return true;
+  }
+  switch (lhs.get_kind()) {
+    case Kind::Integer:
+      return static_cast<const Integer&>(lhs).get_data() == static_cast<const Integer&>(rhs).get_data();
+    case Kind::String:
+      return static_cast<const String&>(lhs).get_data() == static_cast<const String&>(rhs).get_data();
+    default:
+      return lhs.get_refs() == rhs.get_refs();
+  }
 }
 
 class Tuple final : public Meta {
@@ -417,12 +485,28 @@ class Tuple final : public Meta {
   inline Tuple(meta_id_t id, std::vector<Ref<Meta>> refs) : Meta(id, Kind::Tuple, std::move(refs)) {
   }
 
+  inline auto size() const {
+    return get_refs().size();
+  }
+
+  inline auto begin() {
+    return get_refs().begin();
+  }
+
+  inline auto end() {
+    return get_refs().end();
+  }
+
+  inline auto begin() const {
+    return get_refs().begin();
+  }
+
+  inline auto end() const {
+    return get_refs().end();
+  }
+
   virtual ~Tuple();
 };
-
-inline bool operator==(const Tuple& lhs, const Tuple& rhs) {
-  return lhs.get_refs() == rhs.get_refs();
-}
 
 class Node : public Meta {
  protected:
@@ -432,12 +516,17 @@ class Node : public Meta {
  public:
   static inline bool classof(Kind kind) {
     switch (kind) {
+      case Kind::GlobalOrBuiltin:
       case Kind::CompileUnit:
       case Kind::File:
       case Kind::Subprogram:
       case Kind::Namespace:
+      case Kind::VoidType:
       case Kind::BasicType:
-      case Kind::CompositeType:
+      case Kind::StructureType:
+      case Kind::UnionType:
+      case Kind::ArrayType:
+      case Kind::EnumerationType:
       case Kind::DerivedType:
       case Kind::SubroutineType:
       case Kind::Location:
@@ -466,12 +555,17 @@ class Node : public meta::Node {
  public:
   static inline bool classof(Kind kind) {
     switch (kind) {
+      case Kind::GlobalOrBuiltin:
       case Kind::CompileUnit:
       case Kind::File:
       case Kind::Subprogram:
       case Kind::Namespace:
+      case Kind::VoidType:
       case Kind::BasicType:
-      case Kind::CompositeType:
+      case Kind::StructureType:
+      case Kind::UnionType:
+      case Kind::ArrayType:
+      case Kind::EnumerationType:
       case Kind::DerivedType:
       case Kind::SubroutineType:
       case Kind::LocalVariable:
@@ -490,33 +584,23 @@ class Node : public meta::Node {
 };
 
 class Subrange final : public di::Node {
-  META_CLASS(di::Node, Subrange, 0)
-  META_MEMBER(std::optional<size_t>, count)
-  META_MEMBER(size_t, lower_bound)
+  META_CLASS(di::Node, Subrange, 2)
+  META_INTEGER(0, size_t, lower_bound)
+  META_INTEGER(1, size_t, count)
 
  public:
   virtual ~Subrange();
 };
 
-inline bool operator==(const Subrange& lhs, const Subrange& rhs) {
-  return lhs.get_refs() == rhs.get_refs() && lhs.get_count() == rhs.get_count() &&
-         lhs.get_lower_bound() == rhs.get_lower_bound();
-}
-
 class Enumerator final : public di::Node {
-  META_CLASS(di::Node, Enumerator, 1)
-  META_MEMBER(ssize_t, value)
-  META_MEMBER(bool, is_unsigned)
-  META_REF(0, meta::String, name)
+  META_CLASS(di::Node, Enumerator, 3)
+  META_STRING(0, name)
+  META_INTEGER(1, ssize_t, value)
+  META_INTEGER(2, bool, is_unsigned)
 
  public:
   virtual ~Enumerator();
 };
-
-inline bool operator==(const Enumerator& lhs, const Enumerator& rhs) {
-  return lhs.get_refs() == rhs.get_refs() && lhs.get_value() == rhs.get_value() &&
-         lhs.get_is_unsigned() == rhs.get_is_unsigned();
-}
 
 class Scope : public di::Node {
  protected:
@@ -526,12 +610,17 @@ class Scope : public di::Node {
  public:
   static inline bool classof(Kind kind) {
     switch (kind) {
+      case Kind::GlobalOrBuiltin:
       case Kind::CompileUnit:
       case Kind::File:
       case Kind::Subprogram:
       case Kind::Namespace:
+      case Kind::VoidType:
       case Kind::BasicType:
-      case Kind::CompositeType:
+      case Kind::StructureType:
+      case Kind::UnionType:
+      case Kind::ArrayType:
+      case Kind::EnumerationType:
       case Kind::DerivedType:
       case Kind::SubroutineType:
       case Kind::LexicalBlock:
@@ -555,48 +644,48 @@ enum class Language {
   Cpp11,
   Cpp14,
 };
-class File final : public di::Scope {
-  META_CLASS(di::Scope, File, 2)
-  META_REF(0, meta::String, filename)
-  META_REF(1, meta::String, directory)
+
+std::ostream& operator<<(std::ostream& os, const Language& language);
+std::istream& operator>>(std::istream& is, std::optional<Language>& value);
+
+class GlobalOrBuiltin final : public di::Scope {
+  META_CLASS(di::Scope, GlobalOrBuiltin, 0)
 
  public:
+  virtual ~GlobalOrBuiltin();
+};
+
+class File final : public di::Scope {
+  META_CLASS(di::Scope, File, 2)
+  META_STRING(0, filename)
+  META_STRING(1, directory)
+
+ public:
+  bool is_unknown() const;
+
   virtual ~File();
 };
 
-inline bool operator==(const File& lhs, const File& rhs) {
-  return lhs.get_refs() == rhs.get_refs();
-}
-
 class CompileUnit final : public di::Scope {
-  META_CLASS(di::Scope, CompileUnit, 2)
-  META_MEMBER(Language, language)
-  META_MEMBER(bool, is_optimized)
-  META_MEMBER(size_t, runtime_version)
+  META_CLASS(di::Scope, CompileUnit, 5)
   META_REF(0, di::File, file)
-  META_REF(1, meta::String, producer)
+  META_STRING(1, producer)
+  META_INTEGER(2, Language, language)
+  META_INTEGER(3, bool, is_optimized)
+  META_INTEGER(4, size_t, runtime_version)
 
  public:
   virtual ~CompileUnit();
 };
 
-inline bool operator==(const CompileUnit& lhs, const CompileUnit& rhs) {
-  return lhs.get_refs() == rhs.get_refs() && lhs.get_language() == rhs.get_language() &&
-         lhs.get_is_optimized() == rhs.get_is_optimized() && lhs.get_runtime_version() == rhs.get_runtime_version();
-}
-
 class Namespace final : public di::Scope {
   META_CLASS(di::Scope, Namespace, 2)
-  META_REF(0, String, name)
+  META_STRING(0, name)
   META_REF(1, di::Scope, scope)
 
  public:
   virtual ~Namespace();
 };
-
-inline bool operator==(const Namespace& lhs, const Namespace& rhs) {
-  return lhs.get_refs() == rhs.get_refs();
-}
 
 class Type : public di::Scope {
  protected:
@@ -606,8 +695,12 @@ class Type : public di::Scope {
  public:
   static inline bool classof(Kind kind) {
     switch (kind) {
+      case Kind::VoidType:
       case Kind::BasicType:
-      case Kind::CompositeType:
+      case Kind::StructureType:
+      case Kind::UnionType:
+      case Kind::ArrayType:
+      case Kind::EnumerationType:
       case Kind::DerivedType:
       case Kind::SubroutineType:
         return true;
@@ -616,7 +709,52 @@ class Type : public di::Scope {
     }
   }
 
+  inline bool is_void_type() const {
+    return get_kind() == Kind::VoidType;
+  }
+
+  inline bool is_basic_type() const {
+    return get_kind() == Kind::BasicType;
+  }
+
+  inline bool is_structure_type() const {
+    return get_kind() == Kind::StructureType;
+  }
+
+  inline bool is_union_type() const {
+    return get_kind() == Kind::UnionType;
+  }
+
+  inline bool is_array_type() const {
+    return get_kind() == Kind::ArrayType;
+  }
+
+  inline bool is_derived_type() const {
+    return get_kind() == Kind::DerivedType;
+  }
+
+  inline bool is_subroutine_type() const {
+    return get_kind() == Kind::SubroutineType;
+  }
+
+  virtual std::string get_pretty_name() const = 0;
+
+  virtual size_t get_size_in_bits() const = 0;
+
+  // Strips away typedef, const, restrict and volatile
+  const di::Type& get_canonical_type() const;
+
   virtual ~Type();
+};
+
+class VoidType final : public di::Type {
+  META_CLASS(di::Type, VoidType, 0)
+
+ public:
+  std::string get_pretty_name() const override;
+  size_t get_size_in_bits() const override;
+
+  virtual ~VoidType();
 };
 
 enum class Encoding {
@@ -629,44 +767,85 @@ enum class Encoding {
   SignedChar,
   UnsignedChar,
 };
+
+std::ostream& operator<<(std::ostream& os, const Encoding& encoding);
+std::istream& operator>>(std::istream& is, std::optional<Encoding>& value);
+
 class BasicType final : public di::Type {
-  META_CLASS(di::Type, BasicType, 1)
-  META_MEMBER(Encoding, encoding)
-  META_MEMBER(size_t, size_in_bits)
-  META_REF(0, String, name)
+  META_CLASS(di::Type, BasicType, 3)
+  META_STRING(0, name)
+  META_INTEGER(1, Encoding, encoding)
+  META_INTEGER_OVERRIDE(2, size_t, size_in_bits)
 
  public:
+  std::string get_pretty_name() const override;
+
   virtual ~BasicType();
 };
 
-inline bool operator==(const BasicType& lhs, const BasicType& rhs) {
-  return lhs.get_refs() == rhs.get_refs() && lhs.get_size_in_bits() == rhs.get_size_in_bits() &&
-         lhs.get_encoding() == rhs.get_encoding();
-}
-
-enum class CompositeKind {
-  Structure,
-  Class,
-  Union,
-};
-class CompositeType final : public di::Type {
-  META_CLASS(di::Type, CompositeType, 5)
-  META_MEMBER(size_t, line)
-  META_MEMBER(size_t, size_in_bits)
-  META_REF(0, String, name)
-  META_REF(1, String, identifier)
+class DerivedType;
+class StructureType final : public di::Type {
+  META_CLASS(di::Type, StructureType, 7)
+  META_STRING(0, name)
+  META_STRING(1, identifier)
   META_REF(2, di::File, file)
   META_REF(3, di::Scope, scope)
-  META_TUPLE(4, di::Node, element)
+  META_INTEGER(4, size_t, line)
+  META_INTEGER_OVERRIDE(5, size_t, size_in_bits)
+  META_TUPLE(6, di::Node, element)
 
  public:
-  virtual ~CompositeType();
+  std::string get_pretty_name() const override;
+
+  const di::DerivedType* find_member(size_t offset_in_bits) const;
+
+  virtual ~StructureType();
 };
 
-inline bool operator==(const CompositeType& lhs, const CompositeType& rhs) {
-  return lhs.get_refs() == rhs.get_refs() && lhs.get_size_in_bits() == rhs.get_size_in_bits() &&
-         lhs.get_line() == rhs.get_line();
-}
+class UnionType final : public di::Type {
+  META_CLASS(di::Type, UnionType, 7)
+  META_STRING(0, name)
+  META_STRING(1, identifier)
+  META_REF(2, di::File, file)
+  META_REF(3, di::Scope, scope)
+  META_INTEGER(4, size_t, line)
+  META_INTEGER_OVERRIDE(5, size_t, size_in_bits)
+  META_TUPLE(6, di::Node, element)
+
+ public:
+  std::string get_pretty_name() const override;
+
+  virtual ~UnionType();
+};
+
+class ArrayType final : public di::Type {
+  META_CLASS(di::Type, ArrayType, 3)
+  META_REF(0, di::Type, base_type)
+  META_INTEGER_OVERRIDE(1, size_t, size_in_bits)
+  META_TUPLE(2, Integer, count)
+
+ public:
+  size_t get_flattened_count() const;
+  std::string get_pretty_name() const override;
+
+  virtual ~ArrayType();
+};
+
+class EnumerationType final : public di::Type {
+  META_CLASS(di::Type, EnumerationType, 7)
+  META_STRING(0, name)
+  META_STRING(1, identifier)
+  META_REF(2, di::File, file)
+  META_REF(3, di::Scope, scope)
+  META_INTEGER(4, size_t, line)
+  META_INTEGER_OVERRIDE(5, size_t, size_in_bits)
+  META_TUPLE(6, di::Node, element)
+
+ public:
+  std::string get_pretty_name() const override;
+
+  virtual ~EnumerationType();
+};
 
 enum class DerivedKind {
   Member,
@@ -680,26 +859,26 @@ enum class DerivedKind {
   Volatile,
   PtrToMemberType,
 };
+
+std::ostream& operator<<(std::ostream& os, const DerivedKind& kind);
+std::istream& operator>>(std::istream& is, std::optional<DerivedKind>& value);
+
 class DerivedType final : public di::Type {
-  META_CLASS(di::Type, DerivedType, 4)
-  META_MEMBER(DerivedKind, tag)
-  META_MEMBER(size_t, line)
-  META_MEMBER(size_t, offset_in_bits)
-  META_MEMBER(size_t, size_in_bits)
-  META_REF(0, String, name)
+  META_CLASS(di::Type, DerivedType, 8)
+  META_STRING(0, name)
   META_REF(1, di::File, file)
   META_REF(2, di::Scope, scope)
   META_REF(3, di::Type, base_type)
+  META_INTEGER(4, DerivedKind, tag)
+  META_INTEGER(5, size_t, line)
+  META_INTEGER(6, size_t, offset_in_bits)
+  META_INTEGER_OVERRIDE(7, size_t, size_in_bits)
 
  public:
+  std::string get_pretty_name() const override;
+
   virtual ~DerivedType();
 };
-
-inline bool operator==(const DerivedType& lhs, const DerivedType& rhs) {
-  return lhs.get_refs() == rhs.get_refs() && lhs.get_size_in_bits() == rhs.get_size_in_bits() &&
-         lhs.get_kind() == rhs.get_kind() && lhs.get_line() == rhs.get_line() &&
-         lhs.get_offset_in_bits() == rhs.get_offset_in_bits();
-}
 
 class SubroutineType final : public di::Type {
   META_CLASS(di::Type, SubroutineType, 2)
@@ -707,11 +886,37 @@ class SubroutineType final : public di::Type {
   META_TUPLE(1, di::Type, argument_type)
 
  public:
+  std::string get_pretty_name() const override;
+
+  size_t get_size_in_bits() const override {
+    return 0;
+  }
+
   virtual ~SubroutineType();
 };
 
-inline bool operator==(const SubroutineType& lhs, const SubroutineType& rhs) {
-  return lhs.get_refs() == rhs.get_refs();
+template <class Visitor>
+typename Visitor::return_type visit_type(const Type& type, Visitor&& visitor) {
+  switch (type.get_kind()) {
+    case Kind::VoidType:
+      return std::forward<Visitor>(visitor)(static_cast<const VoidType&>(type));
+    case Kind::BasicType:
+      return std::forward<Visitor>(visitor)(static_cast<const BasicType&>(type));
+    case Kind::StructureType:
+      return std::forward<Visitor>(visitor)(static_cast<const StructureType&>(type));
+    case Kind::UnionType:
+      return std::forward<Visitor>(visitor)(static_cast<const UnionType&>(type));
+    case Kind::ArrayType:
+      return std::forward<Visitor>(visitor)(static_cast<const ArrayType&>(type));
+    case Kind::EnumerationType:
+      return std::forward<Visitor>(visitor)(static_cast<const EnumerationType&>(type));
+    case Kind::DerivedType:
+      return std::forward<Visitor>(visitor)(static_cast<const DerivedType&>(type));
+    case Kind::SubroutineType:
+      return std::forward<Visitor>(visitor)(static_cast<const SubroutineType&>(type));
+    default:
+      abort();
+  }
 }
 
 class LocalScope : public di::Scope {
@@ -730,6 +935,8 @@ class LocalScope : public di::Scope {
         return false;
     }
   }
+
+  virtual const di::File& get_file() const = 0;
 
   virtual ~LocalScope();
 };
@@ -755,64 +962,48 @@ class LexicalBlockBase : public di::LocalScope {
 };
 
 class LexicalBlock final : public di::LexicalBlockBase {
-  META_CLASS(di::LexicalBlockBase, LexicalBlock, 2)
-  META_MEMBER(size_t, line)
-  META_MEMBER(size_t, column)
+  META_CLASS(di::LexicalBlockBase, LexicalBlock, 4)
   META_REF(0, di::Scope, scope)
   META_REF(1, di::File, file)
+  META_INTEGER(2, size_t, line)
+  META_INTEGER(3, size_t, column)
 
  public:
   virtual ~LexicalBlock();
 };
 
-inline bool operator==(const LexicalBlock& lhs, const LexicalBlock& rhs) {
-  return lhs.get_refs() == rhs.get_refs() && lhs.get_line() == rhs.get_line() && lhs.get_column() == rhs.get_column();
-}
-
 class LexicalBlockFile final : public di::LexicalBlockBase {
-  META_CLASS(di::LexicalBlockBase, LexicalBlockFile, 2)
-  META_MEMBER(size_t, discriminator)
+  META_CLASS(di::LexicalBlockBase, LexicalBlockFile, 3)
   META_REF(0, di::Scope, scope)
   META_REF(1, di::File, file)
+  META_INTEGER(2, size_t, discriminator)
 
  public:
   virtual ~LexicalBlockFile();
 };
 
-inline bool operator==(const LexicalBlockFile& lhs, const LexicalBlockFile& rhs) {
-  return lhs.get_refs() == rhs.get_refs() && lhs.get_discriminator() == rhs.get_discriminator();
-}
-
 class Subprogram final : public di::LocalScope {
-  META_CLASS(di::LocalScope, Subprogram, 5)
-  META_MEMBER(size_t, line)
-  META_REF(0, String, name)
-  META_REF(1, String, linkage_name)
+  META_CLASS(di::LocalScope, Subprogram, 6)
+  META_STRING(0, name)
+  META_STRING(1, linkage_name)
   META_REF(2, di::File, file)
   META_REF(3, di::Scope, scope)
   META_REF(4, di::SubroutineType, type)
+  META_INTEGER(5, size_t, line)
 
  public:
   virtual ~Subprogram();
 };
 
-inline bool operator==(const Subprogram& lhs, const Subprogram& rhs) {
-  return lhs.get_refs() == rhs.get_refs() && lhs.get_line() == rhs.get_line();
-}
-
 class Location final : public meta::Node {
-  META_CLASS(meta::Node, Location, 1)
-  META_MEMBER(size_t, line)
-  META_MEMBER(size_t, column)
+  META_CLASS(meta::Node, Location, 3)
   META_REF(0, di::LocalScope, scope)
+  META_INTEGER(1, size_t, line)
+  META_INTEGER(2, size_t, column)
 
  public:
   virtual ~Location();
 };
-
-inline bool operator==(const Location& lhs, const Location& rhs) {
-  return lhs.get_refs() == rhs.get_refs() && lhs.get_line() == rhs.get_line() && lhs.get_column() == rhs.get_column();
-}
 
 class Variable : public di::Node {
  protected:
@@ -834,41 +1025,32 @@ class Variable : public di::Node {
 };
 
 class LocalVariable final : public Variable {
-  META_CLASS(Variable, LocalVariable, 5)
-  META_MEMBER(size_t, line)
-  META_REF(0, String, name)
-  META_REF(1, String, linkage_name)
+  META_CLASS(Variable, LocalVariable, 6)
+  META_STRING(0, name)
+  META_STRING(1, linkage_name)
   META_REF(2, Scope, scope)
   META_REF(3, File, file)
   META_REF(4, Type, type)
+  META_INTEGER(5, size_t, line)
 
  public:
   virtual ~LocalVariable();
 };
 
-inline bool operator==(const LocalVariable& lhs, const LocalVariable& rhs) {
-  return lhs.get_refs() == rhs.get_refs() && lhs.get_line() == rhs.get_line();
-}
-
 class GlobalVariable final : public Variable {
-  META_CLASS(Variable, GlobalVariable, 5)
-  META_MEMBER(size_t, line)
-  META_MEMBER(bool, is_local)
-  META_MEMBER(bool, is_definition)
-  META_REF(0, String, name)
-  META_REF(1, String, linkage_name)
+  META_CLASS(Variable, GlobalVariable, 8)
+  META_STRING(0, name)
+  META_STRING(1, linkage_name)
   META_REF(2, Scope, scope)
   META_REF(3, File, file)
   META_REF(4, Type, type)
+  META_INTEGER(5, size_t, line)
+  META_INTEGER(6, bool, is_local)
+  META_INTEGER(7, bool, is_definition)
 
  public:
   virtual ~GlobalVariable();
 };
-
-inline bool operator==(const GlobalVariable& lhs, const GlobalVariable& rhs) {
-  return lhs.get_refs() == rhs.get_refs() && lhs.get_line() == rhs.get_line() && lhs.get_type() == rhs.get_type() &&
-         lhs.get_is_local() == rhs.get_is_local() && lhs.get_is_definition() == rhs.get_is_definition();
-}
 
 }  // namespace di
 
@@ -876,6 +1058,10 @@ class Allocation : public Meta {
  public:
   inline Allocation(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs) : Meta(id, kind, std::move(refs)) {
   }
+
+  virtual const di::Type& get_type() const = 0;
+  virtual const di::File& get_file() const = 0;
+  virtual size_t get_line() const          = 0;
 
   virtual ~Allocation();
 
@@ -896,103 +1082,59 @@ class StackAllocation final : public Allocation {
   META_REF(0, di::LocalVariable, local_variable)
   META_REF(1, di::Location, location)
 
+  const di::Type& get_type() const override {
+    return get_local_variable().get_type();
+  }
+
+  const di::File& get_file() const override {
+    return get_local_variable().get_file();
+  }
+
+  size_t get_line() const override {
+    return get_local_variable().get_line();
+  }
+
  public:
   virtual ~StackAllocation();
 };
 
-inline bool operator==(const StackAllocation& lhs, const StackAllocation& rhs) {
-  return lhs.get_refs() == rhs.get_refs();
-}
-
 class HeapAllocation final : public Allocation {
   META_CLASS(Allocation, HeapAllocation, 2)
-  META_REF(0, di::Type, type)
+  META_REF_OVERRIDE(0, di::Type, type)
   META_REF(1, di::Location, location)
+
+  const di::File& get_file() const override {
+    return get_location().get_scope().get_file();
+  }
+
+  size_t get_line() const override {
+    return get_location().get_line();
+  }
 
  public:
   virtual ~HeapAllocation();
 };
 
-inline bool operator==(const HeapAllocation& lhs, const HeapAllocation& rhs) {
-  return lhs.get_refs() == rhs.get_refs();
-}
-
 class GlobalAllocation final : public Allocation {
   META_CLASS(Allocation, GlobalAllocation, 1)
   META_REF(0, di::GlobalVariable, global_variable)
+
+  inline const di::Type& get_type() const override {
+    return get_global_variable().get_type();
+  }
+
+  const di::File& get_file() const override {
+    return get_global_variable().get_file();
+  }
+
+  size_t get_line() const override {
+    return get_global_variable().get_line();
+  }
 
  public:
   virtual ~GlobalAllocation();
 };
 
-inline bool operator==(const GlobalAllocation& lhs, const GlobalAllocation& rhs) {
-  return lhs.get_refs() == rhs.get_refs();
-}
-
-inline bool operator==(const Meta& lhs, const Meta& rhs) {
-  if (lhs.get_kind() != rhs.get_kind()) {
-    return false;
-  }
-  if (lhs.get_id() == rhs.get_id()) {
-    return true;
-  }
-  switch (lhs.get_kind()) {
-    case Kind::String:
-      return static_cast<const String&>(lhs) == static_cast<const String&>(rhs);
-    case Kind::Tuple:
-      return static_cast<const Tuple&>(lhs) == static_cast<const Tuple&>(rhs);
-    case Kind::CompileUnit:
-      return static_cast<const di::CompileUnit&>(lhs) == static_cast<const di::CompileUnit&>(rhs);
-    case Kind::File:
-      return static_cast<const di::File&>(lhs) == static_cast<const di::File&>(rhs);
-    case Kind::Subprogram:
-      return static_cast<const di::Subprogram&>(lhs) == static_cast<const di::Subprogram&>(rhs);
-    case Kind::Namespace:
-      return static_cast<const di::Namespace&>(lhs) == static_cast<const di::Namespace&>(rhs);
-    case Kind::BasicType:
-      return static_cast<const di::BasicType&>(lhs) == static_cast<const di::BasicType&>(rhs);
-    case Kind::CompositeType:
-      return static_cast<const di::CompositeType&>(lhs) == static_cast<const di::CompositeType&>(rhs);
-    case Kind::DerivedType:
-      return static_cast<const di::DerivedType&>(lhs) == static_cast<const di::DerivedType&>(rhs);
-    case Kind::SubroutineType:
-      return static_cast<const di::SubroutineType&>(lhs) == static_cast<const di::SubroutineType&>(rhs);
-    case Kind::Location:
-      return static_cast<const di::Location&>(lhs) == static_cast<const di::Location&>(rhs);
-    case Kind::LocalVariable:
-      return static_cast<const di::LocalVariable&>(lhs) == static_cast<const di::LocalVariable&>(rhs);
-    case Kind::GlobalVariable:
-      return static_cast<const di::GlobalVariable&>(lhs) == static_cast<const di::GlobalVariable&>(rhs);
-    case Kind::HeapAllocation:
-      return static_cast<const HeapAllocation&>(lhs) == static_cast<const HeapAllocation&>(rhs);
-    case Kind::StackAllocation:
-      return static_cast<const StackAllocation&>(lhs) == static_cast<const StackAllocation&>(rhs);
-    case Kind::GlobalAllocation:
-      return static_cast<const GlobalAllocation&>(lhs) == static_cast<const GlobalAllocation&>(rhs);
-    case Kind::Subrange:
-      return static_cast<const di::Subrange&>(lhs) == static_cast<const di::Subrange&>(rhs);
-    case Kind::LexicalBlock:
-      return static_cast<const di::LexicalBlock&>(lhs) == static_cast<const di::LexicalBlock&>(rhs);
-    case Kind::LexicalBlockFile:
-      return static_cast<const di::LexicalBlockFile&>(lhs) == static_cast<const di::LexicalBlockFile&>(rhs);
-    case Kind::Enumerator:
-      return static_cast<const di::Enumerator&>(lhs) == static_cast<const di::Enumerator&>(rhs);
-    default:
-      abort();
-  }
-}
-
 }  // namespace meta
 
 }  // namespace typeart
-
-namespace std {
-
-template <>
-struct hash<typeart::type_id_t> {
-  std::size_t operator()(const typeart::type_id_t& type_id) const {
-    return hash<typeart::type_id_t::value_type>{}(type_id.value());
-  }
-};
-
-}  // namespace std

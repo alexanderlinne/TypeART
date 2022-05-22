@@ -87,10 +87,10 @@ class BaseFilter : public Filter {
         switch (status) {
           case FilterAnalysis::Filter:
             fpath.pop();
-            LOG_DEBUG("Pre-check, filter")
+            LOG_DEBUG("Pre-check, filter");
             return true;
           case FilterAnalysis::Keep:
-            LOG_DEBUG("Pre-check, keep")
+            LOG_DEBUG("Pre-check, keep");
             return false;
           case FilterAnalysis::Skip:
             [[fallthrough]];
@@ -127,12 +127,12 @@ class BaseFilter : public Filter {
       }
 
       // TODO: here we have a definition OR a omp call, e.g., @__kmpc_fork_call
-      LOG_DEBUG("Looking at: " << c.getCalledFunction()->getName());
+      LOG_DEBUG("Looking at: {}", c.getCalledFunction()->getName());
 
       if constexpr (OmpHelper::WithOmp) {
         if (OmpHelper::isOmpExecutor(c)) {
           if (OmpHelper::canDiscardMicrotaskArg(c, path2def)) {
-            LOG_DEBUG("Passed as internal OMP API arg, skipping " << path2def)
+            LOG_DEBUG("Passed as internal OMP API arg, skipping {}", path2def);
             continue;
           }
         }
@@ -140,11 +140,11 @@ class BaseFilter : public Filter {
 
       auto argv = args(c, path2def);
       if (argv.size() > 1) {
-        LOG_DEBUG("All args are looked at.")
+        LOG_DEBUG("All args are looked at.");
       } else if (argv.size() == 1) {
         LOG_DEBUG("Following 1 arg.");
       } else {
-        LOG_DEBUG("No argument correlation.")
+        LOG_DEBUG("No argument correlation.");
       }
 
       if constexpr (OmpHelper::WithOmp) {
@@ -172,7 +172,7 @@ class BaseFilter : public Filter {
 
   bool DFSfilter(llvm::Value* current, Path& path, PathList& plist) {
     if (current == nullptr) {
-      LOG_FATAL("Called with nullptr: " << path);
+      LOG_FATAL("Called with nullptr: {}", path);
       return false;
     }
 
@@ -183,7 +183,7 @@ class BaseFilter : public Filter {
     const auto status = callsite(current, path);
     switch (status) {
       case FilterAnalysis::Keep:
-        LOG_DEBUG("Callsite check, keep")
+        LOG_DEBUG("Callsite check, keep");
         return false;
       case FilterAnalysis::Skip:
         skip = true;
@@ -202,7 +202,7 @@ class BaseFilter : public Filter {
       for (auto* successor : successors) {
         if constexpr (OmpHelper::WithOmp) {
           if (OmpHelper::isTaskRelatedStore(successor)) {
-            LOG_DEBUG("Keep, passed to OMP task struct. Current: " << *current << " Succ: " << *successor)
+            LOG_DEBUG("Keep, passed to OMP task struct. Current: {} Succ: {}", *current, *successor);
             path.push(successor);
             return false;
           }
@@ -233,10 +233,10 @@ class BaseFilter : public Filter {
       if (indirect_call) {
         if constexpr (CallSiteHandler::Support::Indirect) {
           auto status = handler.indirect(site, path);
-          LOG_DEBUG("Indirect call: " << util::try_demangle(site))
+          LOG_DEBUG("Indirect call: {}", util::try_demangle(site));
           return status;
         } else {
-          LOG_DEBUG("Indirect call, keep: " << util::try_demangle(site))
+          LOG_DEBUG("Indirect call, keep: {}", util::try_demangle(site));
           return FilterAnalysis::Keep;
         }
       }
@@ -249,10 +249,10 @@ class BaseFilter : public Filter {
         if (is_intrinsic) {
           if constexpr (CallSiteHandler::Support::Intrinsic) {
             auto status = handler.intrinsic(site, path);
-            LOG_DEBUG("Intrinsic call: " << util::try_demangle(site))
+            LOG_DEBUG("Intrinsic call: {}", util::try_demangle(site));
             return status;
           } else {
-            LOG_DEBUG("Skip intrinsic: " << util::try_demangle(site))
+            LOG_DEBUG("Skip intrinsic: {}", util::try_demangle(site));
             return FilterAnalysis::Skip;
           }
         }
@@ -260,12 +260,12 @@ class BaseFilter : public Filter {
         if constexpr (OmpHelper::WithOmp) {
           // here we handle microtask executor functions:
           if (OmpHelper::isOmpExecutor(site)) {
-            LOG_DEBUG("Omp executor, follow microtask: " << util::try_demangle(site))
+            LOG_DEBUG("Omp executor, follow microtask: {}", util::try_demangle(site));
             return FilterAnalysis::FollowDef;
           }
 
           if (OmpHelper::isOmpHelper(site)) {
-            LOG_DEBUG("Omp helper, skip: " << util::try_demangle(site))
+            LOG_DEBUG("Omp helper, skip: {}", util::try_demangle(site));
             return FilterAnalysis::Skip;
           }
         }
@@ -273,20 +273,20 @@ class BaseFilter : public Filter {
         // Handle decl (like MPI calls)
         if constexpr (CallSiteHandler::Support::Declaration) {
           auto status = handler.decl(site, path);
-          LOG_DEBUG("Decl call: " << util::try_demangle(site))
+          LOG_DEBUG("Decl call: {}", util::try_demangle(site));
           return status;
         } else {
-          LOG_DEBUG("Declaration, keep: " << util::try_demangle(site))
+          LOG_DEBUG("Declaration, keep: {}", util::try_demangle(site));
           return FilterAnalysis::Keep;
         }
       } else {
         // Handle definitions
         if constexpr (CallSiteHandler::Support::Definition) {
           auto status = handler.def(site, path);
-          LOG_DEBUG("Defined call: " << util::try_demangle(site))
+          LOG_DEBUG("Defined call: {}", util::try_demangle(site));
           return status;
         } else {
-          LOG_DEBUG("Definition, keep: " << util::try_demangle(site))
+          LOG_DEBUG("Definition, keep: {}", util::try_demangle(site));
           return FilterAnalysis::Keep;
         }
       }

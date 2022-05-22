@@ -36,8 +36,6 @@ struct StackCounter {
 
   void addStackHandling(StackOpCounter& allocCounts) const {
     using namespace llvm;
-    //      LOG_DEBUG("Add alloca counter")
-    // counter = 0 at beginning of function
     IRBuilder<> CBuilder(f->getEntryBlock().getFirstNonPHI());
     auto* counter = CBuilder.CreateAlloca(instr_helper->getTypeFor(IType::stack_count), nullptr, "__ta_alloca_counter");
     CBuilder.CreateStore(instr_helper->getConstantFor(IType::stack_count), counter);

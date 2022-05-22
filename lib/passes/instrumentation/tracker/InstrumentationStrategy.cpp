@@ -111,7 +111,7 @@ size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
         break;
       }
       default:
-        LOG_ERROR("Unknown malloc kind. Not instrumenting. " << util::dump(*malloc_call));
+        LOG_ERROR("Unknown malloc kind. Not instrumenting. {}", util::dump(*malloc_call));
         continue;
     }
 
@@ -143,7 +143,7 @@ size_t InstrumentationStrategy::instrumentFree(const FreeArgList& frees) {
         free_arg = args.get_value(ArgMap::ID::pointer);
         break;
       default:
-        LOG_ERROR("Unknown free kind. Not instrumenting. " << util::dump(*free_call));
+        LOG_ERROR("Unknown free kind. Not instrumenting. {}", util::dump(*free_call));
         continue;
     }
 

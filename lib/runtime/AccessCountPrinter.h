@@ -80,10 +80,10 @@ void serialize(const Recorder& r, std::ostringstream& buf) {
 
     t.print(buf);
 
-    std::set<type_id_t> type_id_set;
-    const auto fill_set = [&type_id_set](const auto& map) {
+    std::set<const meta::di::Type*> type_set;
+    const auto fill_set = [&type_set](const auto& map) {
       for (const auto& [key, val] : map) {
-        type_id_set.insert(key);
+        type_set.insert(key);
       }
     };
     fill_set(r.getHeapAlloc());
@@ -102,19 +102,24 @@ void serialize(const Recorder& r, std::ostringstream& buf) {
 
     Table type_table("Allocation type detail (heap, stack, global)");
     type_table.table_header = '#';
-    for (auto type_id : type_id_set) {
-      type_table.put(Row::make(std::to_string(type_id.value()), count(r.getHeapAlloc(), type_id),
-                               count(r.getStackAlloc(), type_id), count(r.getGlobalAlloc(), type_id),
-                               typeart_get_type_name(type_id.value())));
+    for (auto type : type_set) {
+      if (type == nullptr) {
+        continue;
+      }
+      type_table.put(Row::make(type->get_pretty_name(), count(r.getHeapAlloc(), type), count(r.getStackAlloc(), type),
+                               count(r.getGlobalAlloc(), type)));
     }
 
     type_table.print(buf);
 
     Table type_table_free("Free allocation type detail (heap, stack)");
     type_table_free.table_header = '#';
-    for (auto type_id : type_id_set) {
-      type_table_free.put(Row::make(std::to_string(type_id.value()), count(r.getHeapFree(), type_id),
-                                    count(r.getStackFree(), type_id), typeart_get_type_name(type_id.value())));
+    for (auto type : type_set) {
+      if (type == nullptr) {
+        continue;
+      }
+      type_table_free.put(
+          Row::make(type->get_pretty_name(), count(r.getHeapFree(), type), count(r.getStackFree(), type)));
     }
 
     type_table_free.print(buf);

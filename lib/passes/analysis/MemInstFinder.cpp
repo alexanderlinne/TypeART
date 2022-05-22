@@ -84,19 +84,19 @@ static std::unique_ptr<typeart::filter::Filter> make_filter(const MemInstFinderC
   const std::string glob = config.filter.ClCallFilterGlob;
 
   if (filter_id == FilterImplementation::none || !config.filter.ClUseCallFilter) {
-    LOG_DEBUG("Return no-op filter")
+    LOG_DEBUG("Return no-op filter");
     return std::make_unique<NoOpFilter>();
   } else if (filter_id == FilterImplementation::cg) {
     if (config.filter.ClCallFilterCGFile.empty()) {
       LOG_FATAL("CG File not set!");
       std::exit(1);
     }
-    LOG_DEBUG("Return CG filter with CG file @ " << config.filter.ClCallFilterCGFile)
+    LOG_DEBUG("Return CG filter with CG file @ {}", config.filter.ClCallFilterCGFile);
     auto json_cg = JSONCG::getJSON(config.filter.ClCallFilterCGFile);
     auto matcher = std::make_unique<DefaultStringMatcher>(util::glob2regex(glob));
     return std::make_unique<CGForwardFilter>(glob, std::move(json_cg), std::move(matcher));
   } else {
-    LOG_DEBUG("Return default filter")
+    LOG_DEBUG("Return default filter");
     auto matcher         = std::make_unique<DefaultStringMatcher>(util::glob2regex(glob));
     const auto deep_glob = config.filter.ClCallFilterDeepGlob;
     auto deep_matcher    = std::make_unique<DefaultStringMatcher>(util::glob2regex(deep_glob));
@@ -109,27 +109,27 @@ CallFilter::CallFilter(const MemInstFinderConfig& config) : fImpl{detail::make_f
 }
 
 bool CallFilter::operator()(AllocaInst* in) {
-  LOG_DEBUG("Analyzing value: " << util::dump(*in));
+  LOG_DEBUG("Analyzing value: {}", util::dump(*in));
   fImpl->setMode(/*search mallocs = */ false);
   fImpl->setStartingFunction(in->getParent()->getParent());
   const auto filter_ = fImpl->filter(in);
   if (filter_) {
-    LOG_DEBUG("Filtering value: " << util::dump(*in) << "\n");
+    LOG_DEBUG("Filtering value: {}\n", util::dump(*in));
   } else {
-    LOG_DEBUG("Keeping value: " << util::dump(*in) << "\n");
+    LOG_DEBUG("Keeping value: {}\n", util::dump(*in));
   }
   return filter_;
 }
 
 bool CallFilter::operator()(GlobalValue* g) {
-  LOG_DEBUG("Analyzing value: " << util::dump(*g));
+  LOG_DEBUG("Analyzing value: {}", util::dump(*g));
   fImpl->setMode(/*search mallocs = */ false);
   fImpl->setStartingFunction(nullptr);
   const auto filter_ = fImpl->filter(g);
   if (filter_) {
-    LOG_DEBUG("Filtering value: " << util::dump(*g) << "\n");
+    LOG_DEBUG("Filtering value: {}\n", util::dump(*g));
   } else {
-    LOG_DEBUG("Keeping value: " << util::dump(*g) << "\n");
+    LOG_DEBUG("Keeping value: {}\n", util::dump(*g));
   }
   return filter_;
 }
@@ -176,7 +176,7 @@ bool MemInstFinderPass::runOnModule(Module& module) {
                         GlobalVariable* global = gdata.global;
                         const auto name        = global->getName();
 
-                        LOG_DEBUG("Analyzing global: " << name);
+                        LOG_DEBUG("Analyzing global: {}", name);
 
                         if (name.empty()) {
                           return true;
@@ -185,12 +185,12 @@ bool MemInstFinderPass::runOnModule(Module& module) {
                         if (name.startswith("llvm.") || name.startswith("__llvm_gcov") ||
                             name.startswith("__llvm_gcda") || name.startswith("__profn")) {
                           // 2nd and 3rd check: Check if the global is private gcov data (--coverage).
-                          LOG_DEBUG("LLVM startswith \"llvm\"")
+                          LOG_DEBUG("LLVM startswith \"llvm\"");
                           return true;
                         }
 
                         if (name.startswith("___asan") || name.startswith("__msan") || name.startswith("__tsan")) {
-                          LOG_DEBUG("LLVM startswith \"sanitizer\"")
+                          LOG_DEBUG("LLVM startswith \"sanitizer\"");
                           return true;
                         }
 
@@ -237,7 +237,7 @@ bool MemInstFinderPass::runOnModule(Module& module) {
                         }
                         if (auto structType = dyn_cast<StructType>(global_type)) {
                           if (structType->isOpaque()) {
-                            LOG_DEBUG("Encountered opaque struct " << global_type->getStructName() << " - skipping...");
+                            LOG_DEBUG("Encountered opaque struct {} - skipping...", global_type->getStructName());
                             return true;
                           }
                         }
@@ -262,7 +262,7 @@ bool MemInstFinderPass::runOnFunction(llvm::Function& function) {
     return false;
   }
 
-  LOG_DEBUG("Running on function: " << function.getName())
+  LOG_DEBUG("Running on function: {}", function.getName());
 
   mOpsCollector.collect(function);
 
@@ -277,10 +277,10 @@ bool MemInstFinderPass::runOnFunction(llvm::Function& function) {
             (!isVoidPtr(dest) && !isi64Ptr(dest) &&
              primaryBitcast->getDestTy() != dest)) {  // void* and i64* are used by LLVM
           // Second non-void* bitcast detected - semantics unclear
-          LOG_WARNING("Encountered ambiguous pointer type in function: " << util::try_demangle(function));
-          LOG_WARNING("  Allocation" << util::dump(*(mallocData.call)));
-          LOG_WARNING("  Primary cast: " << util::dump(*primaryBitcast));
-          LOG_WARNING("  Secondary cast: " << util::dump(*bitcastInst));
+          LOG_WARNING("Encountered ambiguous pointer type in function: {}", util::try_demangle(function));
+          LOG_WARNING("  Allocation {}", util::dump(*(mallocData.call)));
+          LOG_WARNING("  Primary cast: {}", util::dump(*primaryBitcast));
+          LOG_WARNING("  Secondary cast: {}", util::dump(*bitcastInst));
         }
       });
     }
@@ -362,7 +362,6 @@ bool MemInstFinderPass::runOnFunction(llvm::Function& function) {
                                    return false;
                                  }),
                  allocs.end());
-    //    LOG_DEBUG(allocs.size() << " allocas to instrument : " << util::dump(allocs));
   }
 
   auto& mallocs = mOpsCollector.mallocs;

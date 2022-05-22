@@ -16,17 +16,17 @@
 #include "../common/InstrumentationHelper.h"
 #include "../tracker/ArgumentParser.h"
 #include "analysis/MemOpData.h"
-#include "typegen/TypeGenerator.h"
+#include "db/Database.hpp"
+#include "db/LLVMMetadataConverter.hpp"
 
 namespace typeart::instrumentation::allocator {
 
 class ArgumentParser final : public instrumentation::ArgumentParser {
-  TypeGenerator* type_m;
   common::InstrumentationHelper instr_helper;
   tracker::ArgumentParser tracker_parser;
 
  public:
-  ArgumentParser(llvm::Module& m, TypeGenerator*);
+  ArgumentParser(llvm::Module& m, Database& db, meta::LLVMMetadataConverter& converter);
   HeapArgList collectHeap(const MallocDataList& mallocs) override;
   FreeArgList collectFree(const FreeDataList& frees) override;
   StackArgList collectStack(const AllocaDataList& allocs) override;

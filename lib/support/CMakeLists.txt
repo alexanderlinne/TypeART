@@ -1,4 +1,4 @@
-add_library(${TYPEART_PREFIX}_SystemStatic STATIC System.cpp)
+add_library(${TYPEART_PREFIX}_SystemStatic STATIC System.cpp Logger.cpp)
 
 add_library(typeart::SystemStatic ALIAS ${TYPEART_PREFIX}_SystemStatic)
 
@@ -16,6 +16,19 @@ target_include_directories(
          $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/support>
           $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/typeart>
+)
+
+target_link_libraries(
+  ${TYPEART_PREFIX}_SystemStatic
+  PUBLIC spdlog::spdlog
+         fmt::fmt
+         $<$<BOOL:${TYPEART_MPI_LOGGER}>:MPI::MPI_CXX>
+)
+
+target_compile_definitions(
+  ${TYPEART_PREFIX}_SystemStatic
+  PRIVATE TYPEART_LOG_LEVEL=${TYPEART_LOG_LEVEL_RT}
+          $<$<BOOL:${TYPEART_MPI_LOGGER}>:TYPEART_MPI_LOGGER=1>
 )
 
 typeart_target_compile_options(${TYPEART_PREFIX}_SystemStatic)

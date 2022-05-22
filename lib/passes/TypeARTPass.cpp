@@ -19,7 +19,6 @@
 #include "instrumentation/tracker/InstrumentationStrategy.h"
 #include "support/Logger.hpp"
 #include "support/Table.h"
-#include "typegen/TypeGenerator.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -63,26 +62,29 @@ void TypeArtPass::getAnalysisUsage(llvm::AnalysisUsage& info) const {
 }
 
 bool TypeArtPass::doInitialization(llvm::Module& m) {
-  auto type_filepath = cl::getTypeFilepath();
+  filename = cl::getTypeFilepath();
   if (const char* type_file = std::getenv("TYPEART_TYPE_FILE"); type_file != nullptr) {
-    type_filepath = type_file;
+    filename = type_file;
   }
-  typeManager = make_typegen(type_filepath);
+
+  db        = std::make_unique<Database>();
+  converter = std::make_unique<meta::LLVMMetadataConverter>(*db);
 
   LOG_DEBUG("Propagating type infos.");
-  const auto loaded = typeManager->load();
+  auto loaded = Database::load(filename);
   if (loaded) {
-    LOG_DEBUG("Existing type configuration successfully loaded from " << type_filepath);
+    LOG_DEBUG("Existing type configuration successfully loaded from {}", filename);
+    *db = std::move(loaded).value();
   } else {
-    LOG_DEBUG("No valid existing type configuration found: " << type_filepath);
+    LOG_DEBUG("No valid existing type configuration found: {}", filename);
   }
 
 #ifdef TYPEART_USE_ALLOCATOR
-  auto parser = std::make_unique<instrumentation::allocator::ArgumentParser>(m, typeManager.get());
+  auto parser = std::make_unique<instrumentation::allocator::ArgumentParser>(m, *db, *converter);
   auto strategy =
       std::make_unique<instrumentation::allocator::InstrumentationStrategy>(cl::getInstrumentationMode(), m);
 #else
-  auto parser = std::make_unique<instrumentation::tracker::ArgumentParser>(m, typeManager.get());
+  auto parser = std::make_unique<instrumentation::tracker::ArgumentParser>(m, *db, *converter);
   auto strategy =
       std::make_unique<instrumentation::tracker::InstrumentationStrategy>(m, cl::getInstrumentStackLifetime());
 #endif
@@ -123,11 +125,11 @@ bool TypeArtPass::runOnFunc(llvm::Function& f) {
   }
 
   if (!meminst_finder->hasFunctionData(f)) {
-    LOG_WARNING("No allocation data could be retrieved for function: " << f.getName());
+    LOG_WARNING("No allocation data could be retrieved for function: {}", f.getName());
     return false;
   }
 
-  LOG_DEBUG("Running on function: " << f.getName())
+  LOG_DEBUG("Running on function: {}", f.getName());
 
   bool mod{false};
 
@@ -159,13 +161,13 @@ bool TypeArtPass::doFinalization(llvm::Module&) {
   /*
    * Persist the accumulated type definition information for this module.
    */
-  LOG_DEBUG("Writing type file to " << cl::getTypeFilepath());
+  LOG_DEBUG("Writing type file to {}", cl::getTypeFilepath());
 
-  const auto stored = typeManager->store();
+  const auto stored = db->store(filename);
   if (stored) {
     LOG_DEBUG("Success!");
   } else {
-    LOG_FATAL("Failed writing type config to " << cl::getTypeFilepath());
+    LOG_FATAL("Failed writing type config to {}", cl::getTypeFilepath());
   }
   if (cl::getPrintStats()) {
     auto& out = llvm::errs();

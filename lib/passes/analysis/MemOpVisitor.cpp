@@ -64,7 +64,7 @@ void MemOpVisitor::collect(llvm::Function& function) {
 
   for (const auto& alloc : allocas) {
     if (alloc.lifetime_start.size() > 1) {
-      LOG_DEBUG("Lifetime: " << alloc.lifetime_start.size());
+      LOG_DEBUG("Lifetime: {}", alloc.lifetime_start.size());
       LOG_DEBUG(*alloc.alloca);
       for (auto* lifetime : alloc.lifetime_start) {
         LOG_DEBUG(*lifetime);
@@ -159,7 +159,6 @@ std::tuple<MallocGeps, MallocBcasts, MallocStores> collectRelevantMallocUsers(ll
         if (auto loadInst = dyn_cast<LoadInst>(storeUser)) {
           for (auto loadUser : loadInst->users()) {
             if (auto bcastInst = dyn_cast<BitCastInst>(loadUser)) {
-              // LOG_MSG(*bcastInst)
               bcasts.insert(bcastInst);
             }
           }
@@ -261,7 +260,7 @@ void MemOpVisitor::visitMallocLike(llvm::CallBase& ci, MemOpKind k) {
   auto primary_cast           = bcasts.empty() ? nullptr : *bcasts.begin();
   auto array_cookie           = handleArrayCookie(geps, bcasts, primary_cast);
   if (primary_cast == nullptr) {
-    LOG_DEBUG("Primary bitcast null: " << ci)
+    LOG_DEBUG("Primary bitcast null: {}", ci);
   }
 
   // MDNode* N = MDNode::get(ci.getContext(), MDString::get(ci.getContext(), "0"));
@@ -269,9 +268,14 @@ void MemOpVisitor::visitMallocLike(llvm::CallBase& ci, MemOpKind k) {
 
   auto location = ci.getDebugLoc().get();
   auto types    = findDITypes(ci);
+  ci.print(llvm::errs());
+  llvm::errs() << "\n";
   // TODO we just take the first type we find but we should check that all the types we find are compatible
-  mallocs.push_back(MallocData{&ci, array_cookie, primary_cast, bcasts, location,
-                               types.size() >= 1 ? types.front() : nullptr, k, isa<InvokeInst>(ci)});
+  auto ptr_type = types.size() >= 1 ? llvm::dyn_cast<llvm::DIDerivedType>(types.front()) : nullptr;
+  assert(ptr_type != nullptr);
+  assert(ptr_type->getTag() == llvm::dwarf::DW_TAG_pointer_type);
+  mallocs.push_back(
+      MallocData{&ci, array_cookie, primary_cast, bcasts, location, ptr_type->getBaseType(), k, isa<InvokeInst>(ci)});
 }
 
 void MemOpVisitor::visitFreeLike(llvm::CallBase& ci, MemOpKind k) {

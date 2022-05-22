@@ -46,12 +46,12 @@ target_link_libraries(
           typeart::SystemStatic
           LLVMCore
           LLVMSupport
-          $<$<BOOL:${TYPEART_MPI_LOGGER}>:MPI::MPI_CXX>
           $<$<BOOL:${TYPEART_BTREE}>:google::btree>
           $<$<BOOL:${TYPEART_ABSEIL}>:absl::btree>
           $<$<BOOL:${TYPEART_SAFEPTR}>:sf::pointer>
           $<$<NOT:$<BOOL:${TYPEART_DISABLE_THREAD_SAFETY}>>:Threads::Threads>
           fmt::fmt
+          result::result
 )
 
 target_include_directories(
@@ -66,9 +66,7 @@ target_include_directories(${TYPEART_PREFIX}_Runtime SYSTEM PRIVATE ${LLVM_INCLU
 
 target_compile_definitions(
   ${TYPEART_PREFIX}_Runtime
-  PRIVATE TYPEART_LOG_LEVEL=${TYPEART_LOG_LEVEL_RT}
-          $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:TYPEART_USE_ALLOCATOR>
-          $<$<BOOL:${TYPEART_MPI_LOGGER}>:TYPEART_MPI_LOGGER=1>
+  PRIVATE $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:TYPEART_USE_ALLOCATOR>
           $<$<BOOL:${TYPEART_SOFTCOUNTERS}>:ENABLE_SOFTCOUNTER>
           $<$<BOOL:${TYPEART_BTREE}>:TYPEART_BTREE>
           $<$<BOOL:${TYPEART_ABSEIL}>:TYPEART_ABSEIL>

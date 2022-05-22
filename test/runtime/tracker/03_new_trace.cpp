@@ -18,60 +18,60 @@ int main(int argc, char** argv) {
 
   // CHECK: [Trace] TypeART Runtime Trace
 
-  // CHECK: [Trace] Alloc 0x{{.*}} int8 1 1
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [1 x char]
+  // CHECK: [Trace] Free heap 0x{{.*}} of type [1 x char]
   new_delete<char>();
 
-  // CHECK: [Trace] Alloc 0x{{.*}} int16 2  1
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [1 x short]
+  // CHECK: [Trace] Free heap 0x{{.*}} of type [1 x short]
   new_delete<short>();
 
-  // CHECK: [Trace] Alloc 0x{{.*}} int32 4 1
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [1 x int]
+  // CHECK: [Trace] Free heap 0x{{.*}} of type [1 x int]
   new_delete<int>();
 
-  // CHECK: [Trace] Alloc 0x{{.*}} int64 8 1
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [1 x long int]
+  // CHECK: [Trace] Free heap 0x{{.*}} of type [1 x long int]
   new_delete<long>();
 
-  // CHECK: [Trace] Alloc 0x{{.*}} float 4 1
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [1 x float]
+  // CHECK: [Trace] Free heap 0x{{.*}} of type [1 x float]
   new_delete<float>();
 
-  // CHECK: [Trace] Alloc 0x{{.*}} double 8 1
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [1 x double]
+  // CHECK: [Trace] Free heap 0x{{.*}} of type [1 x double]
   new_delete<double>();
 
-  // CHECK: [Trace] Alloc 0x{{.*}} pointer 8 1
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [1 x int*]
+  // CHECK: [Trace] Free heap 0x{{.*}} of type [1 x int*]
   new_delete<int*>();
 
-  // CHECK: [Trace] Alloc 0x{{.*}} int8 1 42
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [42 x char]
+  // CHECK: [Trace] Free heap 0x{{.*}} of type [42 x char]
   new_delete<char>(n);
 
-  // CHECK: [Trace] Alloc 0x{{.*}} int16 2 42
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [42 x short]
+  // CHECK: [Trace] Free heap 0x{{.*}} of type [42 x short]
   new_delete<short>(n);
 
-  // CHECK: [Trace] Alloc 0x{{.*}} int32 4 42
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [42 x int]
+  // CHECK: [Trace] Free heap 0x{{.*}} of type [42 x int]
   new_delete<int>(n);
 
-  // CHECK: [Trace] Alloc 0x{{.*}} int64 8 42
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [42 x long int]
+  // CHECK: [Trace] Free heap 0x{{.*}} of type [42 x long int]
   new_delete<long>(n);
 
-  // CHECK: [Trace] Alloc 0x{{.*}} float 4 42
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [42 x float]
+  // CHECK: [Trace] Free heap 0x{{.*}} of type [42 x float]
   new_delete<float>(n);
 
-  // CHECK: [Trace] Alloc 0x{{.*}} double 8 42
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [42 x double]
+  // CHECK: [Trace] Free heap 0x{{.*}} of type [42 x double]
   new_delete<double>(n);
 
-  // CHECK: [Trace] Alloc 0x{{.*}} pointer 8 42
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [42 x int*]
+  // CHECK: [Trace] Free heap 0x{{.*}} of type [42 x int*]
   new_delete<int*>(n);
 
   return 0;

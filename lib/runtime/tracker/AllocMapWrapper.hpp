@@ -64,7 +64,7 @@ struct MapOp {
   template <typename PointerMap>
   [[nodiscard]] inline static bool put(PointerMap&& xlocked_map, const void* addr, const RuntimeT::MappedType& data) {
     auto& def             = (*xlocked_map)[addr];
-    const bool overridden = (def.type_id != type_id_t::invalid);
+    const bool overridden = (def.getBaseAddr() != nullptr);
     def                   = data;
     return overridden;
   }

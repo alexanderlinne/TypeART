@@ -89,7 +89,7 @@ size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
         break;
       }
       default:
-        LOG_ERROR("Unknown malloc kind. Not instrumenting. " << util::dump(*malloc_call));
+        LOG_ERROR("Unknown malloc kind. Not instrumenting. {}", util::dump(*malloc_call));
         continue;
     }
 

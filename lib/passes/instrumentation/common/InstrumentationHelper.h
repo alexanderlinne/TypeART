@@ -28,7 +28,6 @@ namespace typeart::instrumentation::common {
 
 enum class IType {
   ptr,          // Type for passing a pointer to the runtime
-  type_id,      // Type for identifying a type
   extent,       // Type for identifying an array length
   stack_count,  // Type for identifying a count of stack alloca instructions
   alloc_id,
