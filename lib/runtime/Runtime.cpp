@@ -215,10 +215,10 @@ PointerInfo PointerInfo::getCanonicalized() && {
 cpp::result<PointerInfo, Status> PointerInfo::resolveStructureOrArrayType() const {
   if (const auto structure_type = meta::dyn_cast<meta::di::StructureType>(type)) {
     const auto first_member = structure_type->find_member(0);
-    if (auto array_type = meta::dyn_cast<meta::di::ArrayType>(&first_member->get_base_type())) {
-      return PointerInfo{base_addr, *allocation, first_member->get_base_type(), array_type->get_flattened_count()};
+    if (auto array_type = meta::dyn_cast<meta::di::ArrayType>(&first_member->get_type())) {
+      return PointerInfo{base_addr, *allocation, first_member->get_type(), array_type->get_flattened_count()};
     } else {
-      return PointerInfo{base_addr, *allocation, first_member->get_base_type(), 1};
+      return PointerInfo{base_addr, *allocation, first_member->get_type(), 1};
     }
   } else if (const auto array_type = meta::dyn_cast<meta::di::ArrayType>(type)) {
     return PointerInfo{base_addr, *allocation, array_type->get_base_type(), array_type->get_flattened_count()};
@@ -344,7 +344,7 @@ cpp::result<StructMemberInfo, Status> StructMemberInfo::get(pointer base_addr, b
     LOG_TRACE("StructInfoMember::get offset points to padding bytes");
     return cpp::fail(Status::BAD_OFFSET);
   }
-  LOG_TRACE("Found member {} with type {}", (const void*)member, member->get_base_type().get_pretty_name());
+  LOG_TRACE("Found member {} with type {}", (const void*)member, member->get_type().get_pretty_name());
   const auto member_offset = byte_offset::from_bits(member->get_offset_in_bits());
 
   return StructMemberInfo{base_addr + member_offset, member, offset - member_offset};
@@ -354,7 +354,7 @@ std::optional<PointerInfo> StructMemberInfo::intoPointerInfo(const PointerInfo& 
   if (!original.contains(base_addr)) {
     return {};
   }
-  return PointerInfo{base_addr, original.getAllocation(), member->get_base_type(), 1};
+  return PointerInfo{base_addr, original.getAllocation(), member->get_type(), 1};
 }
 
 cpp::result<ArrayElementInfo, Status> ArrayElementInfo::get(pointer base_addr, byte_offset offset,

@@ -93,6 +93,12 @@ std::ostream& operator<<(std::ostream& os, const Kind& kind) {
     case Kind::Enumerator:
       os << "Enumerator";
       break;
+    case Kind::Inheritance:
+      os << "Inheritance";
+      break;
+    case Kind::Member:
+      os << "Member";
+      break;
     case Kind::String:
       os << "String";
       break;
@@ -160,6 +166,10 @@ std::istream& operator>>(std::istream& is, std::optional<Kind>& value) {
     value = Kind::LexicalBlockFile;
   } else if (input == "Enumerator") {
     value = Kind::Enumerator;
+  } else if (input == "Inheritance") {
+    value = Kind::Inheritance;
+  } else if (input == "Member") {
+    value = Kind::Member;
   } else if (input == "String") {
     value = Kind::String;
   } else if (input == "Integer") {
@@ -273,6 +283,12 @@ std::unique_ptr<Meta> make_meta(Kind kind, std::vector<Ref<Meta>> refs) {
     case Kind::Enumerator:
       result = std::make_unique<di::Enumerator>();
       break;
+    case Kind::Inheritance:
+      result = std::make_unique<di::Inheritance>();
+      break;
+    case Kind::Member:
+      result = std::make_unique<di::Member>();
+      break;
     default:
       LOG_FATAL("Missing switch case {}", kind);
       abort();
@@ -308,6 +324,12 @@ Subrange::~Subrange() {
 }
 
 Enumerator::~Enumerator() {
+}
+
+Inheritance::~Inheritance() {
+}
+
+Member::~Member() {
 }
 
 Scope::~Scope() {
@@ -400,11 +422,9 @@ const di::Type& Type::get_canonical_type() const {
       case DerivedKind::Volatile:
         result = &derived_type->get_base_type();
         break;
-      case DerivedKind::Member:
       case DerivedKind::Pointer:
       case DerivedKind::Reference:
       case DerivedKind::RvalueReference:
-      case DerivedKind::Inheritance:
       case DerivedKind::PtrToMemberType:
         return *result;
       default:
@@ -495,13 +515,20 @@ std::string StructureType::get_pretty_name() const {
   return get_name();
 }
 
-const di::DerivedType* StructureType::find_member(size_t offset_in_bits) const {
-  for (const auto& e : get_elements()) {
-    auto derived_type = dyn_cast<meta::di::DerivedType>(e.get());
-    if (derived_type != nullptr && derived_type->get_tag() == DerivedKind::Member &&
-        derived_type->get_offset_in_bits() <= offset_in_bits &&
-        offset_in_bits < derived_type->get_offset_in_bits() + derived_type->get_size_in_bits()) {
-      return derived_type;
+const di::Member* StructureType::find_member(size_t offset_in_bits) const {
+  for (const auto& e : get_members()) {
+    auto member = dyn_cast<meta::di::Member>(e.get());
+    if (member->get_offset_in_bits() <= offset_in_bits &&
+        offset_in_bits < member->get_offset_in_bits() + member->get_type().get_size_in_bits()) {
+      return member;
+    }
+  }
+  for (const auto& e : get_base_classes()) {
+    auto inheritance    = dyn_cast<Inheritance>(e.get());
+    auto canonical_base = dyn_cast<StructureType>(&inheritance->get_base().get_canonical_type());
+    if (auto member = canonical_base->find_member(offset_in_bits - inheritance->get_offset_in_bits());
+        member != nullptr) {
+      return member;
     }
   }
   return nullptr;
@@ -547,9 +574,6 @@ EnumerationType::~EnumerationType() {
 
 std::ostream& operator<<(std::ostream& os, const DerivedKind& kind) {
   switch (kind) {
-    case DerivedKind::Member:
-      os << "Member";
-      break;
     case DerivedKind::Typedef:
       os << "Typedef";
       break;
@@ -564,9 +588,6 @@ std::ostream& operator<<(std::ostream& os, const DerivedKind& kind) {
       break;
     case DerivedKind::Const:
       os << "Const";
-      break;
-    case DerivedKind::Inheritance:
-      os << "Inheritance";
       break;
     case DerivedKind::Restrict:
       os << "Restrict";
@@ -587,9 +608,7 @@ std::ostream& operator<<(std::ostream& os, const DerivedKind& kind) {
 std::istream& operator>>(std::istream& is, std::optional<DerivedKind>& value) {
   std::string input;
   is >> input;
-  if (input == "Member") {
-    value = DerivedKind::Member;
-  } else if (input == "Typedef") {
+  if (input == "Typedef") {
     value = DerivedKind::Typedef;
   } else if (input == "Pointer") {
     value = DerivedKind::Pointer;
@@ -599,8 +618,6 @@ std::istream& operator>>(std::istream& is, std::optional<DerivedKind>& value) {
     value = DerivedKind::RvalueReference;
   } else if (input == "Const") {
     value = DerivedKind::Const;
-  } else if (input == "Inheritance") {
-    value = DerivedKind::Inheritance;
   } else if (input == "Restrict") {
     value = DerivedKind::Restrict;
   } else if (input == "Volatile") {
@@ -626,7 +643,7 @@ std::string DerivedType::get_pretty_name() const {
         LOG_WARNING("Derived type with tag {} cannot be formatted!", get_tag());
         return "";
     }
-  }  // TODO handle pointer types etc. separately
+  }
 }
 
 DerivedType::~DerivedType() {

@@ -260,6 +260,59 @@ di::Encoding fromLLVMEncoding(unsigned int encoding) {
     }
     result->set_elements_raw(convertTuple(std::move(refs)));
   };
+  if (di_type.getTag() == llvm::dwarf::DW_TAG_class_type || di_type.getTag() == llvm::dwarf::DW_TAG_structure_type) {
+    return convertStructureOrClassType(di_type);
+  } else if (di_type.getTag() == llvm::dwarf::DW_TAG_union_type) {
+    return make_meta<di::UnionType>(di_type, build_result);
+  } else if (di_type.getTag() == llvm::dwarf::DW_TAG_enumeration_type) {
+    return make_meta<di::EnumerationType>(di_type, build_result);
+  } else if (di_type.getTag() == llvm::dwarf::DW_TAG_array_type) {
+    return convertArrayType(di_type);
+  } else {
+    LOG_FATAL("Unknown dwarf tag {}", di_type.getTag());
+    abort();
+  }
+}
+
+[[nodiscard]] Ref<di::StructureType> LLVMMetadataConverter::convertStructureOrClassType(
+    const llvm::DICompositeType& di_type) {
+  return make_meta<di::StructureType>(di_type, [this, &di_type](auto& result) {
+    result->set_name_raw(convertString(di_type.getName()));
+    result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
+    result->set_identifier_raw(convertString(di_type.getIdentifier()));
+    result->set_file_raw(convertDIFile(di_type.getFile()));
+    result->set_scope_raw(convertDIScope(di_type.getScope()));
+    result->set_line_raw(convertInteger(di_type.getLine()));
+    auto inheritance_refs = std::vector<Ref<Meta>>{};
+    auto method_refs      = std::vector<Ref<Meta>>{};
+    auto member_refs      = std::vector<Ref<Meta>>{};
+    if (di_type.getRawElements() != nullptr) {
+      for (const auto di_elem : di_type.getElements()) {
+        if (const auto derived_type = llvm::dyn_cast<llvm::DIDerivedType>(di_elem)) {
+          if (derived_type->getTag() == llvm::dwarf::DW_TAG_member) {
+            member_refs.emplace_back(convertDIDerivedTypeMember(*derived_type));
+          } else if (derived_type->getTag() == llvm::dwarf::DW_TAG_inheritance) {
+            inheritance_refs.emplace_back(convertDIDerivedTypeInheritance(*derived_type));
+          } else {
+            LOG_FATAL("Unexpected derived type tag {} in structure or class type", derived_type->getTag());
+            abort();
+          }
+        } else if (const auto subprogram = llvm::dyn_cast<llvm::DISubprogram>(di_elem)) {
+          method_refs.emplace_back(convertDISubprogram(*subprogram));
+        } else {
+          LOG_FATAL("Unexpected llvm meta subclass of kind {} as element of structure or type",
+                    di_elem->getMetadataID());
+          abort();
+        }
+      }
+    }
+    result->set_base_classes_raw(convertTuple(std::move(inheritance_refs)));
+    result->set_methods_raw(convertTuple(std::move(method_refs)));
+    result->set_members_raw(convertTuple(std::move(member_refs)));
+  });
+}
+
+[[nodiscard]] Ref<di::ArrayType> LLVMMetadataConverter::convertArrayType(const llvm::DICompositeType& di_type) {
   auto subrange_to_int = [](const llvm::DISubrange* di_subrange) {
     const auto& count = di_subrange->getCount();
     if (count.is<llvm::ConstantInt*>()) {
@@ -269,48 +322,33 @@ di::Encoding fromLLVMEncoding(unsigned int encoding) {
       abort();
     }
   };
-  if (di_type.getTag() == llvm::dwarf::DW_TAG_class_type || di_type.getTag() == llvm::dwarf::DW_TAG_structure_type) {
-    return make_meta<di::StructureType>(di_type, build_result);
-  } else if (di_type.getTag() == llvm::dwarf::DW_TAG_union_type) {
-    return make_meta<di::UnionType>(di_type, build_result);
-  } else if (di_type.getTag() == llvm::dwarf::DW_TAG_enumeration_type) {
-    return make_meta<di::EnumerationType>(di_type, build_result);
-  } else if (di_type.getTag() == llvm::dwarf::DW_TAG_array_type) {
-    return make_meta<di::ArrayType>(di_type, [this, &di_type, &subrange_to_int](auto& result) {
-      result->set_base_type_raw(convertDIType(di_type.getBaseType()));
-      result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
-      auto refs = std::vector<Ref<Meta>>{};
-      if (di_type.getRawElements() != nullptr) {
-        const auto& di_elements = di_type.getElements();
-        refs.reserve(di_elements.size());
-        for (const auto& di_elem : di_elements) {
-          auto di_subrange = llvm::dyn_cast<llvm::DISubrange>(di_elem);
-          assert(di_subrange != nullptr);
-          refs.emplace_back(convertInteger(subrange_to_int(di_subrange)));
-        }
+  return make_meta<di::ArrayType>(di_type, [this, &di_type, &subrange_to_int](auto& result) {
+    result->set_base_type_raw(convertDIType(di_type.getBaseType()));
+    result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
+    auto refs = std::vector<Ref<Meta>>{};
+    if (di_type.getRawElements() != nullptr) {
+      const auto& di_elements = di_type.getElements();
+      refs.reserve(di_elements.size());
+      for (const auto& di_elem : di_elements) {
+        auto di_subrange = llvm::dyn_cast<llvm::DISubrange>(di_elem);
+        assert(di_subrange != nullptr);
+        refs.emplace_back(convertInteger(subrange_to_int(di_subrange)));
       }
-      result->set_counts_raw(convertTuple(std::move(refs)));
-    });
-  } else {
-    LOG_FATAL("Unknown dwarf tag {}", di_type.getTag());
-    abort();
-  }
+    }
+    result->set_counts_raw(convertTuple(std::move(refs)));
+  });
 }
 
 di::DerivedKind fromLLVMDerivedTypeTag(unsigned int tag) {
   switch (tag) {
     case llvm::dwarf::DW_TAG_pointer_type:
       return di::DerivedKind::Pointer;
-    case llvm::dwarf::DW_TAG_member:
-      return di::DerivedKind::Member;
     case llvm::dwarf::DW_TAG_reference_type:
       return di::DerivedKind::Reference;
     case llvm::dwarf::DW_TAG_typedef:
       return di::DerivedKind::Typedef;
     case llvm::dwarf::DW_TAG_const_type:
       return di::DerivedKind::Const;
-    case llvm::dwarf::DW_TAG_inheritance:
-      return di::DerivedKind::Inheritance;
     case llvm::dwarf::DW_TAG_restrict_type:
       return di::DerivedKind::Restrict;
     case llvm::dwarf::DW_TAG_rvalue_reference_type:
@@ -325,17 +363,66 @@ di::DerivedKind fromLLVMDerivedTypeTag(unsigned int tag) {
   }
 }
 
-[[nodiscard]] Ref<di::DerivedType> LLVMMetadataConverter::convertDIDerivedType(const llvm::DIDerivedType& di_type) {
-  return make_meta<di::DerivedType>(di_type, [this, &di_type](auto& result) {
-    result->set_name_raw(convertString(di_type.getName()));
-    result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
-    result->set_tag_raw(convertInteger((int)fromLLVMDerivedTypeTag(di_type.getTag())));
-    result->set_file_raw(convertDIFile(di_type.getFile()));
-    result->set_scope_raw(convertDIScope(di_type.getScope()));
-    result->set_line_raw(convertInteger(di_type.getLine()));
-    result->set_base_type_raw(convertDIType(di_type.getBaseType()));
-    result->set_offset_in_bits_raw(convertInteger(di_type.getOffsetInBits()));
-  });
+[[nodiscard]] Ref<di::Type> LLVMMetadataConverter::convertDIDerivedType(const llvm::DIDerivedType& di_type) {
+  if (di_type.getTag() == llvm::dwarf::DW_TAG_member) {
+    LOG_FATAL("LLVMMetadataConverter::convertDIDerivedTypeMember should be used for members");
+    abort();
+  } else if (di_type.getTag() == llvm::dwarf::DW_TAG_inheritance) {
+    LOG_FATAL("LLVMMetadataConverter::convertDIDerivedTypeInheritance should be used for inheritance");
+    abort();
+  } else {
+    return make_meta<di::DerivedType>(di_type, [this, &di_type](auto& result) {
+      result->set_name_raw(convertString(di_type.getName()));
+      result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
+      result->set_tag_raw(convertInteger((int)fromLLVMDerivedTypeTag(di_type.getTag())));
+      result->set_file_raw(convertDIFile(di_type.getFile()));
+      result->set_scope_raw(convertDIScope(di_type.getScope()));
+      result->set_line_raw(convertInteger(di_type.getLine()));
+      result->set_base_type_raw(convertDIType(di_type.getBaseType()));
+      result->set_offset_in_bits_raw(convertInteger(di_type.getOffsetInBits()));
+    });
+  }
+}
+
+[[nodiscard]] Ref<di::Inheritance> LLVMMetadataConverter::convertDIDerivedTypeInheritance(
+    const llvm::DIDerivedType& di_type) {
+  if (di_type.getTag() == llvm::dwarf::DW_TAG_inheritance) {
+    return make_meta<di::Inheritance>(di_type, [this, &di_type](auto& result) {
+      result->set_scope_raw(convertDIScope(di_type.getScope()));
+      auto base = convertDIType(di_type.getBaseType());
+      if (base->get_canonical_type().get_kind() != Kind::StructureType) {
+        LOG_FATAL("Expected the canonical base of an inheritance to be a structure type, but it has kind {}",
+                  base->get_canonical_type().get_kind());
+        abort();
+      }
+      result->set_base_raw(base);
+      result->set_offset_in_bits_raw(convertInteger(di_type.getOffsetInBits()));
+    });
+  } else {
+    LOG_FATAL(
+        "Called LLVMMetadataConverter::convertDIDerivedTypeInheritance called with llvm::DIDerivedType which is not an "
+        "inheritance");
+    abort();
+  }
+}
+
+[[nodiscard]] Ref<di::Member> LLVMMetadataConverter::convertDIDerivedTypeMember(const llvm::DIDerivedType& di_type) {
+  if (di_type.getTag() == llvm::dwarf::DW_TAG_member) {
+    return make_meta<di::Member>(di_type, [this, &di_type](auto& result) {
+      result->set_name_raw(convertString(di_type.getName()));
+      result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
+      result->set_file_raw(convertDIFile(di_type.getFile()));
+      result->set_scope_raw(convertDIScope(di_type.getScope()));
+      result->set_line_raw(convertInteger(di_type.getLine()));
+      result->set_type_raw(convertDIType(di_type.getBaseType()));
+      result->set_offset_in_bits_raw(convertInteger(di_type.getOffsetInBits()));
+    });
+  } else {
+    LOG_FATAL(
+        "Called LLVMMetadataConverter::convertDIDerivedTypeMember called with llvm::DIDerivedType which is not a "
+        "member");
+    abort();
+  }
 }
 
 [[nodiscard]] Ref<di::SubroutineType> LLVMMetadataConverter::convertDISubroutineType(

@@ -255,7 +255,7 @@ struct StructMemberInfo final {
   pointer base_addr;
 
   // Debug info of the member.
-  const meta::di::DerivedType* member;
+  const meta::di::Member* member;
 
   // The offset of the pointer within the member of the struct.
   byte_offset offset;

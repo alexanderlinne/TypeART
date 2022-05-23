@@ -64,7 +64,11 @@ class LLVMMetadataConverter {
   [[nodiscard]] Ref<di::Type> convertDIType(const llvm::DIType* di_type);
   [[nodiscard]] Ref<di::BasicType> convertDIBasicType(const llvm::DIBasicType& di_type);
   [[nodiscard]] Ref<di::Type> convertDICompositeType(const llvm::DICompositeType& di_type);
-  [[nodiscard]] Ref<di::DerivedType> convertDIDerivedType(const llvm::DIDerivedType& di_type);
+  [[nodiscard]] Ref<di::StructureType> convertStructureOrClassType(const llvm::DICompositeType& di_type);
+  [[nodiscard]] Ref<di::ArrayType> convertArrayType(const llvm::DICompositeType& di_type);
+  [[nodiscard]] Ref<di::Type> convertDIDerivedType(const llvm::DIDerivedType& di_type);
+  [[nodiscard]] Ref<di::Inheritance> convertDIDerivedTypeInheritance(const llvm::DIDerivedType& di_type);
+  [[nodiscard]] Ref<di::Member> convertDIDerivedTypeMember(const llvm::DIDerivedType& di_type);
   [[nodiscard]] Ref<di::SubroutineType> convertDISubroutineType(const llvm::DISubroutineType& di_type);
   [[nodiscard]] Ref<di::LexicalBlock> convertDILexicalBlock(const llvm::DILexicalBlock& di_block);
   [[nodiscard]] Ref<di::LexicalBlockFile> convertDILexicalBlockFile(const llvm::DILexicalBlockFile& di_block);
