@@ -92,43 +92,43 @@ struct InsufficientBufferSize {
 };
 
 struct BuiltinTypeMismatch {
-  int buffer_type_id;
+  runtime::PointerInfo pointer_info;
   MPI_Datatype mpi_type;
 };
 
 struct BufferNotOfStructType {
-  int buffer_type_id;
+  runtime::PointerInfo pointer_info;
 };
 
 struct MemberCountMismatch {
-  int buffer_type_id;
-  size_t buffer_count;
-  int mpi_count;
+  runtime::PointerInfo pointer_info;
+  size_t struct_member_count;
+  int mpi_member_count;
 };
 
 struct MemberOffsetMismatch {
-  type_id_t::value_type type_id;
-  size_t member;
-  ptrdiff_t struct_offset;
-  MPI_Aint mpi_offset;
+  runtime::PointerInfo pointer_info;
+  const meta::di::Member* member;
+  runtime::byte_offset struct_offset;
+  runtime::byte_offset mpi_offset;
 };
 
 struct MemberTypeMismatch {
-  size_t member;
+  runtime::PointerInfo pointer_info;
+  const meta::di::Member* member;
   std::unique_ptr<TypeError> error;
 };
 
 struct MemberElementCountMismatch {
-  type_id_t::value_type type_id;
-  size_t member;
-  size_t count;
+  runtime::PointerInfo pointer_info;
+  const meta::di::Member* member;
+  size_t buffer_count;
   size_t mpi_count;
 };
 
 struct StructSubtypeMismatch {
-  int struct_type_id;
-  int subtype_id;
-  size_t subtype_count;
+  runtime::PointerInfo pointer_info;
+  runtime::PointerInfo subtype_info;
   std::unique_ptr<TypeError> error;
 };
 

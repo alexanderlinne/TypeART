@@ -87,13 +87,14 @@ void check_buffer(const char* name, const void* called_from, bool is_send, const
     return;
   }
 
-  auto buffer = Buffer::create(ptr);
-
-  if (buffer.has_error()) {
+  auto pointer_info_result = runtime::PointerInfo::get(ptr);
+  if (pointer_info_result.has_error()) {
     ++mpi_counter.error;
-    logger.log(name, called_from, is_send, ptr, *std::move(buffer).error());
+    logger.log(name, called_from, is_send, ptr,
+               {InternalError{TypeARTError{error_message_for(pointer_info_result.error())}}});
     return;
   }
+  const auto pointer_info = std::move(pointer_info_result).value();
 
   auto mpi_type = MPIType::create(type);
 
@@ -103,7 +104,7 @@ void check_buffer(const char* name, const void* called_from, bool is_send, const
     return;
   }
 
-  auto result = check_buffer(*buffer, *mpi_type, count);
+  auto result = check_buffer(pointer_info, *mpi_type, count);
 
   if (result.has_error()) {
     if (result.error()->is<InternalError>()) {
@@ -113,7 +114,7 @@ void check_buffer(const char* name, const void* called_from, bool is_send, const
     }
   }
 
-  logger.log(name, called_from, is_send, *buffer, *mpi_type, count, result);
+  logger.log(name, called_from, is_send, pointer_info, *mpi_type, count, result);
 }
 
 }  // namespace typeart

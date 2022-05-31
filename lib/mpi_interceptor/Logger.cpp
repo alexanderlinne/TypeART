@@ -24,72 +24,12 @@
 #include <spdlog/pattern_formatter.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
-
-class LogLevelFlag : public spdlog::custom_flag_formatter {
- public:
-  void format(const spdlog::details::log_msg& msg, const std::tm&, spdlog::memory_buf_t& dest) override {
-    std::string level;
-
-    switch (msg.level) {
-      case spdlog::level::trace:
-        level = "Trace";
-        break;
-      case spdlog::level::debug:
-        level = "Debug";
-        break;
-      case spdlog::level::info:
-        level = "Info";
-        break;
-      case spdlog::level::warn:
-        level = "Warning";
-        break;
-      case spdlog::level::err:
-        level = "Error";
-        break;
-      case spdlog::level::critical:
-        level = "Critical";
-        break;
-      default:
-        level = "Unknown";
-        break;
-    }
-    dest.append(level.data(), level.data() + level.size());
-  }
-
-  std::unique_ptr<custom_flag_formatter> clone() const override {
-    return spdlog::details::make_unique<LogLevelFlag>();
-  }
-};
-
-class MPIRankFlag : public spdlog::custom_flag_formatter {
-  std::string rank = "-";
-
- public:
-  void format(const spdlog::details::log_msg&, const std::tm&, spdlog::memory_buf_t& dest) override {
-    int initialized;
-    MPI_Initialized(&initialized);
-
-    if (initialized != 0) {
-      int mpi_rank;
-      MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-      rank = std::to_string(mpi_rank);
-    }
-
-    dest.append(rank.data(), rank.data() + rank.size());
-  }
-
-  std::unique_ptr<custom_flag_formatter> clone() const override {
-    return spdlog::details::make_unique<MPIRankFlag>();
-  }
-};
+#include <typeart/support/Logger.hpp>
 
 namespace typeart {
 
 Logger::Logger() {
-  logger         = spdlog::stderr_logger_mt("typeart_mpi_interceptor_logger");
-  auto formatter = std::make_unique<spdlog::pattern_formatter>();
-  formatter->add_flag<MPIRankFlag>('M').add_flag<LogLevelFlag>('L').set_pattern("R[%M][%L]T[%t] %v");
-  logger->set_formatter(std::move(formatter));
+  logger = typeart::logger;
 }
 
 Logger::~Logger(){};
@@ -124,42 +64,46 @@ struct TypeErrorVisitor {
     return fmt::format("buffer too small ({} elements, {} required)", err.actual, err.required);
   }
   std::string operator()(const BuiltinTypeMismatch& err) {
-    auto type_name     = typeart_get_type_name(err.buffer_type_id);
+    auto type_name     = err.pointer_info.getType().get_pretty_name();
     auto mpi_type_name = name_for(err.mpi_type);
     return fmt::format(R"(expected a type matching MPI type "{}", but found type "{}")", mpi_type_name, type_name);
   }
   std::string operator()(const BufferNotOfStructType& err) {
-    auto type_name = typeart_get_type_name(err.buffer_type_id);
+    auto type_name = err.pointer_info.getType().get_pretty_name();
     return fmt::format("expected a struct type, but found type \"{}\"", type_name);
   }
   std::string operator()(const MemberCountMismatch& err) {
-    auto type_name = typeart_get_type_name(err.buffer_type_id);
-    return fmt::format("expected {} members, but the type \"{}\" has {} members", err.mpi_count, type_name,
-                       err.buffer_count);
+    auto type_name = err.pointer_info.getType().get_pretty_name();
+    return fmt::format("expected {} members, but the type \"{}\" has {} members", err.mpi_member_count, type_name,
+                       err.struct_member_count);
   }
   std::string operator()(const MemberOffsetMismatch& err) {
-    auto type_name = typeart_get_type_name(err.type_id);
-    return fmt::format("expected a byte offset of {} for member {}, but the type \"{}\" has an offset of {}",
-                       err.mpi_offset, err.member, type_name, err.struct_offset);
+    auto type_name = err.pointer_info.getType().get_pretty_name();
+    return fmt::format("expected a byte offset of {} for member \"{}\", but the type \"{}\" has an offset of {}",
+                       err.mpi_offset, err.member->get_pretty_name(), type_name, err.struct_offset);
   }
   std::string operator()(const MemberTypeMismatch& err) {
-    return fmt::format("the typecheck for member {} failed ({})", err.member, (*err.error).visit(*this));
+    return fmt::format("the typecheck for member \"{}\" failed ({})", err.member->get_pretty_name(),
+                       (*err.error).visit(*this));
   }
   std::string operator()(const MemberElementCountMismatch& err) {
-    auto type_name = typeart_get_type_name(err.type_id);
-    return fmt::format("expected element count of {} for member {}, but the type \"{}\" has a count of {}",
-                       err.mpi_count, err.member, type_name, err.count);
+    auto member_name      = err.member->get_pretty_name();
+    auto member_type_name = err.member->get_type().get_pretty_name();
+    return fmt::format("expected member \"{}\" to have {} element{}, but the type \"{}\" of \"{}\" has {} element{}",
+                       member_name, err.mpi_count, err.mpi_count != 1 ? "s" : "", member_type_name, member_name,
+                       err.buffer_count, err.buffer_count != 1 ? "s" : "");
   }
   std::string operator()(const StructSubtypeErrors& err) {
     std::vector<std::string> subtype_errors;
     std::transform(err.subtype_errors.begin(), err.subtype_errors.end(), std::back_inserter(subtype_errors),
                    [this](auto&& suberr) {
-                     auto struct_type_name = typeart_get_type_name(suberr.struct_type_id);
-                     auto type_name        = typeart_get_type_name(suberr.subtype_id);
+                     auto struct_type_name = suberr.pointer_info.getType().get_pretty_name();
+                     auto type_name        = suberr.subtype_info.getType().get_pretty_name();
                      return fmt::format("Tried the first member [{} x {}] of struct type \"{}\" with error: {}",
-                                        suberr.subtype_count, type_name, struct_type_name, suberr.error->visit(*this));
+                                        suberr.subtype_info.getCount(), type_name, struct_type_name,
+                                        suberr.error->visit(*this));
                    });
-    return fmt::format("{}. {} ]", err.primary_error->visit(*this), fmt::join(subtype_errors, ". "));
+    return fmt::format("{}. {}", err.primary_error->visit(*this), fmt::join(subtype_errors, ". "));
   }
 };
 
@@ -191,7 +135,7 @@ std::string format_source_location(spdlog::level::level_enum level, const void* 
 
 void Logger::log(const void* called_from, const std::string& prefix, const Error& error) {
   auto source_location = error.stacktrace.has_value() ? "" : format_source_location(spdlog::level::err, called_from);
-  logger->error("{}{}{}", source_location, prefix, error.visit(ErrorVisitor{}));
+  SPDLOG_LOGGER_ERROR(logger, "{}{}{}", source_location, prefix, error.visit(ErrorVisitor{}));
 
   if (error.stacktrace.has_value()) {
     for (const auto& entry : error.stacktrace.value()) {
@@ -200,22 +144,22 @@ void Logger::log(const void* called_from, const std::string& prefix, const Error
   }
 }
 
-void Logger::log(const char* name, const void* called_from, bool is_send, const Buffer& buffer, const MPIType& type,
-                 int count, const Result<void>& result) {
+void Logger::log(const char* name, const void* called_from, bool is_send, const runtime::PointerInfo& pointer_info,
+                 const MPIType& type, int count, const Result<void>& result) {
   if (result.has_value()) {
     SPDLOG_LOGGER_INFO(logger,
                        "{}{}: successfully checked {}-buffer {} of type [{} x {}] against {} {} of MPI type \"{}\"",
                        format_source_location(spdlog::level::info, called_from), name, is_send ? "send" : "recv",
-                       buffer.ptr, buffer.count, typeart_get_type_name(buffer.type_id), count,
-                       count == 1 ? "element" : "elements", name_for(type.mpi_type));
+                       pointer_info.getBaseAddr(), pointer_info.getCount(), pointer_info.getType().get_pretty_name(),
+                       count, count == 1 ? "element" : "elements", name_for(type.mpi_type));
   } else {
     auto error                 = result.error();
     auto internal_error_prefix = error->is<TypeError>() ? "type error " : "internal error ";
     log(called_from,
         fmt::format("{}: {}while checking {}-buffer {} of type [{} x {}] against {} {} of MPI type \"{}\": ", name,
-                    internal_error_prefix, is_send ? "send" : "recv", buffer.ptr, buffer.count,
-                    typeart_get_type_name(buffer.type_id), count, count == 1 ? "element" : "elements",
-                    name_for(type.mpi_type)),
+                    internal_error_prefix, is_send ? "send" : "recv", pointer_info.getBaseAddr(),
+                    pointer_info.getCount(), pointer_info.getType().get_pretty_name(), count,
+                    count == 1 ? "element" : "elements", name_for(type.mpi_type)),
         *error);
   }
 }
@@ -250,7 +194,7 @@ void Logger::log_null_buffer(const char* function_name, const void* called_from,
 }
 
 void Logger::log_unsupported(const char* name) {
-  logger->error("The MPI function {} is currently not checked by TypeArt", name);
+  SPDLOG_LOGGER_ERROR(logger, "The MPI function {} is currently not checked by TypeArt", name);
 }
 
 }  // namespace typeart

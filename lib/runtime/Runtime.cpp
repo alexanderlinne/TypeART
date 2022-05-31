@@ -61,9 +61,9 @@ std::ostream& operator<<(std::ostream& os, const Status& status) {
     case Status::UNSUPPORTED_TYPE:
       os << "UNSUPPORTED_TYPE";
       break;
-    case Status::ERROR:
-      os << "ERROR";
-      break;
+    default:
+      LOG_FATAL("Unknown status {}\n", (int)status);
+      abort();
   }
   return os;
 }
@@ -176,7 +176,6 @@ PointerInfo::PointerInfo(pointer base_addr, const meta::Allocation& allocation, 
 }
 
 cpp::result<PointerInfo, Status> PointerInfo::get(pointer addr) {
-  LOG_TRACE("PointerInfo::get with address {}", addr);
   auto guard = ScopeGuard{};
   getRecorder().incUsedInRequest(addr);
 #ifdef TYPEART_USE_ALLOCATOR
@@ -185,12 +184,10 @@ cpp::result<PointerInfo, Status> PointerInfo::get(pointer addr) {
   auto pointer_info_opt = tracker::Tracker::get().getPointerInfo(addr);
 #endif
   if (!pointer_info_opt.has_value()) {
-    LOG_TRACE("Address {} is unknown", addr);
     getRecorder().incAddrMissing(addr);
     return cpp::fail(Status::UNKNOWN_ADDRESS);
   }
   const auto pointer_info = std::move(pointer_info_opt).value();
-  LOG_TRACE("Found pointer info {}", pointer_info);
   if (addr == pointer_info.base_addr) {
     return pointer_info;
   }
@@ -202,29 +199,52 @@ bool PointerInfo::contains(pointer p) const {
 }
 
 // Returns this pointer info with it's type canonicalized.
-PointerInfo PointerInfo::getCanonicalized() const& {
-  return PointerInfo{base_addr, *allocation, type->get_canonical_type(), count};
+PointerInfo PointerInfo::stripTypedefsAndQualifiers() const& {
+  return PointerInfo{base_addr, *allocation, type->strip_typedefs_and_qualifiers(), count};
 }
 
 // Returns this pointer info with it's type canonicalized.
-PointerInfo PointerInfo::getCanonicalized() && {
-  type = &type->get_canonical_type();
+PointerInfo PointerInfo::stripTypedefsAndQualifiers() && {
+  type = &type->strip_typedefs_and_qualifiers();
   return std::move(*this);
 }
 
 cpp::result<PointerInfo, Status> PointerInfo::resolveStructureOrArrayType() const {
   if (const auto structure_type = meta::dyn_cast<meta::di::StructureType>(type)) {
-    const auto first_member = structure_type->find_member(0);
-    if (auto array_type = meta::dyn_cast<meta::di::ArrayType>(&first_member->get_type())) {
-      return PointerInfo{base_addr, *allocation, first_member->get_type(), array_type->get_flattened_count()};
-    } else {
+    if (const auto first_member = structure_type->find_member(0); first_member != nullptr) {
       return PointerInfo{base_addr, *allocation, first_member->get_type(), 1};
+    } else {
+      return cpp::fail(Status::BAD_OFFSET);
     }
   } else if (const auto array_type = meta::dyn_cast<meta::di::ArrayType>(type)) {
     return PointerInfo{base_addr, *allocation, array_type->get_base_type(), array_type->get_flattened_count()};
   } else {
     return cpp::fail(Status::WRONG_KIND);
   }
+}
+
+PointerInfo PointerInfo::resolveAllArrayTypes() const {
+  auto result          = stripTypedefsAndQualifiers();
+  auto resolved_result = result.resolveStructureOrArrayType();
+  while (result.getType().get_kind() == meta::Kind::ArrayType && resolved_result.has_value()) {
+    result          = std::move(resolved_result).value().stripTypedefsAndQualifiers();
+    resolved_result = result.resolveStructureOrArrayType();
+  }
+  return result;
+}
+
+PointerInfo PointerInfo::resolveToInnermostType() const {
+  auto result          = *this;
+  auto resolved_result = result.resolveStructureOrArrayType();
+  while (resolved_result.has_value()) {
+    result          = std::move(resolved_result).value().stripTypedefsAndQualifiers();
+    resolved_result = result.resolveStructureOrArrayType();
+  }
+  return result;
+}
+
+cpp::result<PointerInfo, Status> PointerInfo::findMember(byte_offset offset) const {
+  return StructMemberInfo::get(*this, offset).map([this](auto& value) { return value.intoPointerInfo(*this).value(); });
 }
 
 cpp::result<PointerInfo::Subrange, Status> PointerInfo::getSubrange(pointer addr) const {
@@ -234,6 +254,7 @@ cpp::result<PointerInfo::Subrange, Status> PointerInfo::getSubrange(pointer addr
   }
 
   // Ensure that the given address is in bounds
+  fmt::print(stderr, "{} {}\n", type->get_pretty_name(), type->get_size_in_bits());
   const auto type_size = byte_size::from_bits(type->get_size_in_bits());
   if (!contains(addr)) {
     const auto offset2base = addr - base_addr;
@@ -257,26 +278,21 @@ cpp::result<PointerInfo::Subrange, Status> PointerInfo::getSubrange(pointer addr
 }
 
 cpp::result<PointerInfo, Status> PointerInfo::resolveSubtype(pointer addr) const {
-  LOG_TRACE("Resolving subtype of kind {} on pointer info {}", type->get_kind(), *this);
   auto subrange_result = getSubrange(addr);
   if (subrange_result.has_error()) {
-    LOG_TRACE("Subrange construction failed with error {}", subrange_result.error());
     return cpp::fail(subrange_result.error());
   }
   const auto subrange = std::move(subrange_result).value();
   if (subrange.offset == byte_offset::zero) {
     return PointerInfo{subrange.base_addr, *allocation, *type, subrange.count};
   }
-  const auto& canonical_type = type->get_canonical_type();
+  const auto& canonical_type = type->strip_typedefs_and_qualifiers();
   assert(type != nullptr);
   return meta::di::visit_type(
       canonical_type,
       make_lambda_visitor<cpp::result<PointerInfo, Status>>(
           [](const meta::di::VoidType&) { return cpp::fail(Status::UNSUPPORTED_TYPE); },
-          [](const meta::di::BasicType&) {
-            LOG_TRACE("BasicType not properly aligned!");
-            return cpp::fail(Status::BAD_ALIGNMENT);
-          },
+          [](const meta::di::BasicType&) { return cpp::fail(Status::BAD_ALIGNMENT); },
           [](const meta::di::DerivedType&) { return cpp::fail(Status::BAD_ALIGNMENT); },
           [](const meta::di::EnumerationType&) { return cpp::fail(Status::BAD_ALIGNMENT); },
           [&](const meta::di::StructureType& structure_type) -> cpp::result<PointerInfo, Status> {
@@ -332,22 +348,26 @@ std::ostream& operator<<(std::ostream& os, const PointerInfo::Subrange& subrange
 
 cpp::result<StructMemberInfo, Status> StructMemberInfo::get(pointer base_addr, byte_offset offset,
                                                             const meta::di::StructureType& type) {
-  LOG_TRACE("StructInfoMember::get for type {} with offset {}", type.get_pretty_name(), offset);
   if (offset >= byte_offset::from_bits(type.get_size_in_bits())) {
-    LOG_TRACE("StructInfoMember::get offset larger than size of the struct");
     return cpp::fail(Status::OFFSET_OUT_OF_RANGE);
   }
 
   // Get index of the struct member at the address
   const auto member = type.find_member(offset.as_bits());
   if (member == nullptr) {
-    LOG_TRACE("StructInfoMember::get offset points to padding bytes");
     return cpp::fail(Status::BAD_OFFSET);
   }
-  LOG_TRACE("Found member {} with type {}", (const void*)member, member->get_type().get_pretty_name());
   const auto member_offset = byte_offset::from_bits(member->get_offset_in_bits());
 
   return StructMemberInfo{base_addr + member_offset, member, offset - member_offset};
+}
+
+cpp::result<StructMemberInfo, Status> StructMemberInfo::get(const PointerInfo& pointer_info, byte_offset offset) {
+  auto structure_type = meta::dyn_cast<meta::di::StructureType>(&pointer_info.getType());
+  if (structure_type == nullptr) {
+    return cpp::fail(Status::WRONG_KIND);
+  }
+  return get(pointer_info.getBaseAddr(), offset, *structure_type);
 }
 
 std::optional<PointerInfo> StructMemberInfo::intoPointerInfo(const PointerInfo& original) const {

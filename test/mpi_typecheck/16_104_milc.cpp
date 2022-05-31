@@ -8,11 +8,9 @@
 // UNSUPPORTED: asan
 // UNSUPPORTED: tsan
 
-// XFAIL: *
-
 #include <mpi.h>
 
-typedef struct {
+typedef struct complex_t {
   float imag;
   float real;
 } complex;
@@ -28,7 +26,7 @@ int main(int argc, char** argv) {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  // CHECK-NOT: R[{{0|1}}][Error]{{.*}}
+  // CHECK-NOT: R[{{0|1}}]T[{{[0-9]*}}][Error]{{.*}}
   complex c{1.0, 2.0};
   g_complexsum(&c);
 

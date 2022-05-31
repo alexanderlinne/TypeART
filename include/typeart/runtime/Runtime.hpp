@@ -31,8 +31,7 @@ enum class Status {
   WRONG_KIND,
   INVALID_ALLOC_ID,
   INVALID_META_ID,
-  UNSUPPORTED_TYPE,
-  ERROR
+  UNSUPPORTED_TYPE
 };
 
 std::ostream& operator<<(std::ostream& os, const Status& status);
@@ -228,19 +227,26 @@ class PointerInfo final {
   // allocation described by this pointer info instance.
   bool contains(pointer p) const;
 
-  // Returns this pointer info with it's type canonicalized.
-  PointerInfo getCanonicalized() const&;
+  PointerInfo stripTypedefsAndQualifiers() const&;
+  PointerInfo stripTypedefsAndQualifiers() &&;
 
-  // Returns this pointer info with it's type canonicalized.
-  PointerInfo getCanonicalized() &&;
-
-  // If the type of this instance is a structure type, a pointer info
-  // instance describing the first member is returned.
+  // If the type of this instance is a structure type and it has a
+  // member with offset 0, a pointer info instance describing the
+  // first member is returned.
   // If the type is an array type, a pointer info with it's base type
   // and element count is returned.
   // If the type is neither, an Status::WRONG_KIND is returned.
   // Note: typedefs, const, ... are **not** resolved by this function.
   cpp::result<PointerInfo, Status> resolveStructureOrArrayType() const;
+
+  // Strips typedefs and qualifiers and resolves array types.
+  PointerInfo resolveAllArrayTypes() const;
+
+  // Strips typedefs and qualifiers and resolves structure and array
+  // types until the innermost type is reached.
+  PointerInfo resolveToInnermostType() const;
+
+  cpp::result<PointerInfo, Status> findMember(byte_offset offset) const;
 
  private:
   cpp::result<Subrange, Status> getSubrange(pointer addr) const;
@@ -263,6 +269,8 @@ struct StructMemberInfo final {
  public:
   static cpp::result<StructMemberInfo, Status> get(pointer base_addr, byte_offset offset,
                                                    const meta::di::StructureType& type);
+
+  static cpp::result<StructMemberInfo, Status> get(const PointerInfo& pointer_info, byte_offset offset);
 
   std::optional<PointerInfo> intoPointerInfo(const PointerInfo& original) const;
 };

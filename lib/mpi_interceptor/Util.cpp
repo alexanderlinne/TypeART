@@ -17,90 +17,29 @@
 
 namespace typeart {
 
-const char* error_message_for(typeart_status status) {
+const char* error_message_for(Status status) {
   switch (status) {
-    case TYPEART_OK:
+    case Status::OK:
       return "No errors";
-    case TYPEART_UNKNOWN_ADDRESS:
+    case Status::UNKNOWN_ADDRESS:
       return "Buffer not registered";
-    case TYPEART_BAD_ALIGNMENT:
+    case Status::BAD_ALIGNMENT:
       return "Buffer access is not aligned correctly";
-    case TYPEART_BAD_OFFSET:
+    case Status::OFFSET_OUT_OF_RANGE:
       return "Error in offset computation";
-    case TYPEART_WRONG_KIND:
+    case Status::BAD_OFFSET:
+      return "Error in offset computation";
+    case Status::WRONG_KIND:
       return "Wrong type kind";
-    case TYPEART_INVALID_TYPE_ID:
-      return "Invalid type ID";
-    case TYPEART_INVALID_ALLOC_ID:
-      return "Invalid alloc ID";
+    case Status::INVALID_ALLOC_ID:
+      return "Invalid allocation ID";
+    case Status::INVALID_META_ID:
+      return "Invalid metadata ID";
+    case Status::UNSUPPORTED_TYPE:
+      return "Type is not supported by TypeART";
     default:
       return "Invalid error code";
   }
-}
-
-template <class T>
-int type_of() {
-  static_assert(std::is_integral_v<T>);
-
-  if constexpr (sizeof(T) == sizeof(int8_t)) {
-    return TYPEART_INT8;
-  } else if constexpr (sizeof(T) == sizeof(int16_t)) {
-    return TYPEART_INT16;
-  } else if constexpr (sizeof(T) == sizeof(int32_t)) {
-    return TYPEART_INT32;
-  } else if constexpr (sizeof(T) == sizeof(int64_t)) {
-    return TYPEART_INT64;
-  } else {
-    fprintf(stderr, "[Error] Unsupported integer width %lu!\n", sizeof(T));
-    return TYPEART_UNKNOWN_TYPE;
-  }
-}
-
-// Given a builtin MPI type, returns the corresponding TypeArt type.
-// If the MPI type is a custom type, -1 is returned.
-// Note: this function cannot distinguish between TYPEART_FP128 und TYPEART_PPC_TP128,
-// therefore TYPEART_FP128 is always returned in case of an 16 byte floating point
-// MPI type. This should be considered by the caller for performing typechecks.
-type_id_t::value_type type_id_for(MPI_Datatype mpi_type) {
-  if (mpi_type == MPI_BYTE) {
-    return TYPEART_INT8;
-  } else if (mpi_type == MPI_CHAR) {
-    return type_of<char>();
-  } else if (mpi_type == MPI_UNSIGNED_CHAR) {
-    fprintf(stderr, "[Error] MPI_UNSIGNED_CHAR is unsupported!\n");
-  } else if (mpi_type == MPI_SIGNED_CHAR) {
-    fprintf(stderr, "[Error] MPI_SIGNED_CHAR is unsupported!\n");
-  } else if (mpi_type == MPI_SHORT) {
-    return type_of<short>();
-  } else if (mpi_type == MPI_UNSIGNED_SHORT) {
-    fprintf(stderr, "[Error] Unsigned integers are unsupported!\n");
-  } else if (mpi_type == MPI_INT) {
-    return type_of<int>();
-  } else if (mpi_type == MPI_UNSIGNED) {
-    fprintf(stderr, "[Error] Unsigned integers are unsupported!\n");
-  } else if (mpi_type == MPI_LONG) {
-    return type_of<long int>();
-  } else if (mpi_type == MPI_UNSIGNED_LONG) {
-    fprintf(stderr, "[Error] Unsigned integers are unsupported!\n");
-  } else if (mpi_type == MPI_LONG_LONG_INT) {
-    return type_of<long long int>();
-  } else if (mpi_type == MPI_FLOAT) {
-    return TYPEART_FLOAT;
-  } else if (mpi_type == MPI_DOUBLE) {
-    return TYPEART_DOUBLE;
-  } else if (mpi_type == MPI_LONG_DOUBLE) {
-    if constexpr (sizeof(long double) == sizeof(double)) {
-      return TYPEART_DOUBLE;
-    } else if constexpr (sizeof(long double) == 10) {
-      return TYPEART_X86_FP80;
-    } else if constexpr (sizeof(long double) == 16) {
-      return TYPEART_FP128;
-    } else {
-      fprintf(stderr, "[Error] long double has unexpected size %zu!\n", sizeof(long double));
-    }
-  }
-
-  return TYPEART_UNKNOWN_TYPE;
 }
 
 const char* combiner_name_for(int combiner) {

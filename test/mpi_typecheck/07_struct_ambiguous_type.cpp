@@ -30,20 +30,20 @@ int main(int argc, char** argv) {
   B b;
 
   // clang-format off
-  // RANK0: R[0][Info]T[{{[0-9]*}}] at 0x{{.*}}: MPI_Send: successfully checked send-buffer 0x{{.*}} of type [1 x struct.A] against 16 elements of MPI type "MPI_DOUBLE"
-  // RANK1: R[1][Info]T[{{[0-9]*}}] at 0x{{.*}}: MPI_Recv: successfully checked recv-buffer 0x{{.*}} of type [1 x struct.A] against 16 elements of MPI type "MPI_DOUBLE"
+  // RANK0: R[0]T[{{[0-9]*}}][Info] at 0x{{.*}}: MPI_Send: successfully checked send-buffer 0x{{.*}} of type [1 x A] against 16 elements of MPI type "MPI_DOUBLE"
+  // RANK1: R[1]T[{{[0-9]*}}][Info] at 0x{{.*}}: MPI_Recv: successfully checked recv-buffer 0x{{.*}} of type [1 x A] against 16 elements of MPI type "MPI_DOUBLE"
   // clang-format on
   run_test(a.arr, n, MPI_DOUBLE);
 
   // clang-format off
-  // RANK0: R[0][Info]T[{{[0-9]*}}] at 0x{{.*}}: MPI_Send: successfully checked send-buffer 0x{{.*}} of type [1 x struct.B] against 16 elements of MPI type "MPI_DOUBLE"
-  // RANK1: R[1][Info]T[{{[0-9]*}}] at 0x{{.*}}: MPI_Recv: successfully checked recv-buffer 0x{{.*}} of type [1 x struct.B] against 16 elements of MPI type "MPI_DOUBLE"
+  // RANK0: R[0]T[{{[0-9]*}}][Info] at 0x{{.*}}: MPI_Send: successfully checked send-buffer 0x{{.*}} of type [1 x B] against 16 elements of MPI type "MPI_DOUBLE"
+  // RANK1: R[1]T[{{[0-9]*}}][Info] at 0x{{.*}}: MPI_Recv: successfully checked recv-buffer 0x{{.*}} of type [1 x B] against 16 elements of MPI type "MPI_DOUBLE"
   // clang-format on
   run_test(b.a.arr, n, MPI_DOUBLE);
 
-  // RANK0: R[0][Info]T[{{[0-9]*}}] CCounter { Send: 2 Recv: 0 Send_Recv: 0 Unsupported: 0 MAX RSS[KBytes]: {{[0-9]+}} }
-  // RANK1: R[1][Info]T[{{[0-9]*}}] CCounter { Send: 0 Recv: 2 Send_Recv: 0 Unsupported: 0 MAX RSS[KBytes]: {{[0-9]+}} }
-  // CHECK: R[{{0|1}}][Info]T[{{[0-9]*}}] MCounter { Error: 0 Null_Buf: 0 Null_Count: 0 Type_Error: 0 }
+  // RANK0: R[0]T[{{[0-9]*}}][Info] CCounter { Send: 2 Recv: 0 Send_Recv: 0 Unsupported: 0 MAX RSS[KBytes]: {{[0-9]+}} }
+  // RANK1: R[1]T[{{[0-9]*}}][Info] CCounter { Send: 0 Recv: 2 Send_Recv: 0 Unsupported: 0 MAX RSS[KBytes]: {{[0-9]+}} }
+  // CHECK: R[{{0|1}}]T[{{[0-9]*}}][Info] MCounter { Error: 0 Null_Buf: 0 Null_Count: 0 Type_Error: 0 }
   MPI_Finalize();
   return 0;
 }

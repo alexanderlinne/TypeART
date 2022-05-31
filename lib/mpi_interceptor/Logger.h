@@ -29,8 +29,8 @@ class Logger {
   Logger();
   ~Logger();
 
-  void log(const char* name, const void* called_from, bool is_send, const Buffer& buffer, const MPIType& type,
-           int count, const Result<void>&);
+  void log(const char* name, const void* called_from, bool is_send, const runtime::PointerInfo& pointer_info,
+           const MPIType& type, int count, const Result<void>&);
   void log(const char* function_name, const void* called_from, bool is_send, const void* ptr, const Error&);
   void log(const CallCounter& call_counter, long ru_maxrss);
   void log(const MPICounter& mpi_counter);

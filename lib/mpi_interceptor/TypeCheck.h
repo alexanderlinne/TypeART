@@ -30,17 +30,6 @@ namespace typeart {
 
 struct MPIType;
 
-struct Buffer {
-  ptrdiff_t offset;
-  const void* ptr;
-  size_t count;
-  type_id_t::value_type type_id;
-
- public:
-  static Result<Buffer> create(const void* ptr);
-  static Buffer create(ptrdiff_t offset, const void* ptr, size_t count, type_id_t::value_type type_id);
-};
-
 struct MPICombiner {
   int id;
   std::vector<int> integer_args;
@@ -53,14 +42,13 @@ struct MPICombiner {
 
 struct MPIType {
   MPI_Datatype mpi_type;
-  type_id_t::value_type type_id;
   MPICombiner combiner;
 
  public:
   static Result<MPIType> create(MPI_Datatype type);
 };
 
-Result<void> check_buffer(const Buffer& buffer, const MPIType& type, int count);
+Result<void> check_buffer(const runtime::PointerInfo& pointer_info, const MPIType& type, int count);
 
 }  // namespace typeart
 
