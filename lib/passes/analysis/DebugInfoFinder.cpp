@@ -5,27 +5,29 @@
 
 namespace typeart::analysis {
 
-llvm::DbgDeclareInst* findDbgDeclareInstFor(llvm::AllocaInst* alloca) {
+std::pair<llvm::DILocalVariable*, llvm::DILocation*> findDbgInfoFor(llvm::AllocaInst* alloca) {
   if (alloca == nullptr) {
-    return nullptr;
+    return {nullptr, nullptr};
   }
-  auto dbg_declare_inst = (llvm::DbgDeclareInst*)nullptr;
-  llvm::SmallVector<llvm::DbgVariableIntrinsic*, 1> dbg_users;
+  llvm::SmallVector<llvm::DbgVariableIntrinsic*, 4> dbg_users;
   llvm::findDbgUsers(dbg_users, alloca);
-  for (const auto& user : dbg_users) {
-    if (auto inst = llvm::dyn_cast<llvm::DbgDeclareInst>(user)) {
-      dbg_declare_inst = inst;
+  for (const auto& user : alloca->users()) {
+    if (auto bit_cast = llvm::dyn_cast<llvm::BitCastInst>(user)) {
+      llvm::findDbgUsers(dbg_users, bit_cast);
     }
   }
-  return dbg_declare_inst;
-}
-
-llvm::DILocalVariable* findDILocalVariableFor(llvm::AllocaInst* alloca) {
-  auto dbg_declare_inst = findDbgDeclareInstFor(alloca);
-  if (dbg_declare_inst == nullptr) {
-    return nullptr;
+  for (const auto& user : dbg_users) {
+    if (auto inst = llvm::dyn_cast<llvm::DbgDeclareInst>(user)) {
+      return {inst->getVariable(), inst->getDebugLoc()};
+    }
+    if (auto inst = llvm::dyn_cast<llvm::DbgValueInst>(user)) {
+      auto expr = inst->getExpression();
+      if (expr->getNumElements() == 1 && expr->getElement(0) == llvm::dwarf::DW_OP_deref) {
+        return {inst->getVariable(), inst->getDebugLoc()};
+      }
+    }
   }
-  return dbg_declare_inst->getVariable();
+  return {nullptr, nullptr};
 }
 
 llvm::DIType* removeIrrelevantDerivedTypes(llvm::DIType* type) {
@@ -46,7 +48,7 @@ llvm::DIType* backtrackDIType(llvm::Value* value) {
       case llvm::Instruction::Store:
         return backtrackDIType(llvm::cast<llvm::StoreInst>(inst)->getPointerOperand());
       case llvm::Instruction::Alloca: {
-        auto local_variable = findDILocalVariableFor(llvm::cast<llvm::AllocaInst>(inst));
+        auto [local_variable, _] = findDbgInfoFor(llvm::cast<llvm::AllocaInst>(inst));
         return local_variable != nullptr ? local_variable->getType() : nullptr;
       }
       case llvm::Instruction::Load: {

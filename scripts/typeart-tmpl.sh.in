@@ -198,12 +198,12 @@ function toolchain_init() {
     fi
     ;;
   cc | cxx | cpp)
-    compiler="@TYPEART_CLANGCXX_EXEC@"
+    compiler="@TYPEART_CLANGCXX_EXEC@ -std=c++17"
     if [ $with_omp == 1 ]; then
       readonly omp_flags="@OpenMP_CXX_FLAGS@" # -I@OpenMP_CXX_INCLUDE_DIRS@
     fi
     if [ $with_intercept == 1 ]; then
-      compiler="env OMPI_CXX=clang++ mpic++"
+      compiler="env OMPI_CXX=clang++ mpic++ -std=c++17"
     fi
     ;;
   esac
@@ -222,7 +222,7 @@ function toolchain_init() {
 
 function source_to_llvm() {
   $compiler ${omp_flags} ${typeart_includes} ${typeart_san_flags} \
-    -O1 -g -std=c++17 ${compile_flags} -Xclang -disable-llvm-passes -S -emit-llvm "${source_file}" -o -
+    -O1 -g ${compile_flags} -Xclang -disable-llvm-passes -S -emit-llvm "${source_file}" -o -
 }
 
 function apply_typeart() {

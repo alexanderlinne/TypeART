@@ -173,11 +173,7 @@ StackArgList ArgumentParser::collectStack(const AllocaDataList& allocs) {
       // This should not happen in generated IR code
       assert(!elementType->isArrayTy() && "VLAs of array types are currently not supported.");
     } else {
-      size_t arraySize = adata.array_size;
-      if (elementType->isArrayTy()) {
-        arraySize   = arraySize * tu::getArrayLengthFlattened(elementType);
-        elementType = tu::getArrayElementType(elementType);
-      }
+      size_t arraySize  = adata.array_size;
       constantArraySize = arraySize;
       numElementsVal    = instr_helper.getConstantFor(IType::extent, arraySize);
     }

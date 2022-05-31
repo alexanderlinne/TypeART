@@ -19,7 +19,7 @@
 
 namespace typeart::analysis {
 
-llvm::DbgDeclareInst* findDbgDeclareInstFor(llvm::AllocaInst* alloca);
+std::pair<llvm::DILocalVariable*, llvm::DILocation*> findDbgInfoFor(llvm::AllocaInst* alloca);
 llvm::SmallVector<llvm::DIType*, 4> findDITypes(llvm::CallBase& call);
 
 }  // namespace typeart::analysis

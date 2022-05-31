@@ -263,17 +263,15 @@ void MemOpVisitor::visitMallocLike(llvm::CallBase& ci, MemOpKind k) {
     LOG_DEBUG("Primary bitcast null: {}", ci);
   }
 
-  // MDNode* N = MDNode::get(ci.getContext(), MDString::get(ci.getContext(), "0"));
-  // ci.setMetadata("typeart.alloc_id", N);
-
   auto location = ci.getDebugLoc().get();
   auto types    = findDITypes(ci);
-  ci.print(llvm::errs());
-  llvm::errs() << "\n";
   // TODO we just take the first type we find but we should check that all the types we find are compatible
   auto ptr_type = types.size() >= 1 ? llvm::dyn_cast<llvm::DIDerivedType>(types.front()) : nullptr;
   assert(ptr_type != nullptr);
-  assert(ptr_type->getTag() == llvm::dwarf::DW_TAG_pointer_type);
+  while (ptr_type->getTag() != llvm::dwarf::DW_TAG_pointer_type) {
+    ptr_type = llvm::dyn_cast<llvm::DIDerivedType>(ptr_type->getBaseType());
+    assert(ptr_type != nullptr);
+  }
   mallocs.push_back(
       MallocData{&ci, array_cookie, primary_cast, bcasts, location, ptr_type->getBaseType(), k, isa<InvokeInst>(ci)});
 }
@@ -307,9 +305,7 @@ void MemOpVisitor::visitAllocaInst(llvm::AllocaInst& ai) {
   } else {
     is_vla = true;
   }
-  auto dbg_declare = findDbgDeclareInstFor(&ai);
-  auto location    = dbg_declare != nullptr ? dbg_declare->getDebugLoc().get() : nullptr;
-  auto local_var   = dbg_declare != nullptr ? dbg_declare->getVariable() : nullptr;
+  auto [local_var, location] = findDbgInfoFor(&ai);
   allocas.push_back({&ai, arraySize, is_vla, location, local_var});
 }
 

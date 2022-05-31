@@ -48,10 +48,11 @@ class MPIRankPrefixFlag : public spdlog::custom_flag_formatter {
 
  public:
   void format(const spdlog::details::log_msg&, const std::tm&, spdlog::memory_buf_t& dest) override {
-    int initialized;
+    int initialized, finalized;
     MPI_Initialized(&initialized);
+    MPI_Finalized(&finalized);
 
-    if (initialized != 0) {
+    if (initialized != 0 && finalized == 0) {
       int mpi_rank;
       MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
       rank = fmt::format("R[{}]", mpi_rank);
