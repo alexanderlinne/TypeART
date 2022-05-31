@@ -27,7 +27,7 @@ template <class MetaClass, class InitializerFn>
 Ref<MetaClass> LLVMMetadataConverter::make_meta(const llvm::Metadata& llvm_meta, InitializerFn&& initializer_fn) {
   if (auto meta = lookup_meta<MetaClass>(llvm_meta); meta != nullptr) {
     auto ref = Ref{*meta};
-    return std::find(parents.begin(), parents.end(), &llvm_meta) != parents.end() ? ref.as_weak_ref() : ref;
+    return ref;
   }
   auto meta = std::make_unique<MetaClass>();
   parents.emplace_back(&llvm_meta);
@@ -51,7 +51,6 @@ Ref<MetaClass> LLVMMetadataConverter::make_meta(InitializerFn&& initializer_fn) 
   return make_meta<StackAllocation>([this, &di_local, &di_location](auto& result) {
     result->set_local_variable_raw(convertDILocalVariable(di_local));
     result->set_location_raw(convertDILocation(di_location));
-    result->set_retained(true);
   });
 }
 
@@ -60,16 +59,13 @@ Ref<MetaClass> LLVMMetadataConverter::make_meta(InitializerFn&& initializer_fn) 
   return make_meta<HeapAllocation>([this, &di_type, &di_location](auto& result) {
     result->set_type_raw(convertDIType(&di_type));
     result->set_location_raw(convertDILocation(di_location));
-    result->set_retained(true);
   });
 }
 
 [[nodiscard]] Ref<GlobalAllocation> LLVMMetadataConverter::createGlobalAllocation(
     const llvm::DIGlobalVariable& di_global) {
-  return make_meta<GlobalAllocation>([this, &di_global](auto& result) {
-    result->set_global_variable_raw(convertDIGlobalVariable(di_global));
-    result->set_retained(true);
-  });
+  return make_meta<GlobalAllocation>(
+      [this, &di_global](auto& result) { result->set_global_variable_raw(convertDIGlobalVariable(di_global)); });
 }
 
 [[nodiscard]] Ref<di::LocalVariable> LLVMMetadataConverter::convertDILocalVariable(
@@ -276,6 +272,9 @@ di::Encoding fromLLVMEncoding(unsigned int encoding) {
 
 [[nodiscard]] Ref<di::StructureType> LLVMMetadataConverter::convertStructureOrClassType(
     const llvm::DICompositeType& di_type) {
+  if (auto result = db->lookupStructureType(di_type.getIdentifier()); result != nullptr) {
+    return *result;
+  }
   return make_meta<di::StructureType>(di_type, [this, &di_type](auto& result) {
     result->set_name_raw(convertString(di_type.getName()));
     result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
@@ -308,7 +307,7 @@ di::Encoding fromLLVMEncoding(unsigned int encoding) {
     }
     result->set_base_classes_raw(convertTuple(std::move(inheritance_refs)));
     result->set_methods_raw(convertTuple(std::move(method_refs)));
-    result->set_members_raw(convertTuple(std::move(member_refs)));
+    result->set_direct_members_raw(convertTuple(std::move(member_refs)));
   });
 }
 
@@ -372,13 +371,15 @@ di::DerivedKind fromLLVMDerivedTypeTag(unsigned int tag) {
     abort();
   } else {
     return make_meta<di::DerivedType>(di_type, [this, &di_type](auto& result) {
+      auto base_type    = convertDIType(di_type.getBaseType());
+      auto size_in_bits = di_type.getSizeInBits();
       result->set_name_raw(convertString(di_type.getName()));
-      result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
+      result->set_size_in_bits_raw(convertInteger(size_in_bits != 0 ? size_in_bits : base_type->get_size_in_bits()));
       result->set_tag_raw(convertInteger((int)fromLLVMDerivedTypeTag(di_type.getTag())));
       result->set_file_raw(convertDIFile(di_type.getFile()));
       result->set_scope_raw(convertDIScope(di_type.getScope()));
       result->set_line_raw(convertInteger(di_type.getLine()));
-      result->set_base_type_raw(convertDIType(di_type.getBaseType()));
+      result->set_base_type_raw(base_type);
       result->set_offset_in_bits_raw(convertInteger(di_type.getOffsetInBits()));
     });
   }
@@ -390,9 +391,9 @@ di::DerivedKind fromLLVMDerivedTypeTag(unsigned int tag) {
     return make_meta<di::Inheritance>(di_type, [this, &di_type](auto& result) {
       result->set_scope_raw(convertDIScope(di_type.getScope()));
       auto base = convertDIType(di_type.getBaseType());
-      if (base->get_canonical_type().get_kind() != Kind::StructureType) {
+      if (base->strip_typedefs_and_qualifiers().get_kind() != Kind::StructureType) {
         LOG_FATAL("Expected the canonical base of an inheritance to be a structure type, but it has kind {}",
-                  base->get_canonical_type().get_kind());
+                  base->strip_typedefs_and_qualifiers().get_kind());
         abort();
       }
       result->set_base_raw(base);
@@ -461,6 +462,9 @@ di::DerivedKind fromLLVMDerivedTypeTag(unsigned int tag) {
 }
 
 [[nodiscard]] Ref<di::Subprogram> LLVMMetadataConverter::convertDISubprogram(const llvm::DISubprogram& di_subprogram) {
+  if (auto result = db->lookupSubprogram(di_subprogram.getLinkageName()); result != nullptr) {
+    return *result;
+  }
   return make_meta<di::Subprogram>(di_subprogram, [this, &di_subprogram](auto& result) {
     result->set_name_raw(convertString(di_subprogram.getName()));
     result->set_linkage_name_raw(convertString(di_subprogram.getLinkageName()));

@@ -105,16 +105,8 @@ struct ScalarTraits<typeart::meta::Ref<T>> {
     ScalarTraits<typeart::meta::Kind>::output(ref.get_kind(), p, out);
     out << '#';
     ScalarTraits<typeart::meta_id_t>::output(ref.get_id(), p, out);
-    if (ref.is_weak()) {
-      out << '?';
-    }
   }
   static llvm::StringRef input(llvm::StringRef scalar, void* p, typeart::meta::Ref<T>& value) {
-    bool is_weak = false;
-    if (scalar.endswith("?")) {
-      is_weak = true;
-      scalar  = scalar.substr(0, scalar.size() - 1);
-    }
     auto [kind_str, id_str] = scalar.split('#');
     typeart::meta::Kind kind;
     auto result = ScalarTraits<typeart::meta::Kind>::input(kind_str, p, kind);
@@ -124,9 +116,6 @@ struct ScalarTraits<typeart::meta::Ref<T>> {
     typeart::meta_id_t id;
     result = ScalarTraits<typeart::meta_id_t>::input(id_str, p, id);
     value  = typeart::meta::Ref<T>{id, kind};
-    if (is_weak) {
-      value = std::move(value).as_weak_ref();
-    }
     return result;
   }
   static QuotingType mustQuote(llvm::StringRef scalar) {
@@ -160,12 +149,10 @@ template <>
 struct llvm::yaml::MappingTraits<std::unique_ptr<typeart::meta::Meta>> {
   static void mapping(IO& io, std::unique_ptr<typeart::meta::Meta>& value) {
     using namespace typeart;
-    auto meta_id  = value != nullptr ? value->get_id() : meta_id_t::invalid;
-    auto kind     = value != nullptr ? value->get_kind() : meta::Kind::Unknown;
-    auto retained = value != nullptr ? value->is_retained() : false;
+    auto meta_id = value != nullptr ? value->get_id() : meta_id_t::invalid;
+    auto kind    = value != nullptr ? value->get_kind() : meta::Kind::Unknown;
     io.mapRequired("meta_id", meta_id);
     io.mapRequired("kind", kind);
-    io.mapRequired("retained", retained);
     if (kind == typeart::meta::Kind::Unknown) {
       return;
     }
@@ -178,7 +165,6 @@ struct llvm::yaml::MappingTraits<std::unique_ptr<typeart::meta::Meta>> {
       io.mapRequired("refs", refs);
       value = meta::make_meta(kind, std::move(refs));
       value->set_id(meta_id);
-      value->set_retained(retained);
     }
     if (auto integer = meta::dyn_cast<meta::Integer>(value.get())) {
       auto data = integer->get_data();
@@ -243,8 +229,6 @@ std::optional<Database> Database::load(const std::string& file) {
 
 bool Database::store(const std::string& file) {
   using namespace llvm;
-
-  removeOrphanedMeta();
 
   std::error_code error;
   raw_fd_ostream oss(StringRef(file), error, compat::open_flag());

@@ -25,6 +25,8 @@ set_package_properties(OpenMP PROPERTIES
   "OpenMP is optionally used by the test suite to verify that the LLVM passes handle OpenMPk codes."
 )
 
+find_package(Boost 1.56.0 REQUIRED)
+
 set(TYPEART_INSTRUMENTATION "Allocator" CACHE STRING "The instrumentation implementation used for type tracking. ('Allocator' or 'Tracker')")
 if (NOT ("${TYPEART_INSTRUMENTATION}" STREQUAL "Allocator") AND NOT ("${TYPEART_INSTRUMENTATION}" STREQUAL "Tracker"))
   message(FATAL_ERROR "Unknown instrumentation implementation '${TYPEART_INSTRUMENTATION}'")

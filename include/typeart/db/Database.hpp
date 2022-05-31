@@ -89,7 +89,8 @@ class Database {
   [[nodiscard]] meta::Meta* registerMeta(std::unique_ptr<meta::Meta> meta);
   [[nodiscard]] bool registerMeta(std::vector<std::unique_ptr<meta::Meta>> meta);
   [[nodiscard]] meta::Meta* addMeta(std::unique_ptr<meta::Meta> meta);
-  void removeOrphanedMeta();
+  [[nodiscard]] meta::di::StructureType* lookupStructureType(const std::string& identifier);
+  [[nodiscard]] meta::di::Subprogram* lookupSubprogram(const std::string& linkage_name);
 
   [[nodiscard]] meta::Meta* getMetaInfo(meta_id_t meta_id);
   [[nodiscard]] const meta::Meta* getMetaInfo(meta_id_t meta_id) const;
@@ -97,19 +98,13 @@ class Database {
  private:
   [[nodiscard]] meta_id_t reserveMetaId();
   [[nodiscard]] meta::Meta* lookupMeta(const meta::Meta& meta);
-  [[nodiscard]] meta::Meta* findIsomorphicMeta(const meta::Meta& meta);
-  void replaceWeakRefs(const meta::Meta* current, meta::Meta* value);
   [[nodiscard]] meta::Meta* storeMeta(std::unique_ptr<meta::Meta> meta);
 
  private:
-  struct IsomorphismCheckBuffers {
-    std::vector<std::pair<const meta::Meta*, const meta::Meta*>> parents;
-    std::unordered_map<const meta::Meta*, const meta::Meta*> weak_mappings;
-  };
-  static thread_local IsomorphismCheckBuffers buffers;
-
   std::vector<AllocationInfo> allocation_info;
   std::unordered_map<std::string, meta::String*> string_store;
+  std::unordered_map<std::string, meta::di::StructureType*> structure_store;
+  std::unordered_map<std::string, meta::di::Subprogram*> subprogram_store;
   std::vector<std::unique_ptr<meta::Meta>> meta_info;
 };
 

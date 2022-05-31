@@ -22,8 +22,6 @@
 
 namespace typeart {
 
-thread_local Database::IsomorphismCheckBuffers Database::buffers = {};
-
 Database::Database() {
 }
 
@@ -64,9 +62,6 @@ const AllocationInfo* Database::getAllocationInfo(alloc_id_t alloc_id) const {
       meta_info[id.value() - 1]) {
     return nullptr;
   }
-  if (auto meta_string = meta::dyn_cast<meta::String>(meta.get())) {
-    string_store.try_emplace(meta_string->get_data(), meta_string);
-  }
   return storeMeta(std::move(meta));
 }
 
@@ -91,6 +86,14 @@ const AllocationInfo* Database::getAllocationInfo(alloc_id_t alloc_id) const {
       }
     }
   }
+  for (const auto& elem : meta_info) {
+    if (auto structure_type = meta::dyn_cast<meta::di::StructureType>(elem.get())) {
+      structure_store.try_emplace(structure_type->get_identifier(), structure_type);
+    }
+    if (auto subprogram = meta::dyn_cast<meta::di::Subprogram>(elem.get())) {
+      subprogram_store.try_emplace(subprogram->get_linkage_name(), subprogram);
+    }
+  }
   return true;
 }
 
@@ -99,56 +102,31 @@ const AllocationInfo* Database::getAllocationInfo(alloc_id_t alloc_id) const {
     LOG_FATAL("Database::addMeta argument must not be nullptr");
     abort();
   }
-  for (const auto& ref : meta->get_refs()) {
-    if (!ref.is_valid() && !ref.is_weak()) {
-      LOG_FATAL("Database::addMeta cannot add meta with invalid strong refs");
-      abort();
-    }
-    if (ref.get() == nullptr) {
-      LOG_FATAL("Database::addMeta cannot add meta with nullptr refs");
-      abort();
-    }
-    if (getMetaInfo(ref.get_id()) != ref.get() && !ref.is_weak()) {
-      LOG_FATAL("Database::addMeta cannot add meta with strong refs not known to the database");
-      abort();
-    }
-  }
   if (auto existing_meta = lookupMeta(*meta.get()); existing_meta != nullptr) {
     return existing_meta;
   }
   meta->set_id(reserveMetaId());
-  if (auto meta_string = meta::dyn_cast<meta::String>(meta.get())) {
-    string_store.try_emplace(meta_string->get_data(), meta_string);
+  if (auto structure_type = meta::dyn_cast<meta::di::StructureType>(meta.get())) {
+    structure_store.try_emplace(structure_type->get_identifier(), structure_type);
+  }
+  if (auto subprogram = meta::dyn_cast<meta::di::Subprogram>(meta.get())) {
+    subprogram_store.try_emplace(subprogram->get_linkage_name(), subprogram);
   }
   return storeMeta(std::move(meta));
 }
 
-void Database::removeOrphanedMeta() {
-  bool deleted_meta   = true;
-  auto referenced_ids = std::set<meta_id_value>{};
-  while (deleted_meta) {
-    deleted_meta = false;
-    referenced_ids.clear();
-    for (const auto& info : meta_info) {
-      if (!info) {
-        continue;
-      }
-      for (const auto& ref : info->get_refs()) {
-        if (!ref.is_weak()) {
-          referenced_ids.insert(ref.get_id().value());
-        }
-      }
-    }
-    for (auto& info : meta_info) {
-      if (!info || info->is_retained()) {
-        continue;
-      }
-      if (referenced_ids.find(info->get_id().value()) == referenced_ids.end()) {
-        info.reset();
-        deleted_meta = true;
-      }
-    }
+[[nodiscard]] meta::di::StructureType* Database::lookupStructureType(const std::string& identifier) {
+  if (auto it = structure_store.find(identifier); it != structure_store.end()) {
+    return it->second;
   }
+  return nullptr;
+}
+
+[[nodiscard]] meta::di::Subprogram* Database::lookupSubprogram(const std::string& linkage_name) {
+  if (auto it = subprogram_store.find(linkage_name); it != subprogram_store.end()) {
+    return it->second;
+  }
+  return nullptr;
 }
 
 meta::Meta* Database::getMetaInfo(meta_id_t meta_id) {
@@ -176,92 +154,24 @@ const meta::Meta* Database::getMetaInfo(meta_id_t meta_id) const {
     if (auto it = string_store.find(meta_string->get_data()); it != string_store.end()) {
       return it->second;
     }
+  } else if (auto structure_type = meta::dyn_cast<meta::di::StructureType>(&meta)) {
+    return lookupStructureType(structure_type->get_identifier());
+  } else if (auto subprogram = meta::dyn_cast<meta::di::Subprogram>(&meta)) {
+    return lookupSubprogram(subprogram->get_linkage_name());
   } else {
-    return findIsomorphicMeta(meta);
-  }
-  return nullptr;
-}
-
-[[nodiscard]] bool checkIsIsomorphic(meta::Ref<const meta::Meta> lhs, meta::Ref<const meta::Meta> rhs,
-                                        bool& contains_weak_refs,
-                                        std::vector<std::pair<const meta::Meta*, const meta::Meta*>>& parents,
-                                        std::unordered_map<const meta::Meta*, const meta::Meta*>& weak_mappings) {
-  if (lhs.is_weak() != rhs.is_weak() || lhs->get_kind() != rhs->get_kind() ||
-      lhs->get_refs().size() != rhs->get_refs().size()) {
-    return false;
-  }
-  if (lhs.get_kind() == meta::Kind::Integer || lhs.get_kind() == meta::Kind::String) {
-    return *lhs.get() == *rhs.get();
-  }
-  contains_weak_refs |= lhs.is_weak() || rhs.is_weak();
-  if (lhs.get() == rhs.get()) {
-    return true;
-  }
-  if (lhs.is_weak()) {
-    if (auto it = std::find(parents.begin(), parents.end(), std::pair{lhs.get(), rhs.get()}); it == parents.end()) {
-      return false;
-    }
-    if (auto it = weak_mappings.find(lhs.get()); it != weak_mappings.end()) {
-      return rhs.get() == it->second;
-    } else {
-      weak_mappings.emplace(lhs.get(), rhs.get());
-      return true;
-    }
-  }
-  parents.emplace_back(lhs.get(), rhs.get());
-  for (size_t i = 0; i < lhs->get_refs().size(); ++i) {
-    bool subtree_contains_weak_refs = false;
-    if (!checkIsIsomorphic(lhs->get_refs()[i], rhs->get_refs()[i], subtree_contains_weak_refs, parents,
-                              weak_mappings)) {
-      return false;
-    }
-    contains_weak_refs |= subtree_contains_weak_refs;
-  }
-  parents.pop_back();
-  if (!contains_weak_refs) {
-    return true;
-  }
-  if (auto it = weak_mappings.find(lhs.get()); it != weak_mappings.end()) {
-    return rhs.get() == it->second;
-  } else {
-    return contains_weak_refs;
-  }
-}
-
-[[nodiscard]] meta::Meta* Database::findIsomorphicMeta(const meta::Meta& meta) {
-  for (const auto& info : meta_info) {
-    if (!info) {
-      continue;
-    }
-    bool contains_weak_refs = false;
-    buffers.parents.clear();
-    buffers.weak_mappings.clear();
-    if (checkIsIsomorphic(*info, meta, contains_weak_refs, buffers.parents, buffers.weak_mappings)) {
-      replaceWeakRefs(&meta, info.get());
-      return info.get();
-    }
-  }
-  return nullptr;
-}
-
-void Database::replaceWeakRefs(const meta::Meta* current, meta::Meta* value) {
-  for (const auto& info : meta_info) {
-    if (!info) {
-      continue;
-    }
-    for (auto& ref : info->get_refs()) {
-      if (ref.get() == current) {
-        if (!ref.is_weak()) {
-          LOG_FATAL("non-weak ref created before registration");
-          abort();
-        }
-        ref.set(*value);
+    for (const auto& info : meta_info) {
+      if (meta == *info) {
+        return info.get();
       }
     }
   }
+  return nullptr;
 }
 
 [[nodiscard]] meta::Meta* Database::storeMeta(std::unique_ptr<meta::Meta> meta) {
+  if (auto meta_string = meta::dyn_cast<meta::String>(meta.get())) {
+    string_store.try_emplace(meta_string->get_data(), meta_string);
+  }
   const auto id = meta->get_id();
   if (id.value() > static_cast<meta_id_t::value_type>(meta_info.size())) {
     meta_info.resize(id.value());

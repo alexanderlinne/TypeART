@@ -12,120 +12,21 @@
 
 #pragma once
 
-#include "../support/System.hpp"
+#include "Macros.hpp"
 #include "Types.h"
 
 #include <cassert>
 #include <iosfwd>
-#include <limits>
 #include <memory>
 #include <optional>
 #include <queue>
-#include <type_traits>
+#include <string>
 #include <variant>
 #include <vector>
 
 namespace llvm {
 class Metadata;
 }
-
-#define META_CLASS(BASE, KIND, REF_COUNT)                                                    \
- public:                                                                                     \
-  inline KIND()                                                                              \
-      : BASE(meta_id_t::invalid, Kind::KIND,                                                 \
-             std::vector<Ref<Meta>>(REF_COUNT, Ref<Meta>{meta_id_t::invalid, Kind::KIND})) { \
-  }                                                                                          \
-  constexpr static Kind META_KIND = Kind::KIND;                                              \
-  static inline bool classof(Kind kind) {                                                    \
-    switch (kind) {                                                                          \
-      case Kind::KIND:                                                                       \
-        return true;                                                                         \
-      default:                                                                               \
-        return false;                                                                        \
-    }                                                                                        \
-  }
-
-#define META_REF(INDEX, TYPE, NAME)                 \
- public:                                            \
-  inline const TYPE& get_##NAME() const {           \
-    return *get_##NAME##_raw();                     \
-  }                                                 \
-  inline Ref<TYPE> get_##NAME##_raw() const {       \
-    return dyn_cast<TYPE>(refs[INDEX]);             \
-  }                                                 \
-  inline void set_##NAME##_raw(Ref<TYPE> new_ref) { \
-    refs[INDEX] = new_ref;                          \
-  }
-
-#define META_REF_OVERRIDE(INDEX, TYPE, NAME)        \
- public:                                            \
-  inline const TYPE& get_##NAME() const override {  \
-    return *get_##NAME##_raw();                     \
-  }                                                 \
-  inline Ref<TYPE> get_##NAME##_raw() const {       \
-    return dyn_cast<TYPE>(refs[INDEX]);             \
-  }                                                 \
-  inline void set_##NAME##_raw(Ref<TYPE> new_ref) { \
-    refs[INDEX] = new_ref;                          \
-  }
-
-#define META_STRING(INDEX, NAME)                      \
- public:                                              \
-  inline const std::string& get_##NAME() const {      \
-    return get_##NAME##_raw()->get_data();            \
-  }                                                   \
-  inline Ref<String> get_##NAME##_raw() const {       \
-    return dyn_cast<String>(refs[INDEX]);             \
-  }                                                   \
-  inline void set_##NAME##_raw(Ref<String> new_ref) { \
-    refs[INDEX] = new_ref;                            \
-  }
-
-#define META_INTEGER(INDEX, TYPE, NAME)                       \
- public:                                                      \
-  inline TYPE get_##NAME() const {                            \
-    return static_cast<TYPE>(get_##NAME##_raw()->get_data()); \
-  }                                                           \
-  inline Ref<Integer> get_##NAME##_raw() const {              \
-    return dyn_cast<Integer>(refs[INDEX]);                    \
-  }                                                           \
-  inline void set_##NAME##_raw(Ref<Integer> new_ref) {        \
-    refs[INDEX] = new_ref;                                    \
-  }
-
-#define META_INTEGER_OVERRIDE(INDEX, TYPE, NAME)              \
- public:                                                      \
-  inline TYPE get_##NAME() const override {                   \
-    return static_cast<TYPE>(get_##NAME##_raw()->get_data()); \
-  }                                                           \
-  inline Ref<Integer> get_##NAME##_raw() const {              \
-    return dyn_cast<Integer>(refs[INDEX]);                    \
-  }                                                           \
-  inline void set_##NAME##_raw(Ref<Integer> new_ref) {        \
-    refs[INDEX] = new_ref;                                    \
-  }
-
-#define META_TUPLE(INDEX, TYPE, NAME, NAME_PLURAL)                                            \
- public:                                                                                      \
-  inline Ref<TYPE> get_##NAME(size_t idx) const {                                             \
-    auto meta = dyn_cast<Tuple>(refs[INDEX]).get();                                           \
-    if (!meta) {                                                                              \
-      fprintf(stderr, "Cannot get tuple element from Meta instance with unresolved Refs!\n"); \
-      abort;                                                                                  \
-    }                                                                                         \
-    return dyn_cast<TYPE>(meta->get_refs()[idx]);                                             \
-  }                                                                                           \
-  inline const Tuple& get_##NAME_PLURAL() const {                                             \
-    auto result = dyn_cast<Tuple>(refs[INDEX].get());                                         \
-    assert(result != nullptr);                                                                \
-    return *result;                                                                           \
-  }                                                                                           \
-  inline Ref<Meta> get_##NAME_PLURAL##_raw() {                                                \
-    return refs[INDEX];                                                                       \
-  }                                                                                           \
-  inline void set_##NAME_PLURAL##_raw(Ref<Tuple> ref) {                                       \
-    refs[INDEX] = ref;                                                                        \
-  }
 
 namespace typeart {
 
@@ -228,43 +129,25 @@ class Ref {
   static_assert(std::is_base_of_v<Meta, MetaClass>);
 
   Kind kind;
-  bool _is_weak = false;
   std::variant<meta_id_t, MetaClass*> ref;
 
  public:
   Ref() : kind(Kind::Unknown), ref(meta_id_t::invalid) {
   }
 
-  Ref(meta_id_t id, Kind kind, bool is_weak = false) : kind(kind), _is_weak(is_weak), ref(id) {
+  Ref(meta_id_t id, Kind kind) : kind(kind), ref(id) {
   }
 
-  Ref(MetaClass& meta, bool is_weak = false) : kind(meta.get_kind()), _is_weak(is_weak), ref(&meta) {
+  Ref(MetaClass& meta) : kind(meta.get_kind()), ref(&meta) {
   }
 
   template <class OtherMeta, class = std::enable_if_t<std::is_base_of_v<MetaClass, OtherMeta>>>
-  Ref(const Ref<OtherMeta>& other) : kind(other.get_kind()), _is_weak(other.is_weak()) {
+  Ref(const Ref<OtherMeta>& other) : kind(other.get_kind()) {
     if (auto ptr = other.get(); ptr != nullptr) {
       ref = ptr;
     } else {
       ref = other.get_id();
     }
-  }
-
-  bool is_weak() const {
-    return _is_weak;
-  }
-
-  Ref<MetaClass> as_weak_ref() const& {
-    if (ref.index() == 0) {
-      return {std::get<0>(ref), kind, true};
-    } else {
-      return {*std::get<1>(ref), true};
-    }
-  }
-
-  Ref<MetaClass> as_weak_ref() && {
-    _is_weak = true;
-    return *this;
   }
 
   Kind get_kind() const {
@@ -321,14 +204,12 @@ inline bool operator==(const Ref<MetaClass>& lhs, const Ref<MetaClass>& rhs) {
 
 class Meta {
   Kind kind;
-  bool retained;
   meta_id_t id;
 
  protected:
   std::vector<Ref<Meta>> refs;
 
-  inline Meta(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs)
-      : kind(kind), retained(false), id(id), refs(std::move(refs)) {
+  inline Meta(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs) : kind(kind), id(id), refs(std::move(refs)) {
   }
 
  public:
@@ -346,14 +227,6 @@ class Meta {
     return kind;
   }
 
-  inline bool is_retained() const {
-    return retained;
-  }
-
-  inline void set_retained(bool new_retained) {
-    retained = new_retained;
-  }
-
   inline meta_id_t get_id() const {
     return id;
   }
@@ -369,31 +242,11 @@ class Meta {
   inline std::vector<Ref<Meta>>& get_refs() {
     return refs;
   }
-
-  bool contains_weak_refs() const;
 };
 
-std::unique_ptr<Meta> make_meta(Kind kind, std::vector<Ref<Meta>> refs);
+bool operator==(const Meta& lhs, const Meta& rhs);
 
-template <typename Visitor>
-bool visit_meta(Ref<const Meta> init, Visitor&& visitor) {
-  auto worklist = std::queue<Ref<const Meta>>{};
-  worklist.push(init);
-  while (!worklist.empty()) {
-    auto current = worklist.front();
-    worklist.pop();
-    if (visitor(current)) {
-      if (!current.is_weak()) {
-        for (const auto& ref : current->get_refs()) {
-          worklist.emplace(ref);
-        }
-      }
-    } else {
-      return false;
-    }
-  }
-  return true;
-}
+std::unique_ptr<Meta> make_meta(Kind kind, std::vector<Ref<Meta>> refs);
 
 template <class To, class = std::enable_if_t<std::is_base_of_v<Meta, To>>>
 To* dyn_cast(Meta* meta) {
@@ -415,18 +268,18 @@ template <class To, class = std::enable_if_t<std::is_base_of_v<Meta, To>>>
 Ref<To> dyn_cast(const Ref<Meta>& ref) {
   if (auto ptr = ref.get(); ptr != nullptr) {
     if (auto casted = dyn_cast<To>(ptr); casted != nullptr) {
-      return {*casted, ref.is_weak()};
+      return {*casted};
     }
   } else {
     if (To::classof(ref.get_kind())) {
-      return {ref.get_id(), ref.get_kind(), ref.is_weak()};
+      return {ref.get_id(), ref.get_kind()};
     }
   }
   return {};
 }
 
 class Integer final : public Meta {
-  META_CLASS(Meta, Integer, 0)
+  META_CLASS(Meta, Integer)
   int64_t data;
 
  public:
@@ -440,12 +293,10 @@ class Integer final : public Meta {
   inline void set_data(int64_t new_data) {
     data = new_data;
   }
-
-  virtual ~Integer();
 };
 
 class String final : public Meta {
-  META_CLASS(Meta, String, 0)
+  META_CLASS(Meta, String)
   std::string data;
 
  public:
@@ -459,29 +310,13 @@ class String final : public Meta {
   inline void set_data(std::string new_data) {
     data = std::move(new_data);
   }
-
-  virtual ~String();
 };
 
-inline bool operator==(const Meta& lhs, const Meta& rhs) {
-  if (lhs.get_kind() != rhs.get_kind()) {
-    return false;
-  }
-  if (lhs.get_id() == rhs.get_id()) {
-    return true;
-  }
-  switch (lhs.get_kind()) {
-    case Kind::Integer:
-      return static_cast<const Integer&>(lhs).get_data() == static_cast<const Integer&>(rhs).get_data();
-    case Kind::String:
-      return static_cast<const String&>(lhs).get_data() == static_cast<const String&>(rhs).get_data();
-    default:
-      return lhs.get_refs() == rhs.get_refs();
-  }
-}
-
 class Tuple final : public Meta {
-  META_CLASS(Meta, Tuple, 0)
+  META_CLASS(Meta, Tuple)
+
+ public:
+  using size_type = std::vector<Ref<Meta>>::size_type;
 
  public:
   inline Tuple(meta_id_t id, std::vector<Ref<Meta>> refs) : Meta(id, Kind::Tuple, std::move(refs)) {
@@ -506,8 +341,127 @@ class Tuple final : public Meta {
   inline auto end() const {
     return get_refs().end();
   }
+};
 
-  virtual ~Tuple();
+template <class MetaClass>
+class TupleProxy final {
+  const Tuple* tuple;
+
+ public:
+  using size_type = Tuple::size_type;
+
+ public:
+  class const_iterator {
+    using base_type = std::vector<Ref<Meta>>::const_iterator;
+    base_type it;
+
+   public:
+    using value_type        = MetaClass;
+    using reference         = MetaClass&;
+    using pointer           = MetaClass*;
+    using difference_type   = base_type::difference_type;
+    using iterator_category = std::random_access_iterator_tag;
+
+   public:
+    const_iterator(base_type it) : it(std::move(it)) {
+    }
+
+    const_iterator& operator++() {
+      ++it;
+      return *this;
+    }
+
+    const_iterator operator++(int) {
+      return {it++};
+    }
+
+    const_iterator& operator--() {
+      --it;
+      return *this;
+    }
+
+    const_iterator operator--(int) {
+      return {it--};
+    }
+
+    const_iterator& operator+=(size_type offset) {
+      it += offset;
+      return *this;
+    }
+
+    friend const_iterator operator+(const const_iterator& other, size_type offset) {
+      return {other.it + offset};
+    }
+
+    friend const_iterator operator+(size_type offset, const const_iterator& other) {
+      return {offset + other.it};
+    }
+
+    const_iterator& operator-=(size_type offset) {
+      it -= offset;
+      return *this;
+    }
+
+    friend const_iterator operator-(const const_iterator& other, size_type offset) {
+      return {other - offset};
+    }
+
+    friend difference_type operator-(const const_iterator& lhs, const const_iterator& rhs) {
+      return lhs.it - rhs.it;
+    }
+
+    reference operator*() const {
+      return *dyn_cast<MetaClass>(it->get());
+    }
+
+    pointer operator->() const {
+      return dyn_cast<MetaClass>(it->get());
+    }
+
+    reference operator[](size_type n) const {
+      return *dyn_cast<MetaClass>(it[n].get());
+    }
+
+    friend bool operator==(const const_iterator& lhs, const const_iterator& rhs) {
+      return lhs.it == rhs.it;
+    }
+
+    friend bool operator!=(const const_iterator& lhs, const const_iterator& rhs) {
+      return !(lhs == rhs);
+    }
+
+    friend bool operator<(const const_iterator& lhs, const const_iterator& rhs) {
+      return lhs.it < rhs.it;
+    }
+
+    friend bool operator>(const const_iterator& lhs, const const_iterator& rhs) {
+      return lhs.it > rhs.it;
+    }
+
+    friend bool operator<=(const const_iterator& lhs, const const_iterator& rhs) {
+      return lhs < rhs || lhs == rhs;
+    }
+
+    friend bool operator>=(const const_iterator& lhs, const const_iterator& rhs) {
+      return lhs == rhs || lhs > rhs;
+    }
+  };
+
+ public:
+  TupleProxy(const Tuple& tuple) : tuple(&tuple) {
+  }
+
+  inline auto size() const {
+    return tuple->size();
+  }
+
+  inline const_iterator begin() const {
+    return {tuple->begin()};
+  }
+
+  inline const_iterator end() const {
+    return {tuple->end()};
+  }
 };
 
 class Node : public Meta {
@@ -589,23 +543,46 @@ class Node : public meta::Node {
   virtual ~Node();
 };
 
-class Subrange final : public di::Node {
-  META_CLASS(di::Node, Subrange, 2)
-  META_INTEGER(0, size_t, lower_bound)
-  META_INTEGER(1, size_t, count)
+class File;
+class Scope;
+class Type;
 
- public:
-  virtual ~Subrange();
+class Subrange final : public di::Node {
+  META_CLASS(di::Node, Subrange,
+             ((INTEGER, size_t, lower_bound),  //
+              (INTEGER, size_t, count)))
 };
 
 class Enumerator final : public di::Node {
-  META_CLASS(di::Node, Enumerator, 3)
-  META_STRING(0, name)
-  META_INTEGER(1, ssize_t, value)
-  META_INTEGER(2, bool, is_unsigned)
+  META_CLASS(di::Node, Enumerator,
+             ((STRING, name),             //
+              (INTEGER, ssize_t, value),  //
+              (INTEGER, bool, is_unsigned)))
+};
+
+class StructureType;
+
+class Inheritance final : public di::Node {
+  META_CLASS(di::Node, Inheritance,
+             ((REF, di::Scope, scope),  //
+              (REF, di::Type, base),    //
+              (INTEGER, size_t, offset_in_bits)))
 
  public:
-  virtual ~Enumerator();
+  const StructureType& get_base_structure_type() const;
+};
+
+class Member final : public di::Node {
+  META_CLASS(di::Node, Member,
+             ((STRING, name),                     //
+              (REF, di::File, file),              //
+              (REF, di::Scope, scope),            //
+              (REF, di::Type, type),              //
+              (INTEGER, size_t, line),            //
+              (INTEGER, size_t, offset_in_bits),  //
+              (INTEGER, size_t, size_in_bits)))
+
+  std::string get_pretty_name() const;
 };
 
 class Scope : public di::Node {
@@ -637,6 +614,8 @@ class Scope : public di::Node {
     }
   }
 
+  virtual std::string get_pretty_name() const = 0;
+
   virtual ~Scope();
 };
 
@@ -655,42 +634,42 @@ std::ostream& operator<<(std::ostream& os, const Language& language);
 std::istream& operator>>(std::istream& is, std::optional<Language>& value);
 
 class GlobalOrBuiltin final : public di::Scope {
-  META_CLASS(di::Scope, GlobalOrBuiltin, 0)
+  META_CLASS(di::Scope, GlobalOrBuiltin)
 
  public:
-  virtual ~GlobalOrBuiltin();
+  std::string get_pretty_name() const override;
 };
 
 class File final : public di::Scope {
-  META_CLASS(di::Scope, File, 2)
-  META_STRING(0, filename)
-  META_STRING(1, directory)
+  META_CLASS(di::Scope, File,
+             ((STRING, filename),  //
+              (STRING, directory)))
 
  public:
   bool is_unknown() const;
 
-  virtual ~File();
+  std::string get_pretty_name() const override;
 };
 
 class CompileUnit final : public di::Scope {
-  META_CLASS(di::Scope, CompileUnit, 5)
-  META_REF(0, di::File, file)
-  META_STRING(1, producer)
-  META_INTEGER(2, Language, language)
-  META_INTEGER(3, bool, is_optimized)
-  META_INTEGER(4, size_t, runtime_version)
+  META_CLASS(di::Scope, CompileUnit,
+             ((REF, di::File, file),          //
+              (STRING, producer),             //
+              (INTEGER, Language, language),  //
+              (INTEGER, bool, is_optimized),  //
+              (INTEGER, size_t, runtime_version)))
 
  public:
-  virtual ~CompileUnit();
+  std::string get_pretty_name() const override;
 };
 
 class Namespace final : public di::Scope {
-  META_CLASS(di::Scope, Namespace, 2)
-  META_STRING(0, name)
-  META_REF(1, di::Scope, scope)
+  META_CLASS(di::Scope, Namespace,
+             ((STRING, name),  //
+              (REF, di::Scope, scope)))
 
  public:
-  virtual ~Namespace();
+  std::string get_pretty_name() const override;
 };
 
 class Type : public di::Scope {
@@ -735,6 +714,10 @@ class Type : public di::Scope {
     return get_kind() == Kind::ArrayType;
   }
 
+  inline bool is_enumeration_type() const {
+    return get_kind() == Kind::EnumerationType;
+  }
+
   inline bool is_derived_type() const {
     return get_kind() == Kind::DerivedType;
   }
@@ -743,24 +726,19 @@ class Type : public di::Scope {
     return get_kind() == Kind::SubroutineType;
   }
 
-  virtual std::string get_pretty_name() const = 0;
-
   virtual size_t get_size_in_bits() const = 0;
 
-  // Strips away typedef, const, restrict and volatile
-  const di::Type& get_canonical_type() const;
+  const di::Type& strip_typedefs_and_qualifiers() const;
 
   virtual ~Type();
 };
 
 class VoidType final : public di::Type {
-  META_CLASS(di::Type, VoidType, 0)
+  META_CLASS(di::Type, VoidType)
 
  public:
   std::string get_pretty_name() const override;
   size_t get_size_in_bits() const override;
-
-  virtual ~VoidType();
 };
 
 enum class Encoding {
@@ -778,154 +756,74 @@ std::ostream& operator<<(std::ostream& os, const Encoding& encoding);
 std::istream& operator>>(std::istream& is, std::optional<Encoding>& value);
 
 class BasicType final : public di::Type {
-  META_CLASS(di::Type, BasicType, 3)
-  META_STRING(0, name)
-  META_INTEGER(1, Encoding, encoding)
-  META_INTEGER_OVERRIDE(2, size_t, size_in_bits)
+  META_CLASS(di::Type, BasicType,
+             ((STRING, name),                 //
+              (INTEGER, Encoding, encoding),  //
+              (INTEGER, size_t, size_in_bits, override)))
 
  public:
   std::string get_pretty_name() const override;
-
-  virtual ~BasicType();
 };
 
-class Inheritance final : public di::Node {
-  META_CLASS(di::Node, Inheritance, 3)
-  META_REF(0, di::Scope, scope)
-  META_REF(1, di::Type, base)
-  META_INTEGER(2, size_t, offset_in_bits)
-
- public:
-  virtual ~Inheritance();
-};
-
-class Member final : public di::Node {
-  META_CLASS(di::Node, Member, 7)
-  META_STRING(0, name)
-  META_REF(1, di::File, file)
-  META_REF(2, di::Scope, scope)
-  META_REF(3, di::Type, type)
-  META_INTEGER(4, size_t, line)
-  META_INTEGER(5, size_t, offset_in_bits)
-  META_INTEGER(6, size_t, size_in_bits)
-
- public:
-  virtual ~Member();
-};
-
-class SubroutineType final : public di::Type {
-  META_CLASS(di::Type, SubroutineType, 2)
-  META_REF(0, di::Type, return_type)
-  META_TUPLE(1, di::Type, argument_type, argument_types)
-
- public:
-  std::string get_pretty_name() const override;
-
-  size_t get_size_in_bits() const override {
-    return 0;
-  }
-
-  virtual ~SubroutineType();
-};
-
-class LocalScope : public di::Scope {
- protected:
-  inline LocalScope(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs) : di::Scope(id, kind, std::move(refs)) {
-  }
-
- public:
-  static inline bool classof(Kind kind) {
-    switch (kind) {
-      case Kind::Subprogram:
-      case Kind::LexicalBlock:
-      case Kind::LexicalBlockFile:
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  virtual const di::File& get_file() const = 0;
-
-  virtual ~LocalScope();
-};
-
-class Subprogram final : public di::LocalScope {
-  META_CLASS(di::LocalScope, Subprogram, 6)
-  META_STRING(0, name)
-  META_STRING(1, linkage_name)
-  META_REF(2, di::File, file)
-  META_REF(3, di::Scope, scope)
-  META_REF(4, di::SubroutineType, type)
-  META_INTEGER(5, size_t, line)
-
- public:
-  virtual ~Subprogram();
-};
+class Subprogram;
 
 class StructureType final : public di::Type {
-  META_CLASS(di::Type, StructureType, 9)
-  META_STRING(0, name)
-  META_STRING(1, identifier)
-  META_REF(2, di::File, file)
-  META_REF(3, di::Scope, scope)
-  META_INTEGER(4, size_t, line)
-  META_INTEGER_OVERRIDE(5, size_t, size_in_bits)
-  META_TUPLE(6, di::Inheritance, base_class, base_classes)
-  META_TUPLE(7, di::Subprogram, method, methods)
-  META_TUPLE(8, di::Member, member, members)
+  META_CLASS(di::Type, StructureType,
+             ((STRING, name),                             //
+              (STRING, identifier),                       //
+              (REF, di::File, file),                      //
+              (REF, di::Scope, scope),                    //
+              (INTEGER, size_t, line),                    //
+              (INTEGER, size_t, size_in_bits, override),  //
+              (TUPLE, di::Inheritance, base_classes),     //
+              (TUPLE, di::Subprogram, methods),           //
+              (TUPLE, di::Member, direct_members)))
 
  public:
   std::string get_pretty_name() const override;
 
-  const di::Member* find_member(size_t offset_in_bits) const;
+  const di::Inheritance* find_inheritance(size_t offset_in_bits) const;
 
-  virtual ~StructureType();
+  const di::Member* find_member(size_t offset_in_bits) const;
 };
 
 class UnionType final : public di::Type {
-  META_CLASS(di::Type, UnionType, 7)
-  META_STRING(0, name)
-  META_STRING(1, identifier)
-  META_REF(2, di::File, file)
-  META_REF(3, di::Scope, scope)
-  META_INTEGER(4, size_t, line)
-  META_INTEGER_OVERRIDE(5, size_t, size_in_bits)
-  META_TUPLE(6, di::Node, element, elements)
+  META_CLASS(di::Type, UnionType,
+             ((STRING, name),                             //
+              (STRING, identifier),                       //
+              (REF, di::File, file),                      //
+              (REF, di::Scope, scope),                    //
+              (INTEGER, size_t, line),                    //
+              (INTEGER, size_t, size_in_bits, override),  //
+              (TUPLE, di::Node, elements)))
 
  public:
   std::string get_pretty_name() const override;
-
-  virtual ~UnionType();
 };
 
 class ArrayType final : public di::Type {
-  META_CLASS(di::Type, ArrayType, 3)
-  META_REF(0, di::Type, base_type)
-  META_INTEGER_OVERRIDE(1, size_t, size_in_bits)
-  META_TUPLE(2, Integer, count, counts)
+  META_CLASS(di::Type, ArrayType,
+             ((REF, di::Type, base_type),                 //
+              (INTEGER, size_t, size_in_bits, override),  //
+              (TUPLE, Integer, counts)))
 
  public:
   size_t get_flattened_count() const;
   std::string get_pretty_name() const override;
-
-  virtual ~ArrayType();
 };
 
 class EnumerationType final : public di::Type {
-  META_CLASS(di::Type, EnumerationType, 7)
-  META_STRING(0, name)
-  META_STRING(1, identifier)
-  META_REF(2, di::File, file)
-  META_REF(3, di::Scope, scope)
-  META_INTEGER(4, size_t, line)
-  META_INTEGER_OVERRIDE(5, size_t, size_in_bits)
-  META_TUPLE(6, di::Node, element, elements)
+  META_CLASS(di::Type, EnumerationType,
+             ((STRING, name),                             //
+              (STRING, identifier),                       //
+              (REF, di::File, file),                      //
+              (REF, di::Scope, scope),                    //
+              (INTEGER, size_t, line),                    //
+              (INTEGER, size_t, size_in_bits, override),  //
+              (TUPLE, di::Node, elements)))
 
  public:
   std::string get_pretty_name() const override;
-
-  virtual ~EnumerationType();
 };
 
 enum class DerivedKind {
@@ -943,20 +841,31 @@ std::ostream& operator<<(std::ostream& os, const DerivedKind& kind);
 std::istream& operator>>(std::istream& is, std::optional<DerivedKind>& value);
 
 class DerivedType final : public di::Type {
-  META_CLASS(di::Type, DerivedType, 8)
-  META_STRING(0, name)
-  META_REF(1, di::File, file)
-  META_REF(2, di::Scope, scope)
-  META_REF(3, di::Type, base_type)
-  META_INTEGER(4, DerivedKind, tag)
-  META_INTEGER(5, size_t, line)
-  META_INTEGER(6, size_t, offset_in_bits)
-  META_INTEGER_OVERRIDE(7, size_t, size_in_bits)
+  META_CLASS(di::Type, DerivedType,
+             ((STRING, name),                     //
+              (REF, di::File, file),              //
+              (REF, di::Scope, scope),            //
+              (REF, di::Type, base_type),         //
+              (INTEGER, DerivedKind, tag),        //
+              (INTEGER, size_t, line),            //
+              (INTEGER, size_t, offset_in_bits),  //
+              (INTEGER, size_t, size_in_bits, override)))
+
+ public:
+  std::string get_pretty_name() const override;
+};
+
+class SubroutineType final : public di::Type {
+  META_CLASS(di::Type, SubroutineType,
+             ((REF, di::Type, return_type),  //
+              (TUPLE, di::Type, argument_types)))
 
  public:
   std::string get_pretty_name() const override;
 
-  virtual ~DerivedType();
+  size_t get_size_in_bits() const override {
+    return 0;
+  }
 };
 
 template <class Visitor>
@@ -983,6 +892,28 @@ typename Visitor::return_type visit_type(const Type& type, Visitor&& visitor) {
   }
 }
 
+class LocalScope : public di::Scope {
+ protected:
+  inline LocalScope(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs) : di::Scope(id, kind, std::move(refs)) {
+  }
+
+ public:
+  static inline bool classof(Kind kind) {
+    switch (kind) {
+      case Kind::Subprogram:
+      case Kind::LexicalBlock:
+      case Kind::LexicalBlockFile:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  virtual const di::File& get_file() const = 0;
+
+  virtual ~LocalScope();
+};
+
 class LexicalBlockBase : public di::LocalScope {
  protected:
   inline LexicalBlockBase(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs)
@@ -1004,34 +935,44 @@ class LexicalBlockBase : public di::LocalScope {
 };
 
 class LexicalBlock final : public di::LexicalBlockBase {
-  META_CLASS(di::LexicalBlockBase, LexicalBlock, 4)
-  META_REF(0, di::Scope, scope)
-  META_REF(1, di::File, file)
-  META_INTEGER(2, size_t, line)
-  META_INTEGER(3, size_t, column)
+  META_CLASS(di::LexicalBlockBase, LexicalBlock,
+             ((REF, di::Scope, scope),          //
+              (REF, di::File, file, override),  //
+              (INTEGER, size_t, line),          //
+              (INTEGER, size_t, column)))
 
  public:
-  virtual ~LexicalBlock();
+  std::string get_pretty_name() const override;
 };
 
 class LexicalBlockFile final : public di::LexicalBlockBase {
-  META_CLASS(di::LexicalBlockBase, LexicalBlockFile, 3)
-  META_REF(0, di::Scope, scope)
-  META_REF(1, di::File, file)
-  META_INTEGER(2, size_t, discriminator)
+  META_CLASS(di::LexicalBlockBase, LexicalBlockFile,
+             ((REF, di::Scope, scope),          //
+              (REF, di::File, file, override),  //
+              (INTEGER, size_t, discriminator)))
 
  public:
-  virtual ~LexicalBlockFile();
+  std::string get_pretty_name() const override;
+};
+
+class Subprogram final : public di::LocalScope {
+  META_CLASS(di::LocalScope, Subprogram,
+             ((STRING, name),                   //
+              (STRING, linkage_name),           //
+              (REF, di::File, file, override),  //
+              (REF, di::Scope, scope),          //
+              (REF, di::SubroutineType, type),  //
+              (INTEGER, size_t, line)))
+
+ public:
+  std::string get_pretty_name() const override;
 };
 
 class Location final : public meta::Node {
-  META_CLASS(meta::Node, Location, 3)
-  META_REF(0, di::LocalScope, scope)
-  META_INTEGER(1, size_t, line)
-  META_INTEGER(2, size_t, column)
-
- public:
-  virtual ~Location();
+  META_CLASS(meta::Node, Location,
+             ((REF, di::LocalScope, scope),  //
+              (INTEGER, size_t, line),       //
+              (INTEGER, size_t, column)))
 };
 
 class Variable : public di::Node {
@@ -1054,31 +995,25 @@ class Variable : public di::Node {
 };
 
 class LocalVariable final : public Variable {
-  META_CLASS(Variable, LocalVariable, 6)
-  META_STRING(0, name)
-  META_STRING(1, linkage_name)
-  META_REF(2, Scope, scope)
-  META_REF(3, File, file)
-  META_REF(4, Type, type)
-  META_INTEGER(5, size_t, line)
-
- public:
-  virtual ~LocalVariable();
+  META_CLASS(Variable, LocalVariable,
+             ((STRING, name),          //
+              (STRING, linkage_name),  //
+              (REF, Scope, scope),     //
+              (REF, File, file),       //
+              (REF, Type, type),       //
+              (INTEGER, size_t, line)))
 };
 
 class GlobalVariable final : public Variable {
-  META_CLASS(Variable, GlobalVariable, 8)
-  META_STRING(0, name)
-  META_STRING(1, linkage_name)
-  META_REF(2, Scope, scope)
-  META_REF(3, File, file)
-  META_REF(4, Type, type)
-  META_INTEGER(5, size_t, line)
-  META_INTEGER(6, bool, is_local)
-  META_INTEGER(7, bool, is_definition)
-
- public:
-  virtual ~GlobalVariable();
+  META_CLASS(Variable, GlobalVariable,
+             ((STRING, name),             //
+              (STRING, linkage_name),     //
+              (REF, Scope, scope),        //
+              (REF, File, file),          //
+              (REF, Type, type),          //
+              (INTEGER, size_t, line),    //
+              (INTEGER, bool, is_local),  //
+              (INTEGER, bool, is_definition)))
 };
 
 }  // namespace di
@@ -1107,9 +1042,9 @@ class Allocation : public Meta {
 };
 
 class StackAllocation final : public Allocation {
-  META_CLASS(Allocation, StackAllocation, 2)
-  META_REF(0, di::LocalVariable, local_variable)
-  META_REF(1, di::Location, location)
+  META_CLASS(Allocation, StackAllocation,
+             ((REF, di::LocalVariable, local_variable),  //
+              (REF, di::Location, location)))
 
   const di::Type& get_type() const override {
     return get_local_variable().get_type();
@@ -1122,15 +1057,12 @@ class StackAllocation final : public Allocation {
   size_t get_line() const override {
     return get_local_variable().get_line();
   }
-
- public:
-  virtual ~StackAllocation();
 };
 
 class HeapAllocation final : public Allocation {
-  META_CLASS(Allocation, HeapAllocation, 2)
-  META_REF_OVERRIDE(0, di::Type, type)
-  META_REF(1, di::Location, location)
+  META_CLASS(Allocation, HeapAllocation,
+             ((REF, di::Type, type, override),  //
+              (REF, di::Location, location)))
 
   const di::File& get_file() const override {
     return get_location().get_scope().get_file();
@@ -1139,14 +1071,10 @@ class HeapAllocation final : public Allocation {
   size_t get_line() const override {
     return get_location().get_line();
   }
-
- public:
-  virtual ~HeapAllocation();
 };
 
 class GlobalAllocation final : public Allocation {
-  META_CLASS(Allocation, GlobalAllocation, 1)
-  META_REF(0, di::GlobalVariable, global_variable)
+  META_CLASS(Allocation, GlobalAllocation, ((REF, di::GlobalVariable, global_variable)))
 
   inline const di::Type& get_type() const override {
     return get_global_variable().get_type();
@@ -1159,9 +1087,6 @@ class GlobalAllocation final : public Allocation {
   size_t get_line() const override {
     return get_global_variable().get_line();
   }
-
- public:
-  virtual ~GlobalAllocation();
 };
 
 }  // namespace meta

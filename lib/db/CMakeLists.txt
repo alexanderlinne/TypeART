@@ -6,15 +6,23 @@ set_target_properties(${TYPEART_PREFIX}_DatabaseObj PROPERTIES POSITION_INDEPEND
 
 target_include_directories(${TYPEART_PREFIX}_DatabaseObj SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
 
+target_precompile_headers(${TYPEART_PREFIX}_DatabaseObj
+  PUBLIC ${CMAKE_SOURCE_DIR}/include/typeart/db/Types.hpp
+)
+
 target_include_directories(
   ${TYPEART_PREFIX}_DatabaseObj
   PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
           $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/typeart>
+          ${Boost_INCLUDE_DIRS}
 )
 
-target_link_libraries(${TYPEART_PREFIX}_DatabaseObj PRIVATE typeart::SystemStatic fmt::fmt)
+target_link_libraries(${TYPEART_PREFIX}_DatabaseObj
+  PRIVATE typeart::SystemStatic
+          fmt::fmt
+)
 
 target_compile_definitions(${TYPEART_PREFIX}_DatabaseObj PRIVATE TYPEART_LOG_LEVEL=${TYPEART_LOG_LEVEL})
 
