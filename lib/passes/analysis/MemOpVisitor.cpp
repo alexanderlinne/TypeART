@@ -267,13 +267,15 @@ void MemOpVisitor::visitMallocLike(llvm::CallBase& ci, MemOpKind k) {
   auto types    = findDITypes(ci);
   // TODO we just take the first type we find but we should check that all the types we find are compatible
   auto ptr_type = types.size() >= 1 ? llvm::dyn_cast<llvm::DIDerivedType>(types.front()) : nullptr;
-  assert(ptr_type != nullptr);
-  while (ptr_type->getTag() != llvm::dwarf::DW_TAG_pointer_type) {
-    ptr_type = llvm::dyn_cast<llvm::DIDerivedType>(ptr_type->getBaseType());
-    assert(ptr_type != nullptr);
+  // TODO might be nullptr if the malloc is saved to an external global variable
+  if (ptr_type != nullptr) {
+    while (ptr_type->getTag() != llvm::dwarf::DW_TAG_pointer_type) {
+      ptr_type = llvm::dyn_cast<llvm::DIDerivedType>(ptr_type->getBaseType());
+      assert(ptr_type != nullptr);
+    }
   }
-  mallocs.push_back(
-      MallocData{&ci, array_cookie, primary_cast, bcasts, location, ptr_type->getBaseType(), k, isa<InvokeInst>(ci)});
+  mallocs.push_back(MallocData{&ci, array_cookie, primary_cast, bcasts, location,
+                               ptr_type != nullptr ? ptr_type->getBaseType() : nullptr, k, isa<InvokeInst>(ci)});
 }
 
 void MemOpVisitor::visitFreeLike(llvm::CallBase& ci, MemOpKind k) {

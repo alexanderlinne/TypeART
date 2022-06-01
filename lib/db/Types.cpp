@@ -596,13 +596,14 @@ const di::Member* StructureType::find_member(size_t offset_in_bits) const {
 }
 
 META_CLASS_IMPL(di::Type, UnionType,
-                ((STRING, name),                   //
-                 (STRING, identifier),             //
-                 (REF, di::File, file),            //
-                 (REF, di::Scope, scope),          //
-                 (INTEGER, size_t, line),          //
-                 (INTEGER, size_t, size_in_bits),  //
-                 (TUPLE, di::Node, elements)))
+                ((STRING, name),                    //
+                 (STRING, identifier),              //
+                 (REF, di::File, file),             //
+                 (REF, di::Scope, scope),           //
+                 (INTEGER, size_t, line),           //
+                 (INTEGER, size_t, size_in_bits),   //
+                 (TUPLE, di::Subprogram, methods),  //
+                 (TUPLE, di::Member, members)))
 
 std::string UnionType::get_pretty_name() const {
   return get_name();

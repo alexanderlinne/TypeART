@@ -65,6 +65,7 @@ class LLVMMetadataConverter {
   [[nodiscard]] Ref<di::BasicType> convertDIBasicType(const llvm::DIBasicType& di_type);
   [[nodiscard]] Ref<di::Type> convertDICompositeType(const llvm::DICompositeType& di_type);
   [[nodiscard]] Ref<di::StructureType> convertStructureOrClassType(const llvm::DICompositeType& di_type);
+  [[nodiscard]] Ref<di::UnionType> convertUnionType(const llvm::DICompositeType& di_type);
   [[nodiscard]] Ref<di::ArrayType> convertArrayType(const llvm::DICompositeType& di_type);
   [[nodiscard]] Ref<di::Type> convertDIDerivedType(const llvm::DIDerivedType& di_type);
   [[nodiscard]] Ref<di::Inheritance> convertDIDerivedTypeInheritance(const llvm::DIDerivedType& di_type);

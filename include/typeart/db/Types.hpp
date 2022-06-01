@@ -795,7 +795,8 @@ class UnionType final : public di::Type {
               (REF, di::Scope, scope),                    //
               (INTEGER, size_t, line),                    //
               (INTEGER, size_t, size_in_bits, override),  //
-              (TUPLE, di::Node, elements)))
+              (TUPLE, di::Subprogram, methods),           //
+              (TUPLE, di::Member, members)))
 
  public:
   std::string get_pretty_name() const override;

@@ -179,7 +179,7 @@ cpp::result<PointerInfo, Status> PointerInfo::get(pointer addr) {
   auto guard = ScopeGuard{};
   getRecorder().incUsedInRequest(addr);
 #ifdef TYPEART_USE_ALLOCATOR
-  auto pointer_info = allocator::getPointerInfo(addr);
+  auto pointer_info_opt = allocator::getPointerInfo(addr);
 #else
   auto pointer_info_opt = tracker::Tracker::get().getPointerInfo(addr);
 #endif
@@ -254,7 +254,6 @@ cpp::result<PointerInfo::Subrange, Status> PointerInfo::getSubrange(pointer addr
   }
 
   // Ensure that the given address is in bounds
-  fmt::print(stderr, "{} {}\n", type->get_pretty_name(), type->get_size_in_bits());
   const auto type_size = byte_size::from_bits(type->get_size_in_bits());
   if (!contains(addr)) {
     const auto offset2base = addr - base_addr;

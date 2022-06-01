@@ -259,7 +259,7 @@ di::Encoding fromLLVMEncoding(unsigned int encoding) {
   if (di_type.getTag() == llvm::dwarf::DW_TAG_class_type || di_type.getTag() == llvm::dwarf::DW_TAG_structure_type) {
     return convertStructureOrClassType(di_type);
   } else if (di_type.getTag() == llvm::dwarf::DW_TAG_union_type) {
-    return make_meta<di::UnionType>(di_type, build_result);
+    return convertUnionType(di_type);
   } else if (di_type.getTag() == llvm::dwarf::DW_TAG_enumeration_type) {
     return make_meta<di::EnumerationType>(di_type, build_result);
   } else if (di_type.getTag() == llvm::dwarf::DW_TAG_array_type) {
@@ -308,6 +308,39 @@ di::Encoding fromLLVMEncoding(unsigned int encoding) {
     result->set_base_classes_raw(convertTuple(std::move(inheritance_refs)));
     result->set_methods_raw(convertTuple(std::move(method_refs)));
     result->set_direct_members_raw(convertTuple(std::move(member_refs)));
+  });
+}
+
+[[nodiscard]] Ref<di::UnionType> LLVMMetadataConverter::convertUnionType(const llvm::DICompositeType& di_type) {
+  return make_meta<di::UnionType>(di_type, [this, &di_type](auto& result) {
+    result->set_name_raw(convertString(di_type.getName()));
+    result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
+    result->set_identifier_raw(convertString(di_type.getIdentifier()));
+    result->set_file_raw(convertDIFile(di_type.getFile()));
+    result->set_scope_raw(convertDIScope(di_type.getScope()));
+    result->set_line_raw(convertInteger(di_type.getLine()));
+    auto method_refs = std::vector<Ref<Meta>>{};
+    auto member_refs = std::vector<Ref<Meta>>{};
+    if (di_type.getRawElements() != nullptr) {
+      for (const auto di_elem : di_type.getElements()) {
+        if (const auto derived_type = llvm::dyn_cast<llvm::DIDerivedType>(di_elem)) {
+          if (derived_type->getTag() == llvm::dwarf::DW_TAG_member) {
+            member_refs.emplace_back(convertDIDerivedTypeMember(*derived_type));
+          } else {
+            LOG_FATAL("Unexpected derived type tag {} in structure or class type", derived_type->getTag());
+            abort();
+          }
+        } else if (const auto subprogram = llvm::dyn_cast<llvm::DISubprogram>(di_elem)) {
+          method_refs.emplace_back(convertDISubprogram(*subprogram));
+        } else {
+          LOG_FATAL("Unexpected llvm meta subclass of kind {} as element of structure or type",
+                    di_elem->getMetadataID());
+          abort();
+        }
+      }
+    }
+    result->set_methods_raw(convertTuple(std::move(method_refs)));
+    result->set_members_raw(convertTuple(std::move(member_refs)));
   });
 }
 

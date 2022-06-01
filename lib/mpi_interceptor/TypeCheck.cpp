@@ -187,16 +187,16 @@ Result<Multipliers> check_type(const runtime::PointerInfo& pointer_info, const M
 
 // See MPICall::check_type(const Buffer&, const MPIType&)
 Result<Multipliers> check_combiner_named(const runtime::PointerInfo& pointer_info, const MPIType& type) {
-  const auto mpi_type = type.mpi_type;
-
-  const auto basic_type = meta::dyn_cast<meta::di::BasicType>(&pointer_info.resolveAllArrayTypes().getType());
-  if (basic_type == nullptr) {
-    return make_type_error<BuiltinTypeMismatch>(pointer_info, type.mpi_type);
-  }
-  const auto type_size = basic_type->get_size_in_bits() / 8;
+  const auto mpi_type        = type.mpi_type;
+  const auto basic_type_info = pointer_info.resolveAllArrayTypes();
+  const auto type_size       = basic_type_info.getType().get_size_in_bits() / 8;
   // We assume MPI_BYTE to be the MPI equivalent of void*.
   if (type.mpi_type == MPI_BYTE) {
     return Multipliers{1, type_size};
+  }
+  const auto basic_type = meta::dyn_cast<meta::di::BasicType>(&basic_type_info.getType());
+  if (basic_type == nullptr) {
+    return make_type_error<BuiltinTypeMismatch>(pointer_info, type.mpi_type);
   }
   MPI_Count mpi_type_size;
   MPI_Type_size_x(mpi_type, &mpi_type_size);

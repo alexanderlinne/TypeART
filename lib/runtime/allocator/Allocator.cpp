@@ -96,7 +96,9 @@ struct Region {
       auto count      = *(size_t*)((int8_t*)bucket_ptr + config::heap::count_offset);
       auto alloc_info = runtime::getAllocationInfo(alloc_id);
       if (alloc_info != nullptr) {
-        return PointerInfo{base_ptr, alloc_info->type_id, count, nullptr};
+        const auto meta  = runtime::getMeta(alloc_info->meta_id);
+        const auto alloc = meta::dyn_cast<meta::Allocation>(meta);
+        return PointerInfo{pointer{base_ptr}, *alloc, alloc->get_type(), count};
       }
     }
     return {};
@@ -349,7 +351,9 @@ std::optional<PointerInfo> getPointerInfo(const void* addr) {
     }
     auto alloc_info = runtime::getAllocationInfo(alloc_id);
     if (alloc_info != nullptr) {
-      return PointerInfo{bucket_ptr, alloc_info->type_id, count, nullptr};
+      const auto meta  = runtime::getMeta(alloc_info->meta_id);
+      const auto alloc = meta::dyn_cast<meta::Allocation>(meta);
+      return PointerInfo{pointer{bucket_ptr}, *alloc, alloc->get_type(), count};
     }
   }
   return {};

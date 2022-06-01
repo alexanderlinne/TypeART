@@ -42,9 +42,8 @@ class Value;
 
 namespace typeart::instrumentation::allocator {
 
-InstrumentationStrategy::InstrumentationStrategy(cl::InstrumentationMode mode, llvm::Module& m)
+InstrumentationStrategy::InstrumentationStrategy(llvm::Module& m)
     : instrumentation::InstrumentationStrategy(),
-      mode(mode),
       type_art_functions(m),
       instr_helper(m),
       tracker_instrumentation(m, false) {
@@ -200,6 +199,7 @@ llvm::AllocaInst* InstrumentationStrategy::createWrapperAlloca(llvm::AllocaInst*
                                               /* packed = */ true);
     }
   }
+  assert(dl.getTypeAllocSize(wrapper_type).getFixedSize() == allocation_size);
   auto required_alignment = config::stack::alignment_for(allocation_size);
   assert(required_alignment >= alloca->getAlignment());
   llvm::IRBuilder<> IRB(alloca->getNextNode());
@@ -214,42 +214,30 @@ size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
     auto* alloca   = args.get_as<llvm::AllocaInst>(ArgMap::ID::pointer);
     auto& ctx      = alloca->getContext();
     const auto& dl = alloca->getModule()->getDataLayout();
-    if (mode == cl::InstrumentationMode::before_optimization || mode == cl::InstrumentationMode::combined) {
-      llvm::IRBuilder<> IRB(alloca->getNextNode());
-      auto allocIdConst         = args.get_value(ArgMap::ID::alloc_id);
-      auto elementCountConst    = args.get_value(ArgMap::ID::element_count);
-      const auto wrapper_alloca = createWrapperAlloca(alloca, sdata.is_vla);
+    llvm::IRBuilder<> IRB(alloca->getNextNode());
+    auto allocIdConst         = args.get_value(ArgMap::ID::alloc_id);
+    auto elementCountConst    = args.get_value(ArgMap::ID::element_count);
+    const auto wrapper_alloca = createWrapperAlloca(alloca, sdata.is_vla);
 
-      const auto alloc_id = IRB.CreateStructGEP(wrapper_alloca, sdata.is_vla ? 4 : 2);
-      IRB.CreateStore(allocIdConst, alloc_id);
+    auto byte_size           = dl.getTypeAllocSize(wrapper_alloca->getAllocatedType()).getFixedSize();
+    const auto casted_alloca = (llvm::Instruction*)IRB.CreateBitCast(wrapper_alloca, llvm::Type::getInt8PtrTy(ctx));
+    const auto offset_casted =
+        IRB.CreateGEP(casted_alloca,
+                      llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), config::stack::region_offset_for(byte_size)));
+    auto offset_alloca = IRB.CreateBitCast(offset_casted, wrapper_alloca->getAllocatedType()->getPointerTo());
 
-      if (sdata.is_vla) {
-        const auto element_count = IRB.CreateStructGEP(wrapper_alloca, 2);
-        IRB.CreateStore(elementCountConst, element_count);
-      }
+    const auto alloc_id = IRB.CreateStructGEP(offset_alloca, sdata.is_vla ? 4 : 2);
+    IRB.CreateStore(allocIdConst, alloc_id, true);
 
-      const auto user_data = IRB.CreateStructGEP(wrapper_alloca, 0);
-      alloca->replaceAllUsesWith(user_data);
-      if (alloca->isTerminator()) {
-        abort();
-      }
-      alloca->eraseFromParent();
-      alloca = wrapper_alloca;
+    if (sdata.is_vla) {
+      const auto element_count = IRB.CreateStructGEP(offset_alloca, 2);
+      IRB.CreateStore(elementCountConst, element_count, true);
     }
-    if (mode == cl::InstrumentationMode::after_optimization || mode == cl::InstrumentationMode::combined) {
-      const auto allocated_type = alloca->getAllocatedType();
-      if (allocated_type->getStructName().startswith("Typeart_Wrapper_")) {
-        auto byte_size = dl.getTypeAllocSize(allocated_type).getFixedSize();
-        llvm::IRBuilder<> IRB(alloca->getNextNode());
-        const auto casted_wrapper = (llvm::Instruction*)IRB.CreateBitCast(alloca, llvm::Type::getInt8PtrTy(ctx));
-        const auto offset_casted  = IRB.CreateGEP(
-             casted_wrapper,
-             llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), config::stack::region_offset_for(byte_size)));
-        auto offset_wrapper = IRB.CreateBitCast(offset_casted, allocated_type->getPointerTo());
-        alloca->replaceAllUsesWith(offset_wrapper);
-        casted_wrapper->setOperand(0, alloca);
-      }
-    }
+
+    const auto user_data = IRB.CreateStructGEP(offset_alloca, 0);
+
+    alloca->replaceAllUsesWith(user_data);
+    alloca->eraseFromParent();
   }
 
   return stack.size();

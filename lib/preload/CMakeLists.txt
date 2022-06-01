@@ -16,8 +16,9 @@ add_library(typeart::Preload ALIAS ${TYPEART_PREFIX}_Preload)
 
 target_link_libraries(
   ${TYPEART_PREFIX}_Preload
-  ${TYPEART_PREFIX}_Runtime
-  dl
+  PRIVATE ${TYPEART_PREFIX}_Runtime
+          result::result
+          dl
 )
 
 target_include_directories(

@@ -186,13 +186,13 @@ AllocState Tracker::doAlloc(const void* addr, alloc_id_t alloc_id, size_t count,
 
 FreeState Tracker::doFreeHeap(const void* addr, const void* retAddr) {
   if (unlikely(addr == nullptr)) {
-    LOG_ERROR("Free on nullptr ({})", retAddr);
+    LOG_TRACE("Free on nullptr ({})", retAddr);
     return FreeState::ADDR_SKIPPED | FreeState::NULL_PTR;
   }
   llvm::Optional<PointerInfo> removed = wrapper.remove(addr);
 
   if (unlikely(!removed)) {
-    LOG_ERROR("Free on unregistered address {} ({})", addr, retAddr);
+    LOG_TRACE("Free on unregistered address {} ({})", addr, retAddr);
     return FreeState::ADDR_SKIPPED | FreeState::UNREG_ADDR;
   }
 
@@ -226,7 +226,7 @@ void Tracker::onLeaveScope(int alloca_count, const void* retAddr) {
   auto& recorder = runtime::getRecorder();
   wrapper.remove_range(start_pos, cend, [&](llvm::Optional<PointerInfo>& removed, const void* addr) {
     if (unlikely(!removed)) {
-      LOG_ERROR("Free on unregistered address {} ({})", addr, retAddr);
+      LOG_TRACE("Free on unregistered address {} ({})", addr, retAddr);
     } else {
       LOG_TRACE("Free stack {}", *removed);
       if constexpr (!std::is_same_v<Recorder, softcounter::NoneRecorder>) {

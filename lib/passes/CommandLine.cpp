@@ -6,10 +6,6 @@ using namespace llvm;
 
 static cl::OptionCategory typeart_category("TypeART instrumentation pass", "These control the instrumentation.");
 
-static cl::opt<std::string> cl_typeart_mode(
-    "typeart-mode", cl::desc("Hint for typeart whether it runs on optimized code or will be optimized."),
-    cl::init("combined"), cl::cat(typeart_category));
-
 static cl::opt<std::string> cl_typeart_type_file("typeart-types", cl::desc("Location of the generated type file."),
                                                  cl::init("types.yaml"), cl::cat(typeart_category));
 
@@ -101,18 +97,6 @@ analysis::MemInstFinderConfig getMemInstFinderConfig() {
 const std::string& getTypeFilepath() {
   assert(!cl_typeart_type_file.empty() && "Default type file not set");
   return cl_typeart_type_file.getValue();
-}
-
-InstrumentationMode getInstrumentationMode() {
-  auto& value = cl_typeart_mode.getValue();
-  if (value == "combined") {
-    return InstrumentationMode::combined;
-  } else if (value == "preopt") {
-    return InstrumentationMode::before_optimization;
-  } else if (value == "postopt") {
-    return InstrumentationMode::after_optimization;
-  }
-  abort();
 }
 
 bool getInstrumentGlobal() {

@@ -99,6 +99,7 @@ class Database {
   [[nodiscard]] meta_id_t reserveMetaId();
   [[nodiscard]] meta::Meta* lookupMeta(const meta::Meta& meta);
   [[nodiscard]] meta::Meta* storeMeta(std::unique_ptr<meta::Meta> meta);
+  void replaceRefs(const meta::Meta& original, meta::Meta& replacement);
 
  private:
   std::vector<AllocationInfo> allocation_info;

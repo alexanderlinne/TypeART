@@ -87,6 +87,9 @@ const AllocationInfo* Database::getAllocationInfo(alloc_id_t alloc_id) const {
     }
   }
   for (const auto& elem : meta_info) {
+    if (!elem) {
+      continue;
+    }
     if (auto structure_type = meta::dyn_cast<meta::di::StructureType>(elem.get())) {
       structure_store.try_emplace(structure_type->get_identifier(), structure_type);
     }
@@ -102,7 +105,9 @@ const AllocationInfo* Database::getAllocationInfo(alloc_id_t alloc_id) const {
     LOG_FATAL("Database::addMeta argument must not be nullptr");
     abort();
   }
-  if (auto existing_meta = lookupMeta(*meta.get()); existing_meta != nullptr) {
+  if (auto existing_meta = lookupMeta(*meta); existing_meta != nullptr) {
+    // TODO make sure that unused Meta instances are discarded.
+    replaceRefs(*meta, *existing_meta);
     return existing_meta;
   }
   meta->set_id(reserveMetaId());
@@ -160,6 +165,9 @@ const meta::Meta* Database::getMetaInfo(meta_id_t meta_id) const {
     return lookupSubprogram(subprogram->get_linkage_name());
   } else {
     for (const auto& info : meta_info) {
+      if (!info) {
+        continue;
+      }
       if (meta == *info) {
         return info.get();
       }
@@ -179,6 +187,19 @@ const meta::Meta* Database::getMetaInfo(meta_id_t meta_id) const {
   auto result               = meta.get();
   meta_info[id.value() - 1] = std::move(meta);
   return result;
+}
+
+void Database::replaceRefs(const meta::Meta& original, meta::Meta& replacement) {
+  for (auto& info : meta_info) {
+    if (!info) {
+      continue;
+    }
+    for (auto& ref : info->get_refs()) {
+      if (ref.get() == &original) {
+        ref.set(replacement);
+      }
+    }
+  }
 }
 
 }  // namespace typeart

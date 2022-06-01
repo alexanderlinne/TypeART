@@ -6,22 +6,22 @@ int main(int argc, char** argv) {
   const int n = 42;
   // CHECK: [Trace] TypeART Runtime Trace
 
-  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [42 x unsigned char]
+  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [1 x unsigned char[42]]
   unsigned char a[n];
 
-  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [42 x unsigned short]
+  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [1 x unsigned short[42]]
   unsigned short b[n];
 
-  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [42 x unsigned int]
+  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [1 x unsigned int[42]]
   unsigned int c[n];
 
-  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [42 x long unsigned int]
+  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [1 x long unsigned int[42]]
   unsigned long d[n];
 
-  // CHECK: [Trace] Free stack 0x{{.*}} of type [42 x unsigned char]
-  // CHECK: [Trace] Free stack 0x{{.*}} of type [42 x unsigned short]
-  // CHECK: [Trace] Free stack 0x{{.*}} of type [42 x unsigned int]
-  // CHECK: [Trace] Free stack 0x{{.*}} of type [42 x long unsigned int]
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x unsigned char[42]]
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x unsigned short[42]]
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x unsigned int[42]]
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x long unsigned int[42]]
 
   return 0;
 }

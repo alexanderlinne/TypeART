@@ -231,24 +231,16 @@ function apply_typeart() {
 }
 
 function apply_typeart_optim() {
-  if [ "$typeart_instrumentation" = "Allocator" ];
-  then
-    source_to_llvm |
-      $opt_tool ${typeart_plugin} ${typeart_heap_mode_args} -typeart-stack -typeart-mode preopt ${ta_more_args} |
-      $opt_tool ${optimize} |
-      $opt_tool ${typeart_plugin} ${typeart_stack_mode_args} -typeart-mode postopt ${ta_more_args} -S
-  else
-    source_to_llvm |
-      $opt_tool ${typeart_plugin} ${typeart_heap_mode_args} ${ta_more_args} |
-      $opt_tool ${optimize} |
-      $opt_tool ${typeart_plugin} ${typeart_stack_mode_args} ${ta_more_args} -S
-  fi
+  source_to_llvm |
+    $opt_tool ${typeart_plugin} ${typeart_heap_mode_args} ${ta_more_args} |
+    $opt_tool ${optimize} |
+    $opt_tool ${typeart_plugin} ${typeart_stack_mode_args} ${ta_more_args} -S
 }
 
 function make_no_optim() {
   # Order: heap and stack/global together, no optimization pass
   source_to_llvm 2>&1 >"${source_file}.ll"
-  # apply_typeart 2>&1 >"${source_file}.ta.ll"
+  apply_typeart 2>&1 >"${source_file}.ta.ll"
   if [ $skip_typeart == 0 ]; then
     if [ $show_ir == 0 ]; then
       apply_typeart | $llc_tool -x=ir ${llc_flags} -o "${object_file}"
