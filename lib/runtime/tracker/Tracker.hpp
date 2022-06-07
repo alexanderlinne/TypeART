@@ -35,7 +35,8 @@ enum class AllocState : unsigned {
   NULL_ZERO        = 1 << 5,
   ADDR_REUSE       = 1 << 6,
   UNKNOWN_TYPE_ID  = 1 << 7,
-  UNKNOWN_ALLOC_ID = 1 << 8
+  UNKNOWN_ALLOC_ID = 1 << 8,
+  ERROR            = 1 << 9
 };
 
 inline unsigned operator&(const AllocState& lhs, const AllocState& rhs) {
@@ -48,6 +49,7 @@ enum class FreeState : unsigned {
   ADDR_SKIPPED = 1 << 2,
   NULL_PTR     = 1 << 3,
   UNREG_ADDR   = 1 << 4,
+  ERROR        = 1 << 5,
 };
 
 class Tracker {

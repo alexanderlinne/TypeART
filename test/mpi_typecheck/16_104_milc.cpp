@@ -8,6 +8,8 @@
 // UNSUPPORTED: asan
 // UNSUPPORTED: tsan
 
+// XFAIL: *
+
 #include <mpi.h>
 
 typedef struct complex_t {

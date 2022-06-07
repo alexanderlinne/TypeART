@@ -411,14 +411,8 @@ Recorder& getRecorder() {
   return Runtime::getRecorder();
 }
 
-const meta::Meta* getMeta(meta_id_t meta_id) {
-  auto guard = ScopeGuard{};
-  return Runtime::getDatabase().getMetaInfo(meta_id);
-}
-
-const AllocationInfo* getAllocationInfo(alloc_id_t alloc_id) {
-  auto guard = ScopeGuard{};
-  return Runtime::getDatabase().getAllocationInfo(alloc_id);
+Database& getDatabase() {
+  return Runtime::getDatabase();
 }
 
 }  // namespace typeart::runtime

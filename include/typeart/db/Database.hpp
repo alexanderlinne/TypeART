@@ -92,8 +92,8 @@ class Database {
   [[nodiscard]] meta::di::StructureType* lookupStructureType(const std::string& identifier);
   [[nodiscard]] meta::di::Subprogram* lookupSubprogram(const std::string& linkage_name);
 
-  [[nodiscard]] meta::Meta* getMetaInfo(meta_id_t meta_id);
-  [[nodiscard]] const meta::Meta* getMetaInfo(meta_id_t meta_id) const;
+  [[nodiscard]] meta::Meta* getMeta(meta_id_t meta_id);
+  [[nodiscard]] const meta::Meta* getMeta(meta_id_t meta_id) const;
 
  private:
   [[nodiscard]] meta_id_t reserveMetaId();

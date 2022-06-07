@@ -114,16 +114,6 @@ std::istream& operator>>(std::istream& is, std::optional<Kind>& value);
 
 class Meta;
 
-namespace detail {
-Meta* resolve_meta_id(meta_id_t id, Database& db);
-
-template <typename T, typename = int>
-struct is_leaf_class : std::false_type {};
-
-template <typename T>
-struct is_leaf_class<T, decltype((void)T::META_KIND, 0)> : std::true_type {};
-}  // namespace detail
-
 template <class MetaClass>
 class Ref {
   static_assert(std::is_base_of_v<Meta, MetaClass>);

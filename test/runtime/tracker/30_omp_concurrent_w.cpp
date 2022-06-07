@@ -1,23 +1,23 @@
 // clang-format off
-// RUN: OMP_NUM_THREADS=3 %run %s -o -O1 --omp --manual 2>&1 | %filecheck %s --check-prefix=CHECK-TSAN
-// RUN: OMP_NUM_THREADS=3 %run %s -o -O1 --omp --manual 2>&1 | %filecheck %s
+// RUN: OMP_NUM_THREADS=3 %run %s -o -O1 --omp 2>&1 | %filecheck %s --check-prefix=CHECK-TSAN
+// RUN: OMP_NUM_THREADS=3 %run %s -o -O1 --omp 2>&1 | %filecheck %s
 // REQUIRES: openmp && softcounter
 // REQUIRES: tracker
 
-// TODO: register allocation id at runtime
-// XFAIL: *
-
 // clang-format on
 
-#include "runtime/tracker/CallbackInterface.h"
+#include "util.hpp"
 
 #include <algorithm>
 #include <random>
 #include <vector>
 
+using namespace typeart;
+
 template <typename S, typename E>
-void repeat_alloc(S s, E e) {
-  std::for_each(s, e, [&](auto elem) { typeart_tracker_alloc(reinterpret_cast<const void*>(elem), 6, 20); });
+void repeat_alloc(alloc_id_t alloc_id, S s, E e) {
+  std::for_each(s, e,
+                [&](auto elem) { typeart_tracker_alloc(reinterpret_cast<const void*>(elem), alloc_id.value(), 20); });
 }
 
 template <typename S, typename E>
@@ -45,14 +45,16 @@ int main(int argc, char** argv) {
   auto h2                 = h1 + (size / 3);
   auto e                  = std::end(vec);
 
+  auto alloc_id = create_fake_double_heap_alloc_id();
+
 #pragma omp parallel sections num_threads(3)
   {
 #pragma omp section
-    { repeat_alloc(beg, h1); }
+    { repeat_alloc(alloc_id, beg, h1); }
 #pragma omp section
-    { repeat_alloc(h2, e); }
+    { repeat_alloc(alloc_id, h2, e); }
 #pragma omp section
-    { repeat_alloc(h1, h2); }
+    { repeat_alloc(alloc_id, h1, h2); }
   }
 
 #pragma omp parallel sections num_threads(3)
@@ -70,9 +72,9 @@ int main(int argc, char** argv) {
   // CHECK-NOT: Error
 
   // CHECK: Allocation type detail (heap, stack, global)
-  // CHECK: 6   : 300 ,     0 ,    0 , double
+  // CHECK: double : 301 ,     0 ,    0
 
   // CHECK: Free allocation type detail (heap, stack)
-  // CHECK: 6   : 300 ,     0 , double
+  // CHECK: double : 301 ,     0
   return 0;
 }

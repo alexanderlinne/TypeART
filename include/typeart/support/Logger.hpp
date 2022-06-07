@@ -52,42 +52,42 @@ inline std::ostream& operator<<(std::ostream& os, const llvm::StringRef& str) {
 
 namespace typeart {
 
-extern std::shared_ptr<spdlog::logger> logger;
+std::shared_ptr<spdlog::logger>& logger();
 
 }  // namespace typeart
 
 #if TYPEART_LOG_LEVEL >= 3
-#define LOG_TRACE(...) SPDLOG_LOGGER_TRACE(typeart::logger, __VA_ARGS__)
+#define LOG_TRACE(...) SPDLOG_LOGGER_TRACE(typeart::logger(), __VA_ARGS__)
 #else
 #define LOG_TRACE(...) (void)0
 #endif
 
 #if TYPEART_LOG_LEVEL >= 3
-#define LOG_DEBUG(...) SPDLOG_LOGGER_DEBUG(typeart::logger, __VA_ARGS__)
+#define LOG_DEBUG(...) SPDLOG_LOGGER_DEBUG(typeart::logger(), __VA_ARGS__)
 #else
 #define LOG_DEBUG(...) (void)0
 #endif
 
 #if TYPEART_LOG_LEVEL >= 2
-#define LOG_INFO(...) SPDLOG_LOGGER_DEBUG(typeart::logger, __VA_ARGS__)
+#define LOG_INFO(...) SPDLOG_LOGGER_DEBUG(typeart::logger(), __VA_ARGS__)
 #else
 #define LOG_INFO(...) (void)0
 #endif
 
 #if TYPEART_LOG_LEVEL >= 1
-#define LOG_WARNING(...) SPDLOG_LOGGER_WARN(typeart::logger, __VA_ARGS__)
+#define LOG_WARNING(...) SPDLOG_LOGGER_WARN(typeart::logger(), __VA_ARGS__)
 #else
 #define LOG_WARNING(...) (void)0
 #endif
 
 #if TYPEART_LOG_LEVEL >= 1
-#define LOG_ERROR(...) SPDLOG_LOGGER_ERROR(typeart::logger, __VA_ARGS__)
+#define LOG_ERROR(...) SPDLOG_LOGGER_ERROR(typeart::logger(), __VA_ARGS__)
 #else
 #define LOG_ERROR(...) (void)0
 #endif
 
 #if TYPEART_LOG_LEVEL >= 0
-#define LOG_FATAL(...) SPDLOG_LOGGER_CRITICAL(typeart::logger, __VA_ARGS__)
+#define LOG_FATAL(...) SPDLOG_LOGGER_CRITICAL(typeart::logger(), __VA_ARGS__)
 #else
 #define LOG_FATAL(...) (void)0
 #endif

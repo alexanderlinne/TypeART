@@ -100,56 +100,72 @@ Tracker::Tracker() {
 }
 
 void Tracker::onAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
-  const auto alloc_info = runtime::getAllocationInfo(alloc_id);
-  const auto meta       = runtime::getMeta(alloc_info->meta_id);
-  const auto alloc      = meta::dyn_cast<meta::HeapAllocation>(meta);
-  const auto status     = doAlloc(addr, alloc_id, count, retAddr);
-  if (!(status & AllocState::ADDR_SKIPPED)) {
-    runtime::getRecorder().incHeapAlloc(alloc, count);
-  }
-  if (!(status & AllocState::UNKNOWN_ALLOC_ID)) {
+  const auto status = doAlloc(addr, alloc_id, count, retAddr);
+  if (!(status & AllocState::ERROR)) {
+    const auto alloc_info = runtime::getDatabase().getAllocationInfo(alloc_id);
+    const auto meta       = runtime::getDatabase().getMeta(alloc_info->meta_id);
+    const auto alloc      = meta::dyn_cast<meta::HeapAllocation>(meta);
+    if (unlikely(alloc == nullptr)) {
+      LOG_ERROR("Unexpected meta type. Expected HeapAllocation, but found {}", meta->get_kind());
+      return;
+    }
+    if (!(status & AllocState::ADDR_SKIPPED)) {
+      runtime::getRecorder().incHeapAlloc(alloc, count);
+    }
     auto pointer_info = PointerInfo{pointer{addr}, *alloc, alloc->get_type(), count};
     LOG_TRACE("Alloc heap {}", pointer_info);
   }
 }
 
 void Tracker::onAllocStack(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
-  const auto alloc_info = runtime::getAllocationInfo(alloc_id);
-  const auto meta       = runtime::getMeta(alloc_info->meta_id);
-  const auto alloc      = meta::dyn_cast<meta::StackAllocation>(meta);
-  const auto status     = doAlloc(addr, alloc_id, count, retAddr);
-  if (!(status & AllocState::ADDR_SKIPPED)) {
-    threadData.stackVars.push_back(addr);
-    runtime::getRecorder().incStackAlloc(alloc, count);
-  }
-  if (!(status & AllocState::UNKNOWN_ALLOC_ID)) {
+  const auto status = doAlloc(addr, alloc_id, count, retAddr);
+  if (!(status & AllocState::ERROR)) {
+    const auto alloc_info = runtime::getDatabase().getAllocationInfo(alloc_id);
+    const auto meta       = runtime::getDatabase().getMeta(alloc_info->meta_id);
+    const auto alloc      = meta::dyn_cast<meta::StackAllocation>(meta);
+    if (unlikely(alloc == nullptr)) {
+      LOG_ERROR("Unexpected meta type. Expected StackAllocation, but found {}", meta->get_kind());
+      return;
+    }
+    if (!(status & AllocState::ADDR_SKIPPED)) {
+      threadData.stackVars.push_back(addr);
+      runtime::getRecorder().incStackAlloc(alloc, count);
+    }
     auto pointer_info = PointerInfo{pointer{addr}, *alloc, alloc->get_type(), count};
     LOG_TRACE("Alloc stack {}", pointer_info);
   }
 }
 
 void Tracker::onAllocGlobal(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
-  const auto alloc_info = runtime::getAllocationInfo(alloc_id);
-  const auto meta       = runtime::getMeta(alloc_info->meta_id);
-  const auto alloc      = meta::dyn_cast<meta::GlobalAllocation>(meta);
-  const auto status     = doAlloc(addr, alloc_id, count, retAddr);
-  if (!(status & AllocState::ADDR_SKIPPED)) {
-    runtime::getRecorder().incGlobalAlloc(alloc, count);
-  }
-  if (!(status & AllocState::UNKNOWN_ALLOC_ID)) {
+  const auto status = doAlloc(addr, alloc_id, count, retAddr);
+  if (!(status & AllocState::ERROR)) {
+    const auto alloc_info = runtime::getDatabase().getAllocationInfo(alloc_id);
+    const auto meta       = runtime::getDatabase().getMeta(alloc_info->meta_id);
+    const auto alloc      = meta::dyn_cast<meta::GlobalAllocation>(meta);
+    if (unlikely(alloc == nullptr)) {
+      LOG_ERROR("Unexpected meta type. Expected GlobalAllocation, but found {}", meta->get_kind());
+      return;
+    }
+    if (!(status & AllocState::ADDR_SKIPPED)) {
+      runtime::getRecorder().incGlobalAlloc(alloc, count);
+    }
     auto pointer_info = PointerInfo{pointer{addr}, *alloc, alloc->get_type(), count};
     LOG_TRACE("Alloc global {}", pointer_info);
   }
 }
 
 AllocState Tracker::doAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
-  auto alloc_info = runtime::getAllocationInfo(alloc_id);
+  auto alloc_info = runtime::getDatabase().getAllocationInfo(alloc_id);
   if (unlikely(alloc_info == nullptr)) {
-    auto status = AllocState::UNKNOWN_ALLOC_ID | AllocState::ADDR_SKIPPED;
+    auto status = AllocState::ERROR | AllocState::UNKNOWN_ALLOC_ID | AllocState::ADDR_SKIPPED;
     LOG_ERROR("Allocation with unknown alloc_id! Skipping...");
     return status;
   }
-  const auto meta  = runtime::getMeta(alloc_info->meta_id);
+  const auto meta = runtime::getDatabase().getMeta(alloc_info->meta_id);
+  if (unlikely(meta == nullptr)) {
+    LOG_ERROR("Allocation info with unknown meta_id! Skipping...");
+    return AllocState::ERROR | AllocState::ADDR_SKIPPED;
+  }
   const auto alloc = meta::dyn_cast<meta::Allocation>(meta);
 
   AllocState status = AllocState::NO_INIT;
@@ -199,8 +215,13 @@ FreeState Tracker::doFreeHeap(const void* addr, const void* retAddr) {
   LOG_TRACE("Free heap {}", *removed);
 
   if constexpr (!std::is_same_v<Recorder, softcounter::NoneRecorder>) {
-    runtime::getRecorder().incHeapFree(meta::dyn_cast<meta::HeapAllocation>(&removed->getAllocation()),
-                                       removed->getCount());
+    auto& meta = removed->getAllocation();
+    auto alloc = meta::dyn_cast<meta::HeapAllocation>(&meta);
+    if (unlikely(alloc == nullptr)) {
+      LOG_ERROR("Unexpected meta type. Expected HeapAllocation, but found {}", meta.get_kind());
+      return FreeState::ERROR;
+    }
+    runtime::getRecorder().incHeapFree(alloc, removed->getCount());
   }
   return FreeState::OK;
 }
@@ -230,7 +251,13 @@ void Tracker::onLeaveScope(int alloca_count, const void* retAddr) {
     } else {
       LOG_TRACE("Free stack {}", *removed);
       if constexpr (!std::is_same_v<Recorder, softcounter::NoneRecorder>) {
-        recorder.incStackFree(meta::dyn_cast<meta::StackAllocation>(&removed->getAllocation()), removed->getCount());
+        auto& meta = removed->getAllocation();
+        auto alloc = meta::dyn_cast<meta::StackAllocation>(&meta);
+        if (unlikely(alloc == nullptr)) {
+          LOG_ERROR("Unexpected meta type. Expected StackAllocation, but found {}", meta.get_kind());
+          return;
+        }
+        recorder.incStackFree(alloc, removed->getCount());
       }
     }
   });

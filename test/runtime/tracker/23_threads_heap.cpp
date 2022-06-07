@@ -33,9 +33,9 @@ int main(int argc, char** argv) {
 
   // CHECK-NOT: Error
   // CHECK: Allocation type detail (heap, stack, global)
-  // CHECK: 6   : 3000 ,    0 ,    0 , double
+  // CHECK: double : 3000 ,    0 ,    0
   // CHECK: Free allocation type detail (heap, stack)
-  // CHECK: 6   : 3000 ,    0 , double
+  // CHECK: double : 3000 ,    0
 
   return 0;
 }

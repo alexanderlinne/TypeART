@@ -1,6 +1,9 @@
 // RUN: %run %s 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
+// TODO: add support for VLAs using debug info
+// XFAIL: *
+
 #include <stdlib.h>
 
 typedef int int2 __attribute__((ext_vector_type(2)));

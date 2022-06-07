@@ -1,7 +1,9 @@
 // RUN: %run %s 2>&1 | %filecheck %s
 // REQUIRES: tracker
 
-#include "util.h"
+#include "util.hpp"
+
+using namespace typeart;
 
 struct S1 {
   int x;
@@ -9,16 +11,15 @@ struct S1 {
 };
 
 int main() {
-  const auto check = [&](auto* addr, size_t elems) {
-    typeart_pointer_info pointer_info;
-    typeart_status status = typeart_get_pointer_info(reinterpret_cast<const void*>(addr), &pointer_info);
-
-    if (status == TYPEART_OK) {
-      if (pointer_info.count != elems) {
-        fprintf(stderr, "[Error]: Count not expected: %zu. Expected: %zu.\n", pointer_info.count, elems);
-      }
-    } else {
-      fprintf(stderr, "[Check]: Status: %i with #elem %zu.\n", status, elems);
+  const auto check = [&](const void* addr, size_t elems) {
+    auto pointer_info_result = runtime::PointerInfo::get(addr);
+    if (pointer_info_result.has_error()) {
+      fprintf(stderr, "[Check]: Status: %i with #elem %zu.\n", pointer_info_result.error(), elems);
+      return;
+    }
+    auto pointer_info = pointer_info_result.value();
+    if (pointer_info.getCount() != elems) {
+      fprintf(stderr, "[Error]: Count not expected: %zu. Expected: %zu.\n", pointer_info.getCount(), elems);
     }
   };
 

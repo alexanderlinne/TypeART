@@ -1,12 +1,12 @@
 // clang-format off
-// RUN: %run %s --compile_flags "-g" --thread > %s.log 2>&1
+// RUN: %run %s --thread > %s.log 2>&1
 // RUN: cat %s.log | %filecheck %s
-// RUN: %run %s --compile_flags "-g" --thread 2>&1 | %filecheck %s --check-prefix=CHECK-TSAN
+// RUN: %run %s --thread 2>&1 | %filecheck %s --check-prefix=CHECK-TSAN
 // REQUIRES: thread && softcounter
 // REQUIRES: tracker
 // clang-format on
 
-#include "util.h"
+#include "util.hpp"
 
 #include <atomic>
 #include <pthread.h>
@@ -24,7 +24,7 @@ std::atomic_bool stop{false};
 
 void repeat_type_check(float* ptr, int count) {
   do {
-    check(ptr, 5, count, 0);
+    check(ptr, "float", count, 0);
   } while (!stop);
 }
 
@@ -36,8 +36,8 @@ int main(int argc, char** argv) {
   float* f1 = (float*)malloc(sizeof(float) * 10);
   float* f2 = (float*)malloc(sizeof(float) * 20);
 
-  // CHECK: [Trace] Alloc 0x{{.*}} float 4 10
-  // CHECK: [Trace] Alloc 0x{{.*}} float 4 20
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [10 x float]
+  // CHECK: [Trace] Alloc heap 0x{{.*}} of type [20 x float]
 
   std::thread type_check_1(repeat_type_check, f1, 10);
   std::thread type_check_2(repeat_type_check, f2, 20);
@@ -61,9 +61,9 @@ int main(int argc, char** argv) {
   // CHECK-TSAN-NOT: ThreadSanitizer
 
   // CHECK: Allocation type detail (heap, stack, global)
-  // CHECK: 6   : 3000 ,    0 ,    0 , double
+  // CHECK: double : 3000 ,    0 ,    0
   // CHECK: Free allocation type detail (heap, stack)
-  // CHECK: 6   : 3000 ,    0 , double
+  // CHECK: double : 3000 ,    0
 
   return 0;
 }

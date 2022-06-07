@@ -1,43 +1,42 @@
 // clang-format off
-// RUN: %run %s --manual --compile_flags "-std=c++17" 2>&1 | %filecheck %s
+// RUN: %run %s 2>&1 | %filecheck %s
 // REQUIRES: tracker
 // clang-format on
 
-// TODO: how to handle this test with alloc_ids?
-// XFAIL: *
-
-#include "runtime/tracker/CallbackInterface.h"
-#include "util.h"
+#include "util.hpp"
 
 #include <stdio.h>
 
 int main(int argc, char** argv) {
-  const int type{6};
-  const size_t extent{6};
-  double d[extent];
+  const auto alloc_id = create_fake_double_stack_alloc_id();
 
-  // CHECK: [Error]{{.*}}Stack is smaller than requested de-allocation count. alloca_count: 1. size: 0
-  typeart_tracker_leave_scope(1);
+  // CHECK: [Trace] Alloc stack 0x{{[0-9a-f]+}} of type [1 x double[6]]
+  double d[6];
+
+  // CHECK: [Trace] Free stack 0x{{[0-9a-f]+}} of type [1 x int]
+  // CHECK: [Trace] Free stack 0x{{[0-9a-f]+}} of type [1 x const typeart::alloc_id_t]
+  // CHECK: [Trace] Free stack 0x{{[0-9a-f]+}} of type [1 x double[6]]
+  typeart_tracker_leave_scope(3);
   // CHECK: [Error]{{.*}}Stack is smaller than requested de-allocation count. alloca_count: 12. size: 0
   typeart_tracker_leave_scope(12);
 
-  // CHECK: [Trace] Alloc 0x{{[0-9a-f]+}} {{[0-9]*}} 6 double 8 6
-  typeart_tracker_alloc_stack(reinterpret_cast<const void*>(&d[0]), type, extent);
+  // CHECK: [Trace] Alloc stack 0x{{[0-9a-f]+}} of type [6 x double]
+  typeart_tracker_alloc_stack(reinterpret_cast<const void*>(&d[0]), alloc_id.value(), 6);
 
-  // CHECK: [Trace] Freeing stack (1)  1
-  // CHECK: [Trace] Free 0x{{[0-9a-f]+}} {{[0-9]*}} 6 double 8 6
-  // CHECK: [Trace] Stack after free: 0
+  // CHECK: [Trace] Freeing 1 stack entries
+  // CHECK: [Trace] Free stack 0x{{[0-9a-f]+}} of type [6 x double]
+  // CHECK: [Trace] 0 remaining stack entries
   typeart_tracker_leave_scope(1);
 
   // CHECK: [Error]{{.*}}Stack is smaller than requested de-allocation count. alloca_count: 1. size: 0
   typeart_tracker_leave_scope(1);
 
-  // CHECK: [Trace] Alloc 0x{{[0-9a-f]+}} {{[0-9]*}} 6 double 8 1
-  typeart_tracker_alloc_stack(reinterpret_cast<const void*>(&d[0]), type, 1);
-  // CHECK: [Trace] Alloc 0x{{[0-9a-f]+}} {{[0-9]*}} 6 double 8 1
-  typeart_tracker_alloc_stack(reinterpret_cast<const void*>(&d[1]), type, 1);
+  // CHECK: [Trace] Alloc stack 0x{{[0-9a-f]+}} of type [1 x double]
+  typeart_tracker_alloc_stack(reinterpret_cast<const void*>(&d[0]), alloc_id.value(), 1);
+  // CHECK: [Trace] Alloc stack 0x{{[0-9a-f]+}} of type [1 x double]
+  typeart_tracker_alloc_stack(reinterpret_cast<const void*>(&d[1]), alloc_id.value(), 1);
   // CHECK: [Error]{{.*}}Stack is smaller than requested de-allocation count. alloca_count: 3. size: 2
-  // CHECK: [Trace] Freeing stack (2)  2
+  // CHECK: [Trace] Freeing 2 stack entries
   typeart_tracker_leave_scope(3);
   return 0;
 }

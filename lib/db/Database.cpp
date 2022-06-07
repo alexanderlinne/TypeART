@@ -82,7 +82,7 @@ const AllocationInfo* Database::getAllocationInfo(alloc_id_t alloc_id) const {
     }
     for (auto& ref : elem->get_refs()) {
       if (ref.get() == nullptr) {
-        ref.set(*getMetaInfo(ref.get_id()));
+        ref.set(*getMeta(ref.get_id()));
       }
     }
   }
@@ -134,14 +134,14 @@ const AllocationInfo* Database::getAllocationInfo(alloc_id_t alloc_id) const {
   return nullptr;
 }
 
-meta::Meta* Database::getMetaInfo(meta_id_t meta_id) {
+meta::Meta* Database::getMeta(meta_id_t meta_id) {
   if (meta_id == meta_id_t::invalid || meta_id.value() > static_cast<meta_id_t::value_type>(meta_info.size())) {
     return nullptr;
   }
   return meta_info[meta_id.value() - 1].get();
 }
 
-const meta::Meta* Database::getMetaInfo(meta_id_t meta_id) const {
+const meta::Meta* Database::getMeta(meta_id_t meta_id) const {
   if (meta_id == meta_id_t::invalid || meta_id.value() > static_cast<meta_id_t::value_type>(meta_info.size())) {
     return nullptr;
   }

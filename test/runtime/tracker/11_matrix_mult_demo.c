@@ -83,28 +83,27 @@ int main(int argc, char** argv) {
 // CHECK: [Trace] TypeART Runtime Trace
 
 // Alloc matrix array
-// CHECK: [Trace] Alloc 0x{{.*}} struct.mat_t 16 4
+// CHECK: [Trace] Alloc stack 0x{{.*}} of type [1 x mat[4]]
 
 // Alloc matrix values
-// CHECK: [Trace] Alloc 0x{{.*}} double 8 64
-// CHECK: [Trace] Alloc 0x{{.*}} double 8 64
-// CHECK: [Trace] Alloc 0x{{.*}} double 8 64
-// CHECK: [Trace] Alloc 0x{{.*}} double 8 64
+// CHECK: [Trace] Alloc heap 0x{{.*}} of type [64 x double]
+// CHECK: [Trace] Alloc heap 0x{{.*}} of type [64 x double]
+// CHECK: [Trace] Alloc heap 0x{{.*}} of type [64 x double]
+// CHECK: [Trace] Alloc heap 0x{{.*}} of type [64 x double]
 
 // Alloc and free temp buffer
-// CHECK: [Trace] Alloc 0x{{.*}} double 8 64
-// CHECK: [Trace] Free 0x{{.*}}
-// CHECK: [Trace] Alloc 0x{{.*}} double 8 64
-// CHECK: [Trace] Free 0x{{.*}}
-// CHECK: [Trace] Alloc 0x{{.*}} double 8 64
-// CHECK: [Trace] Free 0x{{.*}}
+// CHECK: [Trace] Alloc heap 0x{{.*}} of type [64 x double]
+// CHECK: [Trace] Free heap 0x{{.*}} of type [64 x double]
+// CHECK: [Trace] Alloc heap 0x{{.*}} of type [64 x double]
+// CHECK: [Trace] Free heap 0x{{.*}} of type [64 x double]
+// CHECK: [Trace] Alloc heap 0x{{.*}} of type [64 x double]
+// CHECK: [Trace] Free heap 0x{{.*}} of type [64 x double]
 
 // Free matrix values
-// CHECK: [Trace] Free 0x{{.*}}
-// CHECK: [Trace] Free 0x{{.*}}
-// CHECK: [Trace] Free 0x{{.*}}
-// CHECK: [Trace] Free 0x{{.*}}
+// CHECK: [Trace] Free heap 0x{{.*}} of type [64 x double]
+// CHECK: [Trace] Free heap 0x{{.*}} of type [64 x double]
+// CHECK: [Trace] Free heap 0x{{.*}} of type [64 x double]
+// CHECK: [Trace] Free heap 0x{{.*}} of type [64 x double]
 
-// TODO: Handle stack deallocation?
 // Free matrix array
-// CHECK?: [Trace] Free 0x{{.*}}
+// CHECK: [Trace] Free stack 0x{{.*}} of type [1 x mat[4]]

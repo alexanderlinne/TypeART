@@ -29,11 +29,11 @@ int main(int argc, char** argv) {
 
   // CHECK-NOT: Error
 
-  // CHECK: [Trace] Free 0x{{.*}} 0 int8 1 7
-  // CHECK: [Trace] Free 0x{{.*}} 6 double 8 1
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x char[7]]
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x double]
 
-  // CHECK: [Trace] Free 0x{{.*}} 0 int8 1 7
-  // CHECK: [Trace] Free 0x{{.*}} 6 double 8 1
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x char[7]]
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x double]
 
   return 0;
 }

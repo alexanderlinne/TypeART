@@ -15,9 +15,9 @@
 
 #include "runtime/AccessCounter.hpp"
 #include "runtime/tracker/Types.hpp"
-#include "support/Logger.hpp"
 #include "support/Table.h"
 
+#include <fmt/core.h>
 #include <fstream>
 #include <map>
 #include <set>
@@ -73,7 +73,6 @@ void serialize(const Recorder& r, std::ostringstream& buf) {
     t.put(Row::make("Total free stack", r.getStackAllocsFree(), r.getStackArrayFree()));
     t.put(Row::make("OMP Stack/Heap/Free", r.getOmpStackCalls(), r.getOmpHeapCalls(), r.getOmpFreeCalls()));
     t.put(Row::make("Null/Zero/NullZero Addr", r.getNullAlloc(), r.getZeroAlloc(), r.getNullAndZeroAlloc()));
-    t.put(Row::make("User-def. types", r.getNumUDefTypes()));
     t.put(Row::make("Estimated memory use (KiB)", size_t(std::round(memory_use.map + memory_use.stack))));
     t.put(Row::make("Bytes per node map/stack", memory::MemOverhead::perNodeSizeMap,
                     memory::MemOverhead::perNodeSizeStack));

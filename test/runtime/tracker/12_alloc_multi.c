@@ -18,40 +18,40 @@ int main(int argc, char** argv) {
   // CHECK-FILTER-NOT: [Trace] TypeART Runtime Trace
   // CHECK-FILTER-NOT [Trace]
 
-  // CHECK: [Trace] Alloc 0x{{.*}} int8 1 42
+  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [1 x char[42]]
   char a[n];
 
-  // CHECK: [Trace] Alloc 0x{{.*}} int16 2 42
+  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [1 x short[42]]
   short b[n];
 
-  // CHECK: [Trace] Alloc 0x{{.*}} int32 4 42
+  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [1 x int[42]]
   int c[n];
 
-  // CHECK: [Trace] Alloc 0x{{.*}} int64 8 42
+  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [1 x long int[42]]
   long d[n];
 
-  // CHECK: [Trace] Alloc 0x{{.*}} float 4 42
+  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [1 x float[42]]
   float e[n];
 
-  // CHECK: [Trace] Alloc 0x{{.*}} double 8 42
+  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [1 x double[42]]
   double f[n];
 
-  // CHECK: [Trace] Alloc 0x{{.*}} pointer 8 42
+  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [1 x int*[42]]
   int* g[n];
 
-  // CHECK: [Trace] Alloc 0x{{.*}} double 8 10
-  // CHECK: [Trace] Alloc 0x{{.*}} double 8 10
+  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [1 x double[10]]
+  // CHECK: [Trace] Alloc stack 0x{{.*}} of type [1 x double[10]]
   call();
-  // CHECK: [Trace] Free 0x{{.*}}
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x double[10]]
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x double[10]]
 
-  // CHECK: [Trace] Free 0x{{.*}}
-  // CHECK: [Trace] Free 0x{{.*}}
-  // CHECK: [Trace] Free 0x{{.*}}
-  // CHECK: [Trace] Free 0x{{.*}}
-  // CHECK: [Trace] Free 0x{{.*}}
-  // CHECK: [Trace] Free 0x{{.*}}
-  // CHECK: [Trace] Free 0x{{.*}}
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x char[42]]
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x short[42]]
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x int[42]]
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x long int[42]]
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x float[42]]
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x double[42]]
+  // CHECK: [Trace] Free stack 0x{{.*}} of type [1 x int*[42]]
 
   return 0;
 }

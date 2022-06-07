@@ -302,10 +302,6 @@ class AccessRecorder {
     ++nullAndZeroAlloc;
   }
 
-  inline void incUDefTypes(size_t count) {
-    numUDefTypes += count;
-  }
-
   inline void incOmpContextStack() {
     ++omp_stack;
   }
@@ -374,9 +370,6 @@ class AccessRecorder {
   }
   Counter getNullAndZeroAlloc() const {
     return nullAndZeroAlloc;
-  }
-  Counter getNumUDefTypes() const {
-    return numUDefTypes;
   }
   Counter getOmpHeapCalls() const {
     return omp_heap;
@@ -493,7 +486,6 @@ class AccessRecorder {
   AtomicCounter nullAlloc        = 0;
   AtomicCounter zeroAlloc        = 0;
   AtomicCounter nullAndZeroAlloc = 0;
-  AtomicCounter numUDefTypes     = 0;
   AtomicCounter omp_stack        = 0;
   AtomicCounter omp_heap         = 0;
   AtomicCounter omp_heap_free    = 0;

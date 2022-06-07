@@ -26,9 +26,7 @@ set(RUNTIME_LIB_SOURCES
     Runtime.cpp
     tracker/CallbackInterface.cpp
     tracker/Tracker.cpp
-    ${TYPEART_META_SOURCE}
     $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:${RUNTIME_LIB_ALLOCATOR_SOURCES}>
-    $<$<BOOL:${TYPEART_MPI_LOGGER}>:../support/MPILogger.cpp>
 )
 
 add_library(${TYPEART_PREFIX}_Runtime SHARED ${RUNTIME_LIB_SOURCES})

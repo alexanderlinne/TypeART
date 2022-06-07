@@ -69,8 +69,8 @@ class MPIRankPrefixFlag : public spdlog::custom_flag_formatter {
 
 namespace typeart {
 
-std::shared_ptr<spdlog::logger> logger = []() {
-  auto result = spdlog::stderr_logger_mt("typeart");
+std::shared_ptr<spdlog::logger>& logger() {
+  static auto result = spdlog::stderr_logger_mt("typeart");
   result->set_level(spdlog::level::trace);
   auto formatter = std::make_unique<spdlog::pattern_formatter>();
 #ifdef TYPEART_MPI_LOGGER
@@ -80,6 +80,6 @@ std::shared_ptr<spdlog::logger> logger = []() {
 #endif
   result->set_formatter(std::move(formatter));
   return result;
-}();
+}
 
 }  // namespace typeart

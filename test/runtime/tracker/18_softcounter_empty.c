@@ -25,7 +25,6 @@ int main(void) {
 // CHECK-NEXT: Total free stack           :   0 ,    0 ,    -
 // CHECK-NEXT: OMP Stack/Heap/Free        :   0 ,    0 ,    0
 // CHECK-NEXT: Null/Zero/NullZero Addr    :   0 ,    0 ,    0
-// CHECK-NEXT: User-def. types            :   0 ,    - ,    -
 // CHECK-NEXT: Estimated memory use (KiB) :   4 ,    - ,    -
 // CHECK-NEXT: Bytes per node map/stack   :  104 ,    8 ,    -
 // CHECK-NEXT: {{(#|-)+}}

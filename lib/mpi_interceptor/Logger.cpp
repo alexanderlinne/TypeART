@@ -10,26 +10,21 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#if TYPEART_LOG_LEVEL <= 0
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_WARN
-#elif TYPEART_LOG_LEVEL <= 2
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_INFO
-#else
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_DEBUG
-#endif
+// We need to include this before we include spdlog headers
+// clang-format off
+#include <typeart/support/Logger.hpp>
+// clang-format on
 
 #include "Logger.h"
 
 #include <fmt/ostream.h>
 #include <spdlog/pattern_formatter.h>
 #include <spdlog/sinks/stdout_sinks.h>
-#include <spdlog/spdlog.h>
-#include <typeart/support/Logger.hpp>
 
 namespace typeart {
 
 Logger::Logger() {
-  logger = typeart::logger;
+  logger = typeart::logger();
 }
 
 Logger::~Logger(){};

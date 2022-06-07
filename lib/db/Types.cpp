@@ -297,12 +297,6 @@ std::unique_ptr<Meta> make_meta(Kind kind, std::vector<Ref<Meta>> refs) {
   return result;
 }
 
-namespace detail {
-Meta* resolve_meta_id(meta_id_t id, Database& db) {
-  return db.getMetaInfo(id);
-}
-}  // namespace detail
-
 META_CLASS_IMPL(Meta, Integer)
 
 META_CLASS_IMPL(Meta, String)
@@ -443,7 +437,12 @@ META_CLASS_IMPL(di::Scope, Namespace,
                  (REF, di::Scope, scope)))
 
 std::string Namespace::get_pretty_name() const {
-  return fmt::format("{}::{}", get_scope().get_pretty_name(), get_name());
+  auto scope_name = get_scope().get_pretty_name();
+  if (scope_name == "") {
+    return get_name();
+  } else {
+    return fmt::format("{}::{}", scope_name, get_name());
+  }
 }
 
 Type::~Type() {
@@ -562,10 +561,11 @@ META_CLASS_IMPL(di::Type, StructureType,
 
 std::string StructureType::get_pretty_name() const {
   auto scope_name = get_scope().get_pretty_name();
+  auto name       = get_name() != "" ? get_name() : (get_identifier() != "" ? get_identifier() : "<unnamed struct>");
   if (scope_name == "") {
-    return get_name();
+    return name;
   } else {
-    return fmt::format("{}::{}", scope_name, get_name());
+    return fmt::format("{}::{}", scope_name, name);
   }
 }
 
@@ -715,7 +715,12 @@ META_CLASS_IMPL(di::Type, DerivedType,
 
 std::string DerivedType::get_pretty_name() const {
   if (get_name() != "") {
-    return get_name();
+    auto scope_name = get_scope().get_pretty_name();
+    if (get_scope().get_kind() != Kind::File && scope_name != "") {
+      return fmt::format("{}::{}", get_scope().get_pretty_name(), get_name());
+    } else {
+      return fmt::format("{}", get_name());
+    }
   } else {
     switch (get_tag()) {
       case DerivedKind::Pointer:
@@ -771,7 +776,11 @@ META_CLASS_IMPL(di::LocalScope, Subprogram,
                  (INTEGER, size_t, line)))
 
 std::string Subprogram::get_pretty_name() const {
-  return fmt::format("{}::{}", get_scope().get_pretty_name(), get_linkage_name());
+  if (get_scope().get_kind() != Kind::File) {
+    return fmt::format("{}::{}", get_scope().get_pretty_name(), get_name());
+  } else {
+    return fmt::format("{}", get_name());
+  }
 }
 
 META_CLASS_IMPL(meta::Node, Location,

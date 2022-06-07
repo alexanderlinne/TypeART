@@ -52,14 +52,13 @@ int main(int argc, char** argv) {
   // CHECK-NEXT: Total free stack           :   0 ,    0 ,    -
   // CHECK-NEXT: OMP Stack/Heap/Free        :   0 ,  200 ,  200
   // CHECK-NEXT: Null/Zero/NullZero Addr    :   0 ,    0 ,    0
-  // CHECK-NEXT: User-def. types            :   0 ,    - ,    -
   // CHECK-NEXT: Estimated memory use (KiB) :   {{[0-9]+}} ,    - ,    -
   // CHECK-NEXT: Bytes per node map/stack   :  104 ,    8 ,    -
   // CHECK-NEXT: {{(#|-)+}}
   // CHECK-NEXT: Allocation type detail (heap, stack, global)
   // CHECK: {{(#|-)+}}
   // CHECK-NEXT: Free allocation type detail (heap, stack)
-  // CHECK-NEXT: 6 : 200 ,    0 , double
+  // CHECK-NEXT: double : 200 ,    0
   // CHECK: Per-thread counter values (2 threads)
   // CHECK-NEXT: Thread Heap Allocs       : 100 ,  100
   // CHECK-NEXT: Thread Heap Arrays       : 100 ,  100

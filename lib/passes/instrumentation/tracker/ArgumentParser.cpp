@@ -163,7 +163,7 @@ StackArgList ArgumentParser::collectStack(const AllocaDataList& allocs) {
   std::optional<size_t> constantArraySize = {};
   for (const AllocaData& adata : allocs) {
     ArgMap arg_map;
-    auto alloca           = adata.alloca;
+    auto alloca = adata.alloca;
     Type* elementType     = alloca->getAllocatedType();
     Value* numElementsVal = nullptr;
     // The length can be specified statically through the array type or as a separate argument.
@@ -180,7 +180,8 @@ StackArgList ArgumentParser::collectStack(const AllocaDataList& allocs) {
 
     assert(adata.alloca != nullptr);
     if (adata.local_variable == nullptr) {
-      LOG_ERROR("Unknown stack type. Not instrumenting. {}", util::dump(*adata.alloca));
+      LOG_WARNING("Unknown stack type for {} in function {}. Skipped.", util::dump(*adata.alloca),
+                  alloca->getFunction()->getName().str());
       continue;
     }
 

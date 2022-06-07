@@ -34,9 +34,9 @@ int main() {
 }
 // clang-format off
 // main()
-// CHECK: [Trace] Alloc [[POINTER:0x[0-9a-f]+]] [[typeid:2[5-9][0-9]]] struct.S1 16 1 ([[ALLOC_FROM:0x[0-9a-f]+]]) H
-// CHECK: [Trace] Free [[POINTER]] [[typeid]] struct.S1 16 1 ([[ALLOC_FROM]])
+// CHECK: [Trace] Alloc heap [[POINTER:0x[0-9a-f]+]] of type [1 x S1] allocated at [[ALLOC_FROM:(/.*)*/16_inv_struct\.cpp:[0-9]*]]
+// CHECK: [Trace] Free heap [[POINTER]] of type [1 x S1] allocated at [[ALLOC_FROM]]
 // foo()
-// CHECK: [Trace] Alloc [[POINTER:0x[0-9a-f]+]] [[typeid:2[5-9][0-9]]] struct.S1 16 1 ([[ALLOC_FROM:0x[0-9a-f]+]]) H
-// CHECK: [Trace] Free [[POINTER]] [[typeid]] struct.S1 16 1 ([[ALLOC_FROM]])
+// CHECK: [Trace] Alloc heap [[POINTER:0x[0-9a-f]+]] of type [1 x S1] allocated at [[ALLOC_FROM:(/.*)*/16_inv_struct\.cpp:[0-9]*]]
+// CHECK: [Trace] Free heap [[POINTER]] of type [1 x S1] allocated at [[ALLOC_FROM]]
 // clang-format on

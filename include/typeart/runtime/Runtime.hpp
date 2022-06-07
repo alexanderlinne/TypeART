@@ -185,6 +185,21 @@ class PointerInfo final {
   size_t count = 0;
 
   // Type containing information on the position of a pointer within an allocation.
+  //
+  // Given an array of some type, the elements of the original PointerInfo (this) and
+  // the subrange describe the following for a given address (addr):
+  //
+  //    this.count               subrange.count = this.count - base_idx
+  //    |    subrange.offset     |
+  //    |                  | /-----------------------\
+  //    |                  |>/---\
+  // /-----------------------------------------------\
+  // |       |       |       |       |       |       |
+  // ^                       ^   ^
+  // this.base_addr          |   |
+  //                         |   addr
+  //                         subrange.base_addr
+  //                         subrange.base_idx
   struct Subrange final {
     // The address to the beginning of the subrange.
     pointer base_addr;
@@ -310,8 +325,7 @@ struct ScopeGuard final {
 };
 
 Recorder& getRecorder();
-const meta::Meta* getMeta(meta_id_t meta_id);
-const AllocationInfo* getAllocationInfo(alloc_id_t alloc_id);
+Database& getDatabase();
 
 }  // namespace typeart::runtime
 

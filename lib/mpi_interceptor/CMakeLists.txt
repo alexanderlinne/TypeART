@@ -49,6 +49,7 @@ endif()
 
 target_link_libraries(MPITool
   PRIVATE typeart::Runtime
+          typeart::SystemStatic
           MPI::MPI_CXX
           result::result
           fmt::fmt
