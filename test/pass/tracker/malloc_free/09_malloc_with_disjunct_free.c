@@ -20,7 +20,7 @@ void foo(double* ptr) {
 // CHECK-NEXT: call void @typeart_tracker_alloc(i8* [[POINTER]],
 // CHECK-NEXT: bitcast i8* [[POINTER]] to double*
 
-// CHECK: call void @free(i8* [[POINTER:%[0-9a-z]+]])
+// CHECK: call void @free(i8*{{( noundef)?}} [[POINTER:%[0-9a-z]+]])
 // CHECK-NEXT: call void @typeart_tracker_free(i8* [[POINTER]])
 
 // CHECK: TypeArtPass [Heap & Stack]

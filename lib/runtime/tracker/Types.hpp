@@ -16,15 +16,12 @@
 #include "runtime/Runtime.hpp"
 
 #ifdef TYPEART_BTREE
-#ifdef TYPEART_ABSEIL
-#error TypeART-RT: Set BTREE and ABSL, mutually exclusive.
-#endif
-#include "btree_map.h"
+#error TypeART-RT: TYPART_BTREE is deprecated.
 #endif
 
 #ifdef TYPEART_ABSEIL
-#ifdef TYPEART_BTREE
-#error TypeART-RT: Set ABSL and BTREE, mutually exclusive.
+#ifdef TYPEART_PHMAP
+#error TypeART-RT: Set ABSL and PHMAP, mutually exclusive.
 #endif
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -32,7 +29,14 @@
 #pragma GCC diagnostic pop
 #endif
 
-#if !defined(TYPEART_BTREE) && !defined(TYPEART_ABSEIL)
+#ifdef TYPEART_PHMAP
+#ifdef TYPEART_ABSEIL
+#error TypeART-RT: Set ABSL and PHMAP, mutually exclusive.
+#endif
+#include "parallel_hashmap/btree.h"
+#endif
+
+#if !defined(TYPEART_PHMAP) && !defined(TYPEART_ABSEIL)
 #include <map>
 #endif
 
@@ -52,15 +56,15 @@ struct RuntimeT {
   using Stack = std::vector<const void*>;
   static constexpr auto StackReserve{512U};
   static constexpr char StackName[] = "std::vector";
-#ifdef TYPEART_BTREE
-  using PointerMapBaseT           = btree::btree_map<const void*, PointerInfo>;
-  static constexpr char MapName[] = "btree::btree_map";
+#ifdef TYPEART_PHMAP
+  using PointerMapBaseT           = phmap::btree_map<const void*, PointerInfo>;
+  static constexpr char MapName[] = "phmap::btree_map";
 #endif
 #ifdef TYPEART_ABSEIL
   using PointerMapBaseT           = absl::btree_map<const void*, PointerInfo>;
   static constexpr char MapName[] = "absl::btree_map";
 #endif
-#if !defined(TYPEART_BTREE) && !defined(TYPEART_ABSEIL)
+#if !defined(TYPEART_PHMAP) && !defined(TYPEART_ABSEIL)
   using PointerMapBaseT           = std::map<const void*, PointerInfo>;
   static constexpr char MapName[] = "std::map";
 #endif

@@ -2,6 +2,8 @@
 // RUN: %run %s -typeart-global=false 2>&1 | %filecheck %s --check-prefix CHECK-SKIP
 // REQUIRES: tracker
 
+// REQUIRES: softcounter
+
 double global_d;
 
 void f() {

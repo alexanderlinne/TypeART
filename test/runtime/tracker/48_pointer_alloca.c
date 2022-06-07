@@ -4,6 +4,8 @@
 // REQUIRES: tracker
 // clang-format on
 
+// REQUIRES: softcounter
+
 int main(int argc, char** argv) {
   int n = argc * 2;
   int* x;

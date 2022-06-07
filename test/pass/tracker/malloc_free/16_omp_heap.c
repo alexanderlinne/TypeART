@@ -19,13 +19,14 @@ void foo(int** x) {
     free(x[i]);
   }
 }
+// clang-format off
 
-// CHECK: [[POINTER:%[0-9a-z]+]] = call noalias{{( align [0-9]+)?}} i8* @calloc(i64 [[SIZE:[0-9a-z]+]], i64 8)
+// CHECK: [[POINTER:%[0-9a-z]+]] = call noalias{{( align [0-9]+)?}} i8* @calloc(i64{{( noundef)?}} [[SIZE:[0-9a-z]+]], i64{{( noundef)?}} 8)
 // CHECK-NEXT: call void @typeart_tracker_alloc_omp(i8* [[POINTER]], i32 {{[0-9]*}}, i64 [[SIZE]])
 // CHECK-NEXT: bitcast i8* [[POINTER]] to double*
 
 // CHECK: typeart_tracker_free_omp(i8* [[POINTER:%[0-9a-z]+]])
-// CHECK-NEXT: [[POINTER2:%[0-9a-z]+]] = call{{( align [0-9]+)?}} i8* @realloc(i8* [[POINTER]], i64 160)
+// CHECK-NEXT: [[POINTER2:%[0-9a-z]+]] = call{{( align [0-9]+)?}} i8* @realloc(i8*{{( noundef)?}} [[POINTER]], i64{{( noundef)?}} 160)
 // CHECK-NEXT: typeart_tracker_alloc_omp(i8* [[POINTER2]], i32 {{[0-9]*}}, i64 20)
 
 // CHECK: [[POINTER:%[0-9a-z]+]] = call noalias{{( align [0-9]+)?}} i8* @malloc
@@ -39,3 +40,5 @@ void foo(int** x) {
 // CHECK-NEXT: Malloc{{[ ]*}}:{{[ ]*}}3
 // CHECK-NEXT: Free{{[ ]*}}:{{[ ]*}}1
 // CHECK-NEXT: Alloca{{[ ]*}}:{{[ ]*}}0
+
+// clang-format on

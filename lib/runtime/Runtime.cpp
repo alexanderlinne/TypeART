@@ -256,9 +256,8 @@ cpp::result<PointerInfo::Subrange, Status> PointerInfo::getSubrange(pointer addr
   // Ensure that the given address is in bounds
   const auto type_size = byte_size::from_bits(type->get_size_in_bits());
   if (!contains(addr)) {
-    const auto offset2base = addr - base_addr;
-    const auto oob_index   = (offset2base.value() / type_size.value()) - count + 1;
-    LOG_WARNING("Lookup for addr {} with pointer info {} was {} elements out of bounds!", addr, *this, oob_index);
+    LOG_WARNING("Lookup for addr {} with pointer info {} was {} elements out of bounds!", addr, *this,
+                ((addr - base_addr).value() / type_size.value()) - count + 1);
     return cpp::fail(Status::UNKNOWN_ADDRESS);
   }
 

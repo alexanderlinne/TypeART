@@ -6,7 +6,7 @@ namespace typeart::cl {
 
 analysis::MemInstFinderConfig getMemInstFinderConfig();
 
-const std::string& getTypeFilepath();
+std::string getTypeFilepath();
 bool getInstrumentGlobal();
 bool getInstrumentStack();
 bool getInstrumentStackLifetime();

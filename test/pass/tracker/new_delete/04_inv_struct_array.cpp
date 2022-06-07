@@ -10,7 +10,7 @@ struct S1 {
   virtual ~S1() = default;
 };
 
-// CHECK: invoke{{.*}} i8* @_Znam(i64 40)
+// CHECK: invoke{{.*}} i8* @_Znam(i64{{( noundef)?}} 40)
 // CHECK: call void @typeart_tracker_alloc(i8* [[POINTER:%[0-9a-z]+]], i32 {{[0-9]*}}, i64 2)
 // CHECK: bitcast i8* [[POINTER]] to %struct.S1*
 int main() {

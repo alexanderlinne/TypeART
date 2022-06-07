@@ -266,7 +266,7 @@ bool MemInstFinderPass::runOnFunction(llvm::Function& function) {
 
   mOpsCollector.collect(function);
 
-  const auto checkAmbigiousMalloc = [&function](const MallocData& mallocData) {
+  const auto checkAmbigiousMalloc = [&](const MallocData& mallocData) {
     using namespace typeart::util::type;
     auto primaryBitcast = mallocData.primary;
     if (primaryBitcast != nullptr) {

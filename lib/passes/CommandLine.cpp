@@ -1,5 +1,7 @@
 #include "CommandLine.h"
 
+#include "support/Logger.hpp"
+
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -7,7 +9,7 @@ using namespace llvm;
 static cl::OptionCategory typeart_category("TypeART instrumentation pass", "These control the instrumentation.");
 
 static cl::opt<std::string> cl_typeart_type_file("typeart-types", cl::desc("Location of the generated type file."),
-                                                 cl::init("types.yaml"), cl::cat(typeart_category));
+                                                 cl::cat(typeart_category));
 
 static cl::opt<bool> cl_typeart_stats("typeart-stats", cl::desc("Show statistics for TypeArt type pass."), cl::Hidden,
                                       cl::init(false), cl::cat(typeart_category));
@@ -94,9 +96,18 @@ analysis::MemInstFinderConfig getMemInstFinderConfig() {
                                                                              cl_typeart_call_filter_cg_file}};
 }
 
-const std::string& getTypeFilepath() {
-  assert(!cl_typeart_type_file.empty() && "Default type file not set");
-  return cl_typeart_type_file.getValue();
+std::string getTypeFilepath() {
+  if (!cl_typeart_type_file.empty()) {
+    LOG_DEBUG("Using cl::opt for types file " << cl_typeart_type_file.getValue());
+    return cl_typeart_type_file.getValue();
+  }
+  const char* type_file = std::getenv("TYPEART_TYPE_FILE");
+  if (type_file != nullptr) {
+    LOG_DEBUG("Using env var for types file {}", type_file);
+    return std::string{type_file};
+  }
+  LOG_DEBUG("Loading default types file types.yaml");
+  return "types.yaml";
 }
 
 bool getInstrumentGlobal() {

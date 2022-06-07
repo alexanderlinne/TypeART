@@ -163,15 +163,14 @@ StackArgList ArgumentParser::collectStack(const AllocaDataList& allocs) {
   std::optional<size_t> constantArraySize = {};
   for (const AllocaData& adata : allocs) {
     ArgMap arg_map;
-    auto alloca = adata.alloca;
-    Type* elementType     = alloca->getAllocatedType();
+    auto alloca           = adata.alloca;
     Value* numElementsVal = nullptr;
     // The length can be specified statically through the array type or as a separate argument.
     // Both cases are handled here.
     if (adata.is_vla) {
       numElementsVal = alloca->getArraySize();
       // This should not happen in generated IR code
-      assert(!elementType->isArrayTy() && "VLAs of array types are currently not supported.");
+      assert(!alloca->getAllocatedType()->isArrayTy() && "VLAs of array types are currently not supported.");
     } else {
       size_t arraySize  = adata.array_size;
       constantArraySize = arraySize;

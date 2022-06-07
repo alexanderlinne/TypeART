@@ -63,10 +63,6 @@ void TypeArtPass::getAnalysisUsage(llvm::AnalysisUsage& info) const {
 
 bool TypeArtPass::doInitialization(llvm::Module& m) {
   filename = cl::getTypeFilepath();
-  if (const char* type_file = std::getenv("TYPEART_TYPE_FILE"); type_file != nullptr) {
-    filename = type_file;
-  }
-
   db        = std::make_unique<Database>();
   converter = std::make_unique<meta::LLVMMetadataConverter>(*db);
 
