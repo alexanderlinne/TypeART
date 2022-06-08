@@ -24,7 +24,6 @@
 namespace typeart {
 
 Logger::Logger() {
-  logger = typeart::logger();
 }
 
 Logger::~Logger(){};
@@ -130,11 +129,11 @@ std::string format_source_location(spdlog::level::level_enum level, const void* 
 
 void Logger::log(const void* called_from, const std::string& prefix, const Error& error) {
   auto source_location = error.stacktrace.has_value() ? "" : format_source_location(spdlog::level::err, called_from);
-  SPDLOG_LOGGER_ERROR(logger, "{}{}{}", source_location, prefix, error.visit(ErrorVisitor{}));
+  LOG_ERROR("{}{}{}", source_location, prefix, error.visit(ErrorVisitor{}));
 
   if (error.stacktrace.has_value()) {
     for (const auto& entry : error.stacktrace.value()) {
-      logger->error("\tin {}", entry);
+      LOG_ERROR("\tin {}", entry);
     }
   }
 }
@@ -142,11 +141,10 @@ void Logger::log(const void* called_from, const std::string& prefix, const Error
 void Logger::log(const char* name, const void* called_from, bool is_send, const runtime::PointerInfo& pointer_info,
                  const MPIType& type, int count, const Result<void>& result) {
   if (result.has_value()) {
-    SPDLOG_LOGGER_INFO(logger,
-                       "{}{}: successfully checked {}-buffer {} of type [{} x {}] against {} {} of MPI type \"{}\"",
-                       format_source_location(spdlog::level::info, called_from), name, is_send ? "send" : "recv",
-                       pointer_info.getBaseAddr(), pointer_info.getCount(), pointer_info.getType().get_pretty_name(),
-                       count, count == 1 ? "element" : "elements", name_for(type.mpi_type));
+    LOG_INFO("{}{}: successfully checked {}-buffer {} of type [{} x {}] against {} {} of MPI type \"{}\"",
+             format_source_location(spdlog::level::info, called_from), name, is_send ? "send" : "recv",
+             pointer_info.getBaseAddr(), pointer_info.getCount(), pointer_info.getType().get_pretty_name(), count,
+             count == 1 ? "element" : "elements", name_for(type.mpi_type));
   } else {
     auto error                 = result.error();
     auto internal_error_prefix = error->is<TypeError>() ? "type error " : "internal error ";
@@ -168,28 +166,27 @@ void Logger::log(const char* name, const void* called_from, bool is_send, const 
 }
 
 void Logger::log(const CallCounter& call_counter, long ru_maxrss) {
-  SPDLOG_LOGGER_INFO(logger, "CCounter {{ Send: {} Recv: {} Send_Recv: {} Unsupported: {} MAX RSS[KBytes]: {} }}",
-                     call_counter.send, call_counter.recv, call_counter.send_recv, call_counter.unsupported, ru_maxrss);
+  LOG_INFO("CCounter {{ Send: {} Recv: {} Send_Recv: {} Unsupported: {} MAX RSS[KBytes]: {} }}", call_counter.send,
+           call_counter.recv, call_counter.send_recv, call_counter.unsupported, ru_maxrss);
 }
 
 void Logger::log(const MPICounter& mpi_counter) {
-  SPDLOG_LOGGER_INFO(logger, "MCounter {{ Error: {} Null_Buf: {} Null_Count: {} Type_Error: {} }}", mpi_counter.error,
-                     mpi_counter.null_buff, mpi_counter.null_count, mpi_counter.type_error);
+  LOG_INFO("MCounter {{ Error: {} Null_Buf: {} Null_Count: {} Type_Error: {} }}", mpi_counter.error,
+           mpi_counter.null_buff, mpi_counter.null_count, mpi_counter.type_error);
 }
 
 void Logger::log_zero_count(const char* function_name, const void* called_from, bool is_send, const void* ptr) {
-  SPDLOG_LOGGER_WARN(logger, "{}{}: attempted to {} 0 elements of buffer {}",
-                     format_source_location(spdlog::level::warn, called_from), function_name,
-                     is_send ? "send" : "receive", ptr);
+  LOG_DEBUG("{}{}: attempted to {} 0 elements of buffer {}", format_source_location(spdlog::level::warn, called_from),
+            function_name, is_send ? "send" : "receive", ptr);
 }
 
 void Logger::log_null_buffer(const char* function_name, const void* called_from, bool is_send) {
-  SPDLOG_LOGGER_WARN(logger, "{}{}: {}-buffer is NULL", format_source_location(spdlog::level::warn, called_from),
-                     function_name, is_send ? "send" : "recv");
+  LOG_DEBUG("{}{}: {}-buffer is NULL", format_source_location(spdlog::level::warn, called_from), function_name,
+            is_send ? "send" : "recv");
 }
 
 void Logger::log_unsupported(const char* name) {
-  SPDLOG_LOGGER_ERROR(logger, "The MPI function {} is currently not checked by TypeArt", name);
+  LOG_ERROR("The MPI function {} is currently not checked by TypeArt", name);
 }
 
 }  // namespace typeart

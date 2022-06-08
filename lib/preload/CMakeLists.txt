@@ -33,7 +33,7 @@ target_include_directories(${TYPEART_PREFIX}_Preload SYSTEM PRIVATE ${LLVM_INCLU
 
 target_compile_definitions(
   ${TYPEART_PREFIX}_Preload
-  PRIVATE LOG_LEVEL=${LOG_LEVEL_RT}
+  PRIVATE LOG_LEVEL=${TYPEART_LOG_LEVEL_RT}
 )
 
 typeart_target_compile_options(${TYPEART_PREFIX}_Preload)

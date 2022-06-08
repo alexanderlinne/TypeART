@@ -25,8 +25,6 @@ class logger;
 namespace typeart {
 
 class Logger {
-  std::shared_ptr<spdlog::logger> logger;
-
  public:
   Logger();
   ~Logger();

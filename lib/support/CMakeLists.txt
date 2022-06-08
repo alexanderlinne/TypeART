@@ -28,7 +28,6 @@ target_link_libraries(
 target_compile_definitions(
   ${TYPEART_PREFIX}_SystemStatic
   PRIVATE TYPEART_LOG_LEVEL=${TYPEART_LOG_LEVEL_RT}
-          $<$<BOOL:${TYPEART_MPI_LOGGER}>:TYPEART_MPI_LOGGER=1>
 )
 
 typeart_target_compile_options(${TYPEART_PREFIX}_SystemStatic)

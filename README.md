@@ -356,7 +356,7 @@ $> cmake --build build --target install --parallel
 | `TYPEART_ABSEIL`       |  `ON`   | Enable usage of btree-backed map of the [Abseil project](https://abseil.io/) (LTS release) for storing allocation data. |
 | `TYPEART_PHMAP`        |  `OFF`  | Enable usage of a [btree-backed map](https://github.com/greg7mdp/parallel-hashmap) (alternative to Abseil).             |
 | `TYPEART_SOFTCOUNTERS` |  `OFF`  | Enable runtime tracking of #tracked addrs. / #distinct checks / etc.                                                    |
-| `TYPEART_LOG_LEVEL_RT` |   `0`   | Granularity of runtime logger. 3 is most verbose, 0 is least.                                                           |
+| `TYPEART_LOG_LEVEL_RT` |   `1`   | Granularity of runtime logger. 3 is most verbose, 0 is least.                                                           |
 
 <!--- @formatter:on --->
 
