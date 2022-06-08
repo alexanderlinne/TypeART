@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
   const size_t extent = 2;
   typeart_tracker_alloc((const void*)addr, alloc_id.value(), extent);
 
-  auto pointer_info_result = runtime::PointerInfo::get((const void*)addr);
+  auto pointer_info_result = PointerInfo::get((const void*)addr);
 
   if (pointer_info_result.has_error()) {
     std::cerr << "[Error] Status not OK: " << pointer_info_result.error() << "\n";

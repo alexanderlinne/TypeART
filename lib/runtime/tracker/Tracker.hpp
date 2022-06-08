@@ -24,7 +24,7 @@ template <typename T>
 class Optional;
 }  // namespace llvm
 
-namespace typeart::runtime::tracker {
+namespace typeart::tracker {
 
 enum class AllocState : unsigned {
   NO_INIT          = 1 << 0,
@@ -83,6 +83,6 @@ class Tracker {
   FreeState doFreeHeap(const void* addr, const void* retAddr);
 };
 
-}  // namespace typeart::runtime::tracker
+}  // namespace typeart::tracker
 
 #endif  // TYPEART_ALLOCATIONTRACKING_H

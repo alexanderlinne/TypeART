@@ -68,10 +68,6 @@ std::ostream& operator<<(std::ostream& os, const Status& status) {
   return os;
 }
 
-}  // namespace typeart
-
-namespace typeart::runtime {
-
 byte_offset byte_offset::zero = {0};
 
 static constexpr const char* defaultTypeFileName = "types.yaml";
@@ -414,4 +410,4 @@ Database& getDatabase() {
   return Runtime::getDatabase();
 }
 
-}  // namespace typeart::runtime
+}  // namespace typeart

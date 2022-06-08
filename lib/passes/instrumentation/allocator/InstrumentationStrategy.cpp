@@ -175,7 +175,7 @@ std::string typeNameFor(llvm::Type* ty) {
 }
 
 llvm::AllocaInst* InstrumentationStrategy::createWrapperAlloca(llvm::AllocaInst* alloca, bool is_vla) {
-  namespace config          = typeart::runtime::allocator::config;
+  namespace config          = typeart::allocator::config;
   const auto alloc_id_type  = instr_helper.getTypeFor(IType::alloc_id);
   const auto count_type     = instr_helper.getTypeFor(IType::extent);
   auto& ctx                 = alloca->getContext();
@@ -209,7 +209,7 @@ llvm::AllocaInst* InstrumentationStrategy::createWrapperAlloca(llvm::AllocaInst*
 }
 
 size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
-  namespace config = typeart::runtime::allocator::config;
+  namespace config = typeart::allocator::config;
   for (const auto& [sdata, args] : stack) {
     auto* alloca   = args.get_as<llvm::AllocaInst>(ArgMap::ID::pointer);
     auto& ctx      = alloca->getContext();

@@ -50,7 +50,7 @@
 #include <cstddef>  // size_t
 #include <vector>
 
-namespace typeart::runtime::tracker {
+namespace typeart::tracker {
 
 struct RuntimeT {
   using Stack = std::vector<const void*>;
@@ -81,4 +81,4 @@ struct RuntimeT {
   using StackEntry = Stack::value_type;
 };
 
-}  // namespace typeart::runtime::tracker
+}  // namespace typeart::tracker

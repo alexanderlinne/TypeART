@@ -26,7 +26,7 @@ void free_vector(vector v) {
 }
 
 int fill_vector(void* values, int count, vector* v) {
-  auto pointer_info_result = runtime::PointerInfo::get(values);
+  auto pointer_info_result = PointerInfo::get(values);
   if (pointer_info_result.has_error()) {
     fprintf(stderr, "Failure\n");
     return 0;

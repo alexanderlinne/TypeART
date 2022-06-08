@@ -138,7 +138,7 @@ void Logger::log(const void* called_from, const std::string& prefix, const Error
   }
 }
 
-void Logger::log(const char* name, const void* called_from, bool is_send, const runtime::PointerInfo& pointer_info,
+void Logger::log(const char* name, const void* called_from, bool is_send, const PointerInfo& pointer_info,
                  const MPIType& type, int count, const Result<void>& result) {
   if (result.has_value()) {
     LOG_INFO("{}{}: successfully checked {}-buffer {} of type [{} x {}] against {} {} of MPI type \"{}\"",

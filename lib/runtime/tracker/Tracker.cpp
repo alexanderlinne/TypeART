@@ -38,7 +38,7 @@ using namespace btree;
 #define CONCAT(x, y)  CONCAT_(x, y)
 #define GUARDNAME     CONCAT(typeart_guard_, __LINE__)
 
-namespace typeart::runtime::tracker {
+namespace typeart::tracker {
 
 namespace detail {
 template <class...>
@@ -102,15 +102,15 @@ Tracker::Tracker() {
 void Tracker::onAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
   const auto status = doAlloc(addr, alloc_id, count, retAddr);
   if (!(status & AllocState::ERROR)) {
-    const auto alloc_info = runtime::getDatabase().getAllocationInfo(alloc_id);
-    const auto meta       = runtime::getDatabase().getMeta(alloc_info->meta_id);
+    const auto alloc_info = getDatabase().getAllocationInfo(alloc_id);
+    const auto meta       = getDatabase().getMeta(alloc_info->meta_id);
     const auto alloc      = meta::dyn_cast<meta::HeapAllocation>(meta);
     if (unlikely(alloc == nullptr)) {
       LOG_ERROR("Unexpected meta type. Expected HeapAllocation, but found {}", meta->get_kind());
       return;
     }
     if (!(status & AllocState::ADDR_SKIPPED)) {
-      runtime::getRecorder().incHeapAlloc(alloc, count);
+      getRecorder().incHeapAlloc(alloc, count);
     }
     auto pointer_info = PointerInfo{pointer{addr}, *alloc, alloc->get_type(), count};
     LOG_TRACE("Alloc heap {}", pointer_info);
@@ -120,8 +120,8 @@ void Tracker::onAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const
 void Tracker::onAllocStack(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
   const auto status = doAlloc(addr, alloc_id, count, retAddr);
   if (!(status & AllocState::ERROR)) {
-    const auto alloc_info = runtime::getDatabase().getAllocationInfo(alloc_id);
-    const auto meta       = runtime::getDatabase().getMeta(alloc_info->meta_id);
+    const auto alloc_info = getDatabase().getAllocationInfo(alloc_id);
+    const auto meta       = getDatabase().getMeta(alloc_info->meta_id);
     const auto alloc      = meta::dyn_cast<meta::StackAllocation>(meta);
     if (unlikely(alloc == nullptr)) {
       LOG_ERROR("Unexpected meta type. Expected StackAllocation, but found {}", meta->get_kind());
@@ -129,7 +129,7 @@ void Tracker::onAllocStack(const void* addr, alloc_id_t alloc_id, size_t count, 
     }
     if (!(status & AllocState::ADDR_SKIPPED)) {
       threadData.stackVars.push_back(addr);
-      runtime::getRecorder().incStackAlloc(alloc, count);
+      getRecorder().incStackAlloc(alloc, count);
     }
     auto pointer_info = PointerInfo{pointer{addr}, *alloc, alloc->get_type(), count};
     LOG_TRACE("Alloc stack {}", pointer_info);
@@ -139,15 +139,15 @@ void Tracker::onAllocStack(const void* addr, alloc_id_t alloc_id, size_t count, 
 void Tracker::onAllocGlobal(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
   const auto status = doAlloc(addr, alloc_id, count, retAddr);
   if (!(status & AllocState::ERROR)) {
-    const auto alloc_info = runtime::getDatabase().getAllocationInfo(alloc_id);
-    const auto meta       = runtime::getDatabase().getMeta(alloc_info->meta_id);
+    const auto alloc_info = getDatabase().getAllocationInfo(alloc_id);
+    const auto meta       = getDatabase().getMeta(alloc_info->meta_id);
     const auto alloc      = meta::dyn_cast<meta::GlobalAllocation>(meta);
     if (unlikely(alloc == nullptr)) {
       LOG_ERROR("Unexpected meta type. Expected GlobalAllocation, but found {}", meta->get_kind());
       return;
     }
     if (!(status & AllocState::ADDR_SKIPPED)) {
-      runtime::getRecorder().incGlobalAlloc(alloc, count);
+      getRecorder().incGlobalAlloc(alloc, count);
     }
     auto pointer_info = PointerInfo{pointer{addr}, *alloc, alloc->get_type(), count};
     LOG_TRACE("Alloc global {}", pointer_info);
@@ -155,13 +155,13 @@ void Tracker::onAllocGlobal(const void* addr, alloc_id_t alloc_id, size_t count,
 }
 
 AllocState Tracker::doAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
-  auto alloc_info = runtime::getDatabase().getAllocationInfo(alloc_id);
+  auto alloc_info = getDatabase().getAllocationInfo(alloc_id);
   if (unlikely(alloc_info == nullptr)) {
     auto status = AllocState::ERROR | AllocState::UNKNOWN_ALLOC_ID | AllocState::ADDR_SKIPPED;
     LOG_ERROR("Allocation with unknown alloc_id! Skipping...");
     return status;
   }
-  const auto meta = runtime::getDatabase().getMeta(alloc_info->meta_id);
+  const auto meta = getDatabase().getMeta(alloc_info->meta_id);
   if (unlikely(meta == nullptr)) {
     LOG_ERROR("Allocation info with unknown meta_id! Skipping...");
     return AllocState::ERROR | AllocState::ADDR_SKIPPED;
@@ -169,7 +169,7 @@ AllocState Tracker::doAlloc(const void* addr, alloc_id_t alloc_id, size_t count,
   const auto alloc = meta::dyn_cast<meta::Allocation>(meta);
 
   AllocState status = AllocState::NO_INIT;
-  auto& recorder    = runtime::getRecorder();
+  auto& recorder    = getRecorder();
 
   // Calling malloc with size 0 may return a nullptr or some address that can not be written to.
   // In the second case, the allocation is tracked anyway so that onFree() does not report an error.
@@ -221,7 +221,7 @@ FreeState Tracker::doFreeHeap(const void* addr, const void* retAddr) {
       LOG_ERROR("Unexpected meta type. Expected HeapAllocation, but found {}", meta.get_kind());
       return FreeState::ERROR;
     }
-    runtime::getRecorder().incHeapFree(alloc, removed->getCount());
+    getRecorder().incHeapFree(alloc, removed->getCount());
   }
   return FreeState::OK;
 }
@@ -229,7 +229,7 @@ FreeState Tracker::doFreeHeap(const void* addr, const void* retAddr) {
 void Tracker::onFreeHeap(const void* addr, const void* retAddr) {
   const auto status = doFreeHeap(addr, retAddr);
   if (FreeState::OK == status) {
-    runtime::getRecorder().decHeapAlloc();
+    getRecorder().decHeapAlloc();
   }
 }
 
@@ -244,7 +244,7 @@ void Tracker::onLeaveScope(int alloca_count, const void* retAddr) {
   const auto start_pos = (cend - alloca_count);
   LOG_TRACE("Freeing {} stack entries...", alloca_count);
 
-  auto& recorder = runtime::getRecorder();
+  auto& recorder = getRecorder();
   wrapper.remove_range(start_pos, cend, [&](llvm::Optional<PointerInfo>& removed, const void* addr) {
     if (unlikely(!removed)) {
       LOG_TRACE("Free on unregistered address {} ({})", addr, retAddr);
@@ -275,4 +275,4 @@ std::optional<PointerInfo> Tracker::getPointerInfo(const void* addr) {
   return {};
 }
 
-}  // namespace typeart::runtime::tracker
+}  // namespace typeart::tracker

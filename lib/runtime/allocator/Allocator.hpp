@@ -3,7 +3,7 @@
 #include <optional>
 #include <pthread.h>
 
-namespace typeart::runtime::allocator {
+namespace typeart::allocator {
 
 void* malloc(alloc_id_t alloc_id, size_t count, size_t size);
 void* realloc(alloc_id_t alloc_id, size_t count, void* ptr, size_t new_size);
@@ -20,4 +20,4 @@ void free(pthread_t current_owner);
 
 }  // namespace stack
 
-}  // namespace typeart::runtime::allocator
+}  // namespace typeart::allocator

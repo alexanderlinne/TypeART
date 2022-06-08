@@ -89,19 +89,19 @@ struct Multipliers {
   size_t buffer;
 };
 
-Result<void> check_type_and_count(const runtime::PointerInfo& pointer_info, const MPIType& type, int count);
-Result<Multipliers> check_type(const runtime::PointerInfo& pointer_info, const MPIType& type);
-Result<Multipliers> check_combiner_named(const runtime::PointerInfo& pointer_info, const MPIType& type);
-Result<Multipliers> check_combiner_contiguous(const runtime::PointerInfo& pointer_info, const MPIType& type);
-Result<Multipliers> check_combiner_vector(const runtime::PointerInfo& pointer_info, const MPIType& type);
-Result<Multipliers> check_combiner_indexed_block(const runtime::PointerInfo& pointer_info, const MPIType& type);
-Result<Multipliers> check_combiner_struct(const runtime::PointerInfo& pointer_info, const MPIType& type);
-Result<Multipliers> check_combiner_subarray(const runtime::PointerInfo& pointer_info, const MPIType& type);
+Result<void> check_type_and_count(const PointerInfo& pointer_info, const MPIType& type, int count);
+Result<Multipliers> check_type(const PointerInfo& pointer_info, const MPIType& type);
+Result<Multipliers> check_combiner_named(const PointerInfo& pointer_info, const MPIType& type);
+Result<Multipliers> check_combiner_contiguous(const PointerInfo& pointer_info, const MPIType& type);
+Result<Multipliers> check_combiner_vector(const PointerInfo& pointer_info, const MPIType& type);
+Result<Multipliers> check_combiner_indexed_block(const PointerInfo& pointer_info, const MPIType& type);
+Result<Multipliers> check_combiner_struct(const PointerInfo& pointer_info, const MPIType& type);
+Result<Multipliers> check_combiner_subarray(const PointerInfo& pointer_info, const MPIType& type);
 
 // For a given Buffer checks that the type of the buffer fits the MPI type
 // `args.type` of this MPICall instance and that the buffer is large enough to
 // hold `args.count` elements of the MPI type.
-Result<void> check_buffer(const runtime::PointerInfo& pointer_info, const MPIType& type, int count) {
+Result<void> check_buffer(const PointerInfo& pointer_info, const MPIType& type, int count) {
   auto stripped_pointer_info = pointer_info.resolveAllArrayTypes();
   auto result                = check_type_and_count(stripped_pointer_info, type, count);
 
@@ -134,7 +134,7 @@ Result<void> check_buffer(const runtime::PointerInfo& pointer_info, const MPITyp
   return make_type_error<StructSubtypeErrors>(std::move(primary_error), std::move(subtype_errors));
 }
 
-Result<void> check_type_and_count(const runtime::PointerInfo& pointer_info, const MPIType& type, int count) {
+Result<void> check_type_and_count(const PointerInfo& pointer_info, const MPIType& type, int count) {
   auto result = check_type(pointer_info, type);
 
   if (result.has_error()) {
@@ -162,7 +162,7 @@ Result<void> check_type_and_count(const runtime::PointerInfo& pointer_info, cons
 // type needed to represent one element of the buffer's type. This is used to
 // correctly handle MPI_BYTE, where for each given type T, sizeof(T) elements
 // of MPI_BYTE are needed to represent one instance of T.
-Result<Multipliers> check_type(const runtime::PointerInfo& pointer_info, const MPIType& type) {
+Result<Multipliers> check_type(const PointerInfo& pointer_info, const MPIType& type) {
   switch (type.combiner.id) {
     case MPI_COMBINER_NAMED:
       return check_combiner_named(pointer_info, type);
@@ -186,7 +186,7 @@ Result<Multipliers> check_type(const runtime::PointerInfo& pointer_info, const M
 }
 
 // See MPICall::check_type(const Buffer&, const MPIType&)
-Result<Multipliers> check_combiner_named(const runtime::PointerInfo& pointer_info, const MPIType& type) {
+Result<Multipliers> check_combiner_named(const PointerInfo& pointer_info, const MPIType& type) {
   const auto mpi_type        = type.mpi_type;
   const auto basic_type_info = pointer_info.resolveAllArrayTypes();
   const auto type_size       = basic_type_info.getType().get_size_in_bits() / 8;
@@ -232,7 +232,7 @@ Result<Multipliers> check_combiner_named(const runtime::PointerInfo& pointer_inf
 //
 // See MPICall::check_type(const Buffer&, const MPIType&) for an explanation of
 // the arguments and the return type.
-Result<Multipliers> check_combiner_contiguous(const runtime::PointerInfo& pointer_info, const MPIType& type) {
+Result<Multipliers> check_combiner_contiguous(const PointerInfo& pointer_info, const MPIType& type) {
   // MPI_Type_contiguous has one type argument and a count which denotes the
   // number of consecutive elements of the old type forming one element of the
   // conntiguous type. Therefore, we check that the old type matches the
@@ -250,7 +250,7 @@ Result<Multipliers> check_combiner_contiguous(const runtime::PointerInfo& pointe
 //
 // See MPICall::check_type(const Buffer&, const MPIType&) for an explanation of
 // the arguments and the return type.
-Result<Multipliers> check_combiner_vector(const runtime::PointerInfo& pointer_info, const MPIType& type) {
+Result<Multipliers> check_combiner_vector(const PointerInfo& pointer_info, const MPIType& type) {
   const auto count       = type.combiner.integer_args[0];
   const auto blocklength = type.combiner.integer_args[1];
   const auto stride      = type.combiner.integer_args[2];
@@ -276,7 +276,7 @@ Result<Multipliers> check_combiner_vector(const runtime::PointerInfo& pointer_in
 //
 // See MPICall::check_type(const Buffer&, const MPIType&) for an explanation of
 // the arguments and the return type.
-Result<Multipliers> check_combiner_indexed_block(const runtime::PointerInfo& pointer_info, const MPIType& type) {
+Result<Multipliers> check_combiner_indexed_block(const PointerInfo& pointer_info, const MPIType& type) {
   const auto count                  = type.combiner.integer_args[0];
   const auto blocklength            = type.combiner.integer_args[1];
   const auto array_of_displacements = type.combiner.integer_args.begin() + 2;
@@ -316,7 +316,7 @@ void collect_members(const meta::di::StructureType& current_struct, size_t inher
 //
 // See MPICall::check_type(const Buffer&, const MPIType&) for an explanation of
 // the arguments and the return type.
-Result<Multipliers> check_combiner_struct(const runtime::PointerInfo& pointer_info, const MPIType& type) {
+Result<Multipliers> check_combiner_struct(const PointerInfo& pointer_info, const MPIType& type) {
   const auto count                 = type.combiner.integer_args[0];
   const auto array_of_blocklenghts = type.combiner.integer_args.begin() + 1;
 
@@ -341,13 +341,13 @@ Result<Multipliers> check_combiner_struct(const runtime::PointerInfo& pointer_in
     // the `array_of_displacements` type combiner argument.
     if (members[i].second != 8 * type.combiner.address_args[i]) {
       return make_type_error<MemberOffsetMismatch>(pointer_info, members[i].first,
-                                                   runtime::byte_offset::from_bits(members[i].second),
-                                                   runtime::byte_offset::from_bytes(type.combiner.address_args[i]));
+                                                   byte_offset::from_bits(members[i].second),
+                                                   byte_offset::from_bytes(type.combiner.address_args[i]));
     }
   }
 
   for (size_t i = 0; i < members.size(); ++i) {
-    auto member_info = pointer_info.findMember(runtime::byte_offset::from_bits(members[i].second)).value();
+    auto member_info = pointer_info.findMember(byte_offset::from_bits(members[i].second)).value();
 
     // ... the type of the member matches the respective MPI type in the
     // `array_of_types` type combiner argument.
@@ -384,7 +384,7 @@ Result<Multipliers> check_combiner_struct(const runtime::PointerInfo& pointer_in
 //
 // See MPICall::check_type(const Buffer&, const MPIType&) for an explanation of
 // the arguments and the return type.
-Result<Multipliers> check_combiner_subarray(const runtime::PointerInfo& pointer_info, const MPIType& type) {
+Result<Multipliers> check_combiner_subarray(const PointerInfo& pointer_info, const MPIType& type) {
   const auto ndims               = type.combiner.integer_args[0];
   const auto array_of_sizes      = type.combiner.integer_args.begin() + 1;
   const auto array_element_count = std::accumulate(array_of_sizes, array_of_sizes + ndims, 1, std::multiplies{});

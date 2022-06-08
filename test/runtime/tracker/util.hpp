@@ -15,33 +15,33 @@ void typeart_tracker_leave_scope(int alloca_count);
 
 typeart::alloc_id_t create_fake_double_heap_alloc_id() {
   double* d                = (double*)malloc(sizeof(double));
-  auto pointer_info_result = typeart::runtime::PointerInfo::get(d);
+  auto pointer_info_result = typeart::PointerInfo::get(d);
   if (pointer_info_result.has_error()) {
     fprintf(stderr, "Error: could not create fake allocation!\n");
     abort();
   }
   auto pointer_info = pointer_info_result.value();
   free(d);
-  return typeart::runtime::getDatabase().getOrCreateAllocationId(pointer_info.getAllocation().get_id(), {});
+  return typeart::getDatabase().getOrCreateAllocationId(pointer_info.getAllocation().get_id(), {});
 }
 
 typeart::alloc_id_t create_fake_double_stack_alloc_id() {
   double d;
-  auto pointer_info_result = typeart::runtime::PointerInfo::get(&d);
+  auto pointer_info_result = typeart::PointerInfo::get(&d);
   if (pointer_info_result.has_error()) {
     fprintf(stderr, "Error: could not create fake allocation!\n");
     abort();
   }
   auto pointer_info = pointer_info_result.value();
-  return typeart::runtime::getDatabase().getOrCreateAllocationId(pointer_info.getAllocation().get_id(), {});
+  return typeart::getDatabase().getOrCreateAllocationId(pointer_info.getAllocation().get_id(), {});
 }
 
 typeart::alloc_id_t create_inexistent_meta_alloc_id() {
-  return typeart::runtime::getDatabase().getOrCreateAllocationId(typeart::meta_id_t::invalid, {});
+  return typeart::getDatabase().getOrCreateAllocationId(typeart::meta_id_t::invalid, {});
 }
 
 void check(void* addr, const char* type_name, int count, bool resolveStructs) {
-  auto pointer_info_result = typeart::runtime::PointerInfo::get(addr);
+  auto pointer_info_result = typeart::PointerInfo::get(addr);
   if (pointer_info_result.has_value()) {
     auto pointer_info = std::move(pointer_info_result).value();
     if (resolveStructs) {
@@ -79,7 +79,7 @@ void check(void* addr, const char* type_name, int count, bool resolveStructs) {
 }
 
 void check_struct(void* addr, const char* name, int expected_count) {
-  auto pointer_info_result = typeart::runtime::PointerInfo::get(addr);
+  auto pointer_info_result = typeart::PointerInfo::get(addr);
   if (pointer_info_result.has_value()) {
     const auto pointer_info = std::move(pointer_info_result).value();
     if (pointer_info.getType().is_structure_type()) {

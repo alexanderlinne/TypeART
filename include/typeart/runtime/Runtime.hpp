@@ -36,10 +36,6 @@ enum class Status {
 
 std::ostream& operator<<(std::ostream& os, const Status& status);
 
-}  // namespace typeart
-
-namespace typeart::runtime {
-
 class pointer {
   const void* value;
 
@@ -327,6 +323,6 @@ struct ScopeGuard final {
 Recorder& getRecorder();
 Database& getDatabase();
 
-}  // namespace typeart::runtime
+}  // namespace typeart
 
 #endif  // TYPEART_RUNTIME_H

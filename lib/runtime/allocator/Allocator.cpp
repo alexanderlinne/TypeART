@@ -15,7 +15,7 @@
 // We require to be on a 64bit architecture
 static_assert(sizeof(void*) == sizeof(std::int64_t));
 
-namespace typeart::runtime::allocator {
+namespace typeart::allocator {
 
 void* reserve_virtual_memory(size_t size) {
   return mmap64(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
@@ -87,7 +87,7 @@ struct Region {
     if (addr >= begin && addr < end) {
       auto bucket_ptr      = (void*)((uintptr_t)addr & ~(allocation_size - 1));
       auto alloc_id        = *(alloc_id_t*)bucket_ptr;
-      auto allocation_info = runtime::getDatabase().getAllocationInfo(alloc_id);
+      auto allocation_info = getDatabase().getAllocationInfo(alloc_id);
       if (allocation_info == nullptr) {
         fmt::print(stderr, "Found invalid allocaton_id {}!\n", alloc_id);
         return {};
@@ -97,9 +97,9 @@ struct Region {
       auto base_ptr = (void*)((int8_t*)bucket_ptr + heap::min_alignment);
       auto count    = *(size_t*)((int8_t*)bucket_ptr + config::heap::count_offset);
 #pragma clang diagnostic pop
-      auto alloc_info = runtime::getDatabase().getAllocationInfo(alloc_id);
+      auto alloc_info = getDatabase().getAllocationInfo(alloc_id);
       if (alloc_info != nullptr) {
-        const auto meta  = runtime::getDatabase().getMeta(alloc_info->meta_id);
+        const auto meta  = getDatabase().getMeta(alloc_info->meta_id);
         const auto alloc = meta::dyn_cast<meta::Allocation>(meta);
         return PointerInfo{pointer{base_ptr}, *alloc, alloc->get_type(), count};
       }
@@ -350,7 +350,7 @@ std::optional<PointerInfo> getPointerInfo(const void* addr) {
 #pragma clang diagnostic ignored "-Wcast-align"
     auto alloc_id = *(alloc_id_t*)((int8_t*)bucket_ptr + allocation_size - sizeof(alloc_id_value));
 #pragma clang diagnostic pop
-    auto allocation_info = runtime::getDatabase().getAllocationInfo(alloc_id);
+    auto allocation_info = getDatabase().getAllocationInfo(alloc_id);
     if (allocation_info == nullptr) {
       fmt::print(stderr, "Found invalid allocaton_id {}!\n", alloc_id);
       return {};
@@ -364,9 +364,9 @@ std::optional<PointerInfo> getPointerInfo(const void* addr) {
       count = *(size_t*)((int8_t*)bucket_ptr + config::stack::count_offset);
 #pragma clang diagnostic pop
     }
-    auto alloc_info = runtime::getDatabase().getAllocationInfo(alloc_id);
+    auto alloc_info = getDatabase().getAllocationInfo(alloc_id);
     if (alloc_info != nullptr) {
-      const auto meta  = runtime::getDatabase().getMeta(alloc_info->meta_id);
+      const auto meta  = getDatabase().getMeta(alloc_info->meta_id);
       const auto alloc = meta::dyn_cast<meta::Allocation>(meta);
       return PointerInfo{pointer{bucket_ptr}, *alloc, alloc->get_type(), count};
     }
@@ -383,12 +383,12 @@ std::optional<PointerInfo> getPointerInfo(const void* addr) {
   if (auto result = stack::getPointerInfo(addr); result.has_value()) {
     return result;
   }
-  return runtime::tracker::Tracker::get().getPointerInfo(addr);
+  return tracker::Tracker::get().getPointerInfo(addr);
 }
 
-}  // namespace typeart::runtime::allocator
+}  // namespace typeart::allocator
 
-using namespace typeart::runtime;
+using namespace typeart;
 
 extern "C" {
 

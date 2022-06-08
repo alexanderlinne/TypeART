@@ -30,7 +30,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-namespace typeart::runtime {
+namespace typeart {
 
 namespace softcounter {
 
@@ -565,6 +565,6 @@ using Recorder = softcounter::AccessRecorder;
 using Recorder = softcounter::NoneRecorder;
 #endif
 
-}  // namespace typeart::runtime
+}  // namespace typeart
 
 #endif  // TYPEART_ACCESSCOUNTER_H

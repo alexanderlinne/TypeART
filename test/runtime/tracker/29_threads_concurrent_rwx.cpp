@@ -42,7 +42,7 @@ template <typename S, typename E>
 void repeat_type_check(alloc_id_t alloc_id, S s, E e) {
   do {
     std::for_each(s, e, [&](auto addr) {
-      auto pointer_info_result = runtime::PointerInfo::get(reinterpret_cast<const void*>(addr));
+      auto pointer_info_result = PointerInfo::get(reinterpret_cast<const void*>(addr));
       if (pointer_info_result.has_error()) {
         fprintf(stderr, "[Error]: Lookup failed for %i (%#02x)\n", addr, addr);
       } else {

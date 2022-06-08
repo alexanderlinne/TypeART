@@ -3,7 +3,7 @@
 #include <db/Database.hpp>
 #include <unistd.h>
 
-namespace typeart::runtime::allocator::config {
+namespace typeart::allocator::config {
 
 constexpr size_t page_size = 4096;
 
@@ -127,4 +127,4 @@ constexpr ptrdiff_t metadata_byte_size(bool is_vla) {
 
 }  // namespace stack
 
-}  // namespace typeart::runtime::allocator::config
+}  // namespace typeart::allocator::config

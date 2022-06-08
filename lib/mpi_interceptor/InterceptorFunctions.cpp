@@ -87,7 +87,7 @@ void check_buffer(const char* name, const void* called_from, bool is_send, const
     return;
   }
 
-  auto pointer_info_result = runtime::PointerInfo::get(ptr);
+  auto pointer_info_result = PointerInfo::get(ptr);
   if (pointer_info_result.has_error()) {
     ++mpi_counter.error;
     logger.log(name, called_from, is_send, ptr,

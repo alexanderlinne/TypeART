@@ -52,7 +52,7 @@ void free(void* ptr) {
   if (!preload::actual_free) {
     preload::actual_free = (preload::free_t)preload::find_next_symbol("free");
   }
-  if (!runtime::allocator::free(ptr)) {
+  if (!allocator::free(ptr)) {
     preload::actual_free(ptr);
   }
 }
@@ -77,7 +77,7 @@ void typeart_preload_reclaim_stack(void* args) {
 void* typeart_preload_allocate_stack(void** stack_ptr) {
   using namespace typeart;
   auto current_thread  = pthread_self();
-  auto new_stack_begin = runtime::allocator::stack::allocate(current_thread);
+  auto new_stack_begin = allocator::stack::allocate(current_thread);
 
   pthread_attr_t attr;
   if (pthread_getattr_np(current_thread, &attr) != 0) {
@@ -91,7 +91,7 @@ void* typeart_preload_allocate_stack(void** stack_ptr) {
     fprintf(stderr, "pthread_attr_getstack failed!\n");
     abort();
   }
-  auto config_stack_size = runtime::allocator::config::stack::stack_size;
+  auto config_stack_size = allocator::config::stack::stack_size;
   if (stack_size > config_stack_size) {
     fprintf(stderr, "Configured stack size %ld is insufficient for required stack size %ld!\n", config_stack_size,
             stack_size);
@@ -120,7 +120,7 @@ void typeart_preload_free_stack() {
   // our caller should be the exact same caller as
   // the one who called typeart_allocate_stack.
   using namespace typeart;
-  runtime::allocator::stack::free(pthread_self());
+  allocator::stack::free(pthread_self());
 }
 
 }  // extern "C"

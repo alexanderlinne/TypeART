@@ -48,7 +48,7 @@ struct MPIType {
   static Result<MPIType> create(MPI_Datatype type);
 };
 
-Result<void> check_buffer(const runtime::PointerInfo& pointer_info, const MPIType& type, int count);
+Result<void> check_buffer(const PointerInfo& pointer_info, const MPIType& type, int count);
 
 }  // namespace typeart
 

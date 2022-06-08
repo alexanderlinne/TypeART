@@ -5,7 +5,6 @@
 #include <cstring>
 
 using namespace typeart;
-using namespace typeart::runtime;
 
 extern "C" {
 
