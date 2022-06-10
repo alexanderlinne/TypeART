@@ -176,12 +176,12 @@ void Logger::log(const MPICounter& mpi_counter) {
 }
 
 void Logger::log_zero_count(const char* function_name, const void* called_from, bool is_send, const void* ptr) {
-  LOG_DEBUG("{}{}: attempted to {} 0 elements of buffer {}", format_source_location(spdlog::level::warn, called_from),
+  LOG_DEBUG("{}{}: attempted to {} 0 elements of buffer {}", format_source_location(spdlog::level::debug, called_from),
             function_name, is_send ? "send" : "receive", ptr);
 }
 
 void Logger::log_null_buffer(const char* function_name, const void* called_from, bool is_send) {
-  LOG_DEBUG("{}{}: {}-buffer is NULL", format_source_location(spdlog::level::warn, called_from), function_name,
+  LOG_DEBUG("{}{}: {}-buffer is NULL", format_source_location(spdlog::level::debug, called_from), function_name,
             is_send ? "send" : "recv");
 }
 

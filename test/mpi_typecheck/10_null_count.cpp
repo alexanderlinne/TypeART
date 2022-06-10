@@ -19,8 +19,8 @@ int main(int argc, char** argv) {
   double f[4];
 
   // clang-format off
-  // RANK0: R[0]T[{{[0-9]*}}][Warning] at 0x{{.*}}: MPI_Send: attempted to send 0 elements of buffer 0x{{.*}} 
-  // RANK1: R[1]T[{{[0-9]*}}][Warning] at 0x{{.*}}: MPI_Recv: attempted to receive 0 elements of buffer 0x{{.*}} 
+  // RANK0: R[0]T[{{[0-9]*}}][Debug] at 0x{{.*}}: MPI_Send: attempted to send 0 elements of buffer 0x{{.*}} 
+  // RANK1: R[1]T[{{[0-9]*}}][Debug] at 0x{{.*}}: MPI_Recv: attempted to receive 0 elements of buffer 0x{{.*}} 
   // CHECK-NOT: R[{{0|1}}][Error]{{.*}}
   // clang-format on
   run_test(f, 0, MPI_DOUBLE);

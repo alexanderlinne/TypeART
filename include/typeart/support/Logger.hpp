@@ -69,7 +69,7 @@ std::shared_ptr<spdlog::logger>& logger();
 #endif
 
 #if TYPEART_LOG_LEVEL >= 2
-#define LOG_INFO(...) SPDLOG_LOGGER_DEBUG(typeart::logger(), __VA_ARGS__)
+#define LOG_INFO(...) SPDLOG_LOGGER_INFO(typeart::logger(), __VA_ARGS__)
 #else
 #define LOG_INFO(...) (void)0
 #endif
