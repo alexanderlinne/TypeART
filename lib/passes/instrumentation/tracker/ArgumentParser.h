@@ -23,11 +23,10 @@ namespace typeart::instrumentation::tracker {
 class ArgumentParser final : public instrumentation::ArgumentParser {
   llvm::Module* module;
   common::InstrumentationHelper instr_helper;
-  Database* db;
   meta::LLVMMetadataConverter* converter;
 
  public:
-  ArgumentParser(llvm::Module& m, Database& db, meta::LLVMMetadataConverter& converter);
+  ArgumentParser(llvm::Module& m, meta::LLVMMetadataConverter& converter);
   HeapArgList collectHeap(const MallocDataList& mallocs) override;
   FreeArgList collectFree(const FreeDataList& frees) override;
   StackArgList collectStack(const AllocaDataList& allocs) override;

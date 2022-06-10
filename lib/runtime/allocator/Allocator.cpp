@@ -85,11 +85,11 @@ struct Region {
 
   std::optional<PointerInfo> getPointerInfo(const void* addr) {
     if (addr >= begin && addr < end) {
-      auto bucket_ptr      = (void*)((uintptr_t)addr & ~(allocation_size - 1));
-      auto alloc_id        = *(alloc_id_t*)bucket_ptr;
-      auto allocation_info = getDatabase().getAllocationInfo(alloc_id);
-      if (allocation_info == nullptr) {
-        fmt::print(stderr, "Found invalid allocaton_id {}!\n", alloc_id);
+      auto bucket_ptr = (void*)((uintptr_t)addr & ~(allocation_size - 1));
+      auto meta_id    = *(meta_id_t*)bucket_ptr;
+      const auto meta = getDatabase().getMeta(meta_id);
+      if (meta == nullptr) {
+        fmt::print(stderr, "Found invalid meta_id {}!\n", meta_id.value());
         return {};
       }
 #pragma clang diagnostic push
@@ -97,12 +97,8 @@ struct Region {
       auto base_ptr = (void*)((int8_t*)bucket_ptr + heap::min_alignment);
       auto count    = *(size_t*)((int8_t*)bucket_ptr + config::heap::count_offset);
 #pragma clang diagnostic pop
-      auto alloc_info = getDatabase().getAllocationInfo(alloc_id);
-      if (alloc_info != nullptr) {
-        const auto meta  = getDatabase().getMeta(alloc_info->meta_id);
-        const auto alloc = meta::dyn_cast<meta::Allocation>(meta);
-        return PointerInfo{pointer{base_ptr}, *alloc, alloc->get_type(), count};
-      }
+      const auto alloc = meta::dyn_cast<meta::Allocation>(meta);
+      return PointerInfo{pointer{base_ptr}, *alloc, alloc->get_type(), count};
     }
     return {};
   }
@@ -175,7 +171,7 @@ std::optional<PointerInfo> getPointerInfo(const void* addr) {
 
 }  // namespace heap
 
-void* malloc(alloc_id_t alloc_id, size_t count, size_t size) {
+void* malloc(meta_id_t meta_id, size_t count, size_t size) {
   if (!heap::initialized) {
     return ::malloc(size);
   }
@@ -192,7 +188,7 @@ void* malloc(alloc_id_t alloc_id, size_t count, size_t size) {
                region->allocation_size);
     return ::malloc(size);
   }
-  *(alloc_id_t*)allocation = alloc_id;
+  *(meta_id_t*)allocation = meta_id;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-align"
   *(size_t*)((int8_t*)allocation + config::heap::count_offset) = count;
@@ -200,9 +196,9 @@ void* malloc(alloc_id_t alloc_id, size_t count, size_t size) {
   return (void*)((int8_t*)allocation + heap::min_alignment);
 }
 
-void* realloc(alloc_id_t alloc_id, size_t count, void* ptr, size_t new_size) {
+void* realloc(meta_id_t meta_id, size_t count, void* ptr, size_t new_size) {
   if (ptr == nullptr) {
-    return malloc(alloc_id, count, new_size);
+    return malloc(meta_id, count, new_size);
   }
   if (!heap::is_instrumented(ptr)) {
     return ::realloc(ptr, new_size);
@@ -218,7 +214,7 @@ void* realloc(alloc_id_t alloc_id, size_t count, void* ptr, size_t new_size) {
 #pragma clang diagnostic pop
     return ptr;
   }
-  const auto result = malloc(alloc_id, count, new_size);
+  const auto result = malloc(meta_id, count, new_size);
   if (result != nullptr) {
     memcpy(result, ptr, old_data_size);
   }
@@ -348,28 +344,30 @@ std::optional<PointerInfo> getPointerInfo(const void* addr) {
     auto bucket_ptr            = (void*)((uintptr_t)addr & ~(allocation_size - 1));
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-align"
-    auto alloc_id = *(alloc_id_t*)((int8_t*)bucket_ptr + allocation_size - sizeof(alloc_id_value));
+    auto meta_id = *(meta_id_t*)((int8_t*)bucket_ptr + allocation_size - sizeof(meta_id_value));
 #pragma clang diagnostic pop
-    auto allocation_info = getDatabase().getAllocationInfo(alloc_id);
-    if (allocation_info == nullptr) {
-      fmt::print(stderr, "Found invalid allocaton_id {}!\n", alloc_id);
+    const auto meta = getDatabase().getMeta(meta_id);
+    if (meta == nullptr) {
+      fmt::print(stderr, "Found invalid meta_id {}!\n", meta_id.value());
       return {};
     }
     auto count = size_t{0};
-    if (allocation_info->count.has_value()) {
-      count = allocation_info->count.value();
-    } else {
+    if (auto stack_allocation = meta::dyn_cast<meta::StackAllocation>(meta)) {
+      if (stack_allocation->get_count().has_value()) {
+        count = stack_allocation->get_count().value();
+      } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-align"
-      count = *(size_t*)((int8_t*)bucket_ptr + config::stack::count_offset);
+        count = *(size_t*)((int8_t*)bucket_ptr + config::stack::count_offset);
 #pragma clang diagnostic pop
+      }
+    } else {
+      fmt::print(stderr, "Found meta_id {} on the stack that does not resolve to a StackAllocation!\n",
+                 meta_id.value());
+      return {};
     }
-    auto alloc_info = getDatabase().getAllocationInfo(alloc_id);
-    if (alloc_info != nullptr) {
-      const auto meta  = getDatabase().getMeta(alloc_info->meta_id);
-      const auto alloc = meta::dyn_cast<meta::Allocation>(meta);
-      return PointerInfo{pointer{bucket_ptr}, *alloc, alloc->get_type(), count};
-    }
+    const auto alloc = meta::dyn_cast<meta::Allocation>(meta);
+    return PointerInfo{pointer{bucket_ptr}, *alloc, alloc->get_type(), count};
   }
   return {};
 }

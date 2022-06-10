@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 int main(int argc, char** argv) {
-  const auto alloc_id = create_fake_double_heap_alloc_id();
+  const auto meta_id = create_fake_double_heap_allocation();
   const size_t extent{6};
   const size_t expected_count{extent};
 

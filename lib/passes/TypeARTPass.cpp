@@ -62,7 +62,7 @@ void TypeArtPass::getAnalysisUsage(llvm::AnalysisUsage& info) const {
 }
 
 bool TypeArtPass::doInitialization(llvm::Module& m) {
-  filename = cl::getTypeFilepath();
+  filename  = cl::getTypeFilepath();
   db        = std::make_unique<Database>();
   converter = std::make_unique<meta::LLVMMetadataConverter>(*db);
 
@@ -79,7 +79,7 @@ bool TypeArtPass::doInitialization(llvm::Module& m) {
   auto parser   = std::make_unique<instrumentation::allocator::ArgumentParser>(m, *db, *converter);
   auto strategy = std::make_unique<instrumentation::allocator::InstrumentationStrategy>(m);
 #else
-  auto parser = std::make_unique<instrumentation::tracker::ArgumentParser>(m, *db, *converter);
+  auto parser = std::make_unique<instrumentation::tracker::ArgumentParser>(m, *converter);
   auto strategy =
       std::make_unique<instrumentation::tracker::InstrumentationStrategy>(m, cl::getInstrumentStackLifetime());
 #endif

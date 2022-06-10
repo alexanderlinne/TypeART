@@ -45,22 +45,6 @@ struct ScalarTraits<std::optional<size_t>> {
 };
 
 template <>
-struct ScalarTraits<typeart::alloc_id_t> {
-  static void output(const typeart::alloc_id_t& value, void* p, llvm::raw_ostream& out) {
-    ScalarTraits<typeart::alloc_id_t::value_type>::output(value.value(), p, out);
-  }
-  static llvm::StringRef input(llvm::StringRef scalar, void* p, typeart::alloc_id_t& value) {
-    typeart::alloc_id_t::value_type actual_value;
-    auto result = ScalarTraits<typeart::alloc_id_t::value_type>::input(scalar, p, actual_value);
-    value       = actual_value;
-    return result;
-  }
-  static QuotingType mustQuote(llvm::StringRef scalar) {
-    return ScalarTraits<typeart::alloc_id_t::value_type>::mustQuote(scalar);
-  }
-};
-
-template <>
 struct ScalarTraits<typeart::meta_id_t> {
   static void output(const typeart::meta_id_t& value, void* p, llvm::raw_ostream& out) {
     ScalarTraits<typeart::meta_id_t::value_type>::output(value.value(), p, out);
@@ -99,14 +83,34 @@ struct ScalarTraits<typeart::meta::Kind> {
   }
 };
 
-template <class T>
-struct ScalarTraits<typeart::meta::Ref<T>> {
-  static void output(const typeart::meta::Ref<T>& ref, void* p, llvm::raw_ostream& out) {
-    ScalarTraits<typeart::meta::Kind>::output(ref.get_kind(), p, out);
-    out << '#';
-    ScalarTraits<typeart::meta_id_t>::output(ref.get_id(), p, out);
+struct MetaWrapper {
+  typeart::meta::Meta* meta;
+};
+
+struct MetaInfoFile {
+  size_t size;
+  std::vector<std::unique_ptr<typeart::meta::Meta>>& meta;
+};
+
+template <>
+struct ScalarTraits<MetaWrapper> {
+  static void output(const MetaWrapper& wrapper, void* p, llvm::raw_ostream& out) {
+    auto& meta = wrapper.meta;
+    if (meta == nullptr) {
+      out << "None";
+    } else {
+      ScalarTraits<typeart::meta::Kind>::output(meta->get_kind(), p, out);
+      out << '#';
+      ScalarTraits<typeart::meta_id_t>::output(meta->get_id(), p, out);
+    }
   }
-  static llvm::StringRef input(llvm::StringRef scalar, void* p, typeart::meta::Ref<T>& value) {
+  static llvm::StringRef input(llvm::StringRef scalar, void* p, MetaWrapper& wrapper) {
+    auto& meta = wrapper.meta;
+    if (scalar == "None") {
+      meta = nullptr;
+      return {};
+    }
+    auto& ctx               = *(MetaInfoFile*)p;
     auto [kind_str, id_str] = scalar.split('#');
     typeart::meta::Kind kind;
     auto result = ScalarTraits<typeart::meta::Kind>::input(kind_str, p, kind);
@@ -114,8 +118,16 @@ struct ScalarTraits<typeart::meta::Ref<T>> {
       return result;
     }
     typeart::meta_id_t id;
-    result = ScalarTraits<typeart::meta_id_t>::input(id_str, p, id);
-    value  = typeart::meta::Ref<T>{id, kind};
+    result            = ScalarTraits<typeart::meta_id_t>::input(id_str, p, id);
+    auto& stored_meta = ctx.meta[id.value() - 1];
+    if (stored_meta != nullptr) {
+      meta = stored_meta.get();
+    } else {
+      auto new_meta = typeart::meta::make_meta(kind);
+      new_meta->set_id(id);
+      meta        = new_meta.get();
+      stored_meta = std::move(new_meta);
+    }
     return result;
   }
   static QuotingType mustQuote(llvm::StringRef scalar) {
@@ -123,55 +135,27 @@ struct ScalarTraits<typeart::meta::Ref<T>> {
   }
 };
 
-struct TypeFile {
-  std::vector<typeart::AllocationInfo>& allocation_info;
-  std::vector<std::unique_ptr<typeart::meta::Meta>>& meta;
-};
-
 template <>
-struct llvm::yaml::MappingTraits<TypeFile> {
-  static void mapping(IO& io, TypeFile& info) {
-    io.mapRequired("allocations", info.allocation_info);
-    io.mapRequired("meta", info.meta);
-  }
-};
-
-template <>
-struct llvm::yaml::MappingTraits<typeart::AllocationInfo> {
-  static void mapping(IO& io, typeart::AllocationInfo& info) {
-    io.mapRequired("alloc_id", info.alloc_id);
-    io.mapRequired("meta_id", info.meta_id);
-    io.mapOptional("count", info.count);
-  }
-};
-
-template <>
-struct llvm::yaml::MappingTraits<std::unique_ptr<typeart::meta::Meta>> {
+struct MappingTraits<std::unique_ptr<typeart::meta::Meta>> {
   static void mapping(IO& io, std::unique_ptr<typeart::meta::Meta>& value) {
     using namespace typeart;
-    auto meta_id = value != nullptr ? value->get_id() : meta_id_t::invalid;
-    auto kind    = value != nullptr ? value->get_kind() : meta::Kind::Unknown;
-    io.mapRequired("meta_id", meta_id);
-    io.mapRequired("kind", kind);
-    if (kind == typeart::meta::Kind::Unknown) {
-      return;
+    auto wrapper = MetaWrapper{value != nullptr ? value.get() : nullptr};
+    io.mapRequired("self", wrapper);
+    auto self = wrapper.meta;
+    if (auto tuple = meta::dyn_cast<meta::TupleBase>(self)) {
+      auto size = tuple->get_refs().size();
+      io.mapRequired("size", size);
+      tuple->get_refs().resize(size);
     }
-    if (io.outputting()) {
-      assert(value != nullptr);
-      io.mapRequired("refs", value->get_refs());
-    } else {
-      assert(value == nullptr);
-      std::vector<meta::Ref<meta::Meta>> refs;
-      io.mapRequired("refs", refs);
-      value = meta::make_meta(kind, std::move(refs));
-      value->set_id(meta_id);
+    if (value != nullptr) {
+      io.mapRequired("refs", self->get_refs());
     }
-    if (auto integer = meta::dyn_cast<meta::Integer>(value.get())) {
+    if (auto integer = meta::dyn_cast<meta::Integer>(self)) {
       auto data = integer->get_data();
       io.mapRequired("data", data);
       integer->set_data(data);
     }
-    if (auto string = meta::dyn_cast<meta::String>(value.get())) {
+    if (auto string = meta::dyn_cast<meta::String>(self)) {
       auto data = string->get_data();
       io.mapRequired("data", data);
       string->set_data(std::move(data));
@@ -179,29 +163,29 @@ struct llvm::yaml::MappingTraits<std::unique_ptr<typeart::meta::Meta>> {
   }
 };
 
+LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<typeart::meta::Meta>)
+
 template <>
-struct SequenceTraits<std::vector<std::unique_ptr<typeart::meta::Meta>>> {
-  static size_t size(IO& io, std::vector<std::unique_ptr<typeart::meta::Meta>>& list) {
-    return std::count_if(list.begin(), list.end(), [](auto& e) { return !!e; });
+struct SequenceTraits<std::vector<typeart::meta::Meta*>> {
+  static size_t size(IO& io, std::vector<typeart::meta::Meta*>& list) {
+    return list.size();
   }
-  static std::unique_ptr<typeart::meta::Meta>& element(IO& io, std::vector<std::unique_ptr<typeart::meta::Meta>>& list,
-                                                       size_t index) {
-    if (io.outputting()) {
-      return *std::find_if(list.begin(), list.end(), [&index](auto& e) { return (index--) == 0; });
-    } else {
-      if (index >= list.size()) {
-        list.resize(index + 1);
-      }
-      return list[index];
-    }
+  static MetaWrapper& element(IO& io, std::vector<typeart::meta::Meta*>& list, size_t index) {
+    return *(MetaWrapper*)&list[index];
+  }
+  static const bool flow = true;
+};
+
+template <>
+struct MappingTraits<MetaInfoFile> {
+  static void mapping(IO& io, MetaInfoFile& value) {
+    io.mapRequired("size", value.size);
+    value.meta.resize(value.size);
+    io.mapRequired("meta", value.meta);
   }
 };
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(typeart::AllocationInfo)
-LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(typeart::meta::Ref<typeart::meta::Meta>)
-
 namespace typeart {
-
 std::optional<Database> Database::load(const std::string& file) {
   using namespace llvm;
   ErrorOr<std::unique_ptr<MemoryBuffer>> memBuffer = MemoryBuffer::getFile(file);
@@ -212,19 +196,17 @@ std::optional<Database> Database::load(const std::string& file) {
     return {};
   }
 
-  yaml::Input in(memBuffer.get()->getMemBufferRef());
-  std::vector<AllocationInfo> allocation_info;
   std::vector<std::unique_ptr<typeart::meta::Meta>> meta_info;
-  TypeFile type_file{allocation_info, meta_info};
-  in >> type_file;
+  auto meta_info_file = MetaInfoFile{0, meta_info};
+  yaml::Input in(memBuffer.get()->getMemBufferRef(), &meta_info_file);
+  in >> meta_info_file;
 
   Database db;
-  db.registerAllocations(std::move(allocation_info));
   if (!db.registerMeta(std::move(meta_info))) {
     fmt::print(stderr, "Couln't register meta information!\n");
     abort();
   }
-  return std::optional<Database>{std::move(db)};
+  return db;
 }
 
 bool Database::store(const std::string& file) {
@@ -238,9 +220,9 @@ bool Database::store(const std::string& file) {
     return false;
   }
 
-  auto type_file = TypeFile{allocation_info, meta_info};
   yaml::Output out(oss);
-  out << type_file;
+  auto meta_info_file = MetaInfoFile{meta_info.size(), meta_info};
+  out << meta_info_file;
   return true;
 }
 

@@ -15,9 +15,9 @@
 using namespace typeart;
 
 template <typename S, typename E>
-void repeat_alloc(alloc_id_t alloc_id, S s, E e) {
+void repeat_alloc(meta_id_t meta_id, S s, E e) {
   std::for_each(s, e,
-                [&](auto elem) { typeart_tracker_alloc(reinterpret_cast<const void*>(elem), alloc_id.value(), 20); });
+                [&](auto elem) { typeart_tracker_alloc(reinterpret_cast<const void*>(elem), meta_id.value(), 20); });
 }
 
 std::vector<int> unique_rand(const unsigned size) {
@@ -38,16 +38,16 @@ int main(int argc, char** argv) {
   auto beg                = std::begin(vec);
   auto e                  = std::end(vec);
 
-  auto alloc_id = create_fake_double_heap_alloc_id();
+  auto meta_id = create_fake_double_heap_allocation();
 
 #pragma omp parallel sections num_threads(3)
   {
 #pragma omp section
-    { repeat_alloc(alloc_id, beg, e); }
+    { repeat_alloc(meta_id, beg, e); }
 #pragma omp section
-    { repeat_alloc(alloc_id, beg, e); }
+    { repeat_alloc(meta_id, beg, e); }
 #pragma omp section
-    { repeat_alloc(alloc_id, beg, e); }
+    { repeat_alloc(meta_id, beg, e); }
   }
 
   // CHECK-TSAN-NOT: ThreadSanitizer

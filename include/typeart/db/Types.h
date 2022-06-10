@@ -16,7 +16,6 @@
 extern "C" {
 #endif
 
-typedef int alloc_id_value;
 typedef int meta_id_value;
 
 #ifdef __cplusplus

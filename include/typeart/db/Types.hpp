@@ -107,99 +107,20 @@ enum class Kind {
   String,
   Integer,
   Tuple,
+  Optional,
 };
 
 std::ostream& operator<<(std::ostream& os, const Kind& kind);
 std::istream& operator>>(std::istream& is, std::optional<Kind>& value);
-
-class Meta;
-
-template <class MetaClass>
-class Ref {
-  static_assert(std::is_base_of_v<Meta, MetaClass>);
-
-  Kind kind;
-  std::variant<meta_id_t, MetaClass*> ref;
-
- public:
-  Ref() : kind(Kind::Unknown), ref(meta_id_t::invalid) {
-  }
-
-  Ref(meta_id_t id, Kind kind) : kind(kind), ref(id) {
-  }
-
-  Ref(MetaClass& meta) : kind(meta.get_kind()), ref(&meta) {
-  }
-
-  template <class OtherMeta, class = std::enable_if_t<std::is_base_of_v<MetaClass, OtherMeta>>>
-  Ref(const Ref<OtherMeta>& other) : kind(other.get_kind()) {
-    if (auto ptr = other.get(); ptr != nullptr) {
-      ref = ptr;
-    } else {
-      ref = other.get_id();
-    }
-  }
-
-  Kind get_kind() const {
-    return kind;
-  }
-
-  template <class _MetaClass = MetaClass, class = std::enable_if_t<!std::is_const_v<_MetaClass>>>
-  void set_id(meta_id_t new_id) {
-    if (ref.index() == 0) {
-      ref = new_id;
-    } else {
-      std::get<1>(ref)->set_id(new_id);
-    }
-  }
-
-  meta_id_t get_id() const {
-    if (ref.index() == 0) {
-      return std::get<0>(ref);
-    } else {
-      return std::get<1>(ref)->get_id();
-    }
-  }
-
-  void set(MetaClass& meta) {
-    kind = meta.get_kind();
-    ref  = &meta;
-  }
-
-  MetaClass* get() const {
-    if (ref.index() == 0) {
-      return nullptr;
-    } else {
-      return std::get<1>(ref);
-    }
-  }
-
-  inline MetaClass* operator->() const {
-    return get();
-  }
-
-  inline MetaClass& operator*() const {
-    return *get();
-  }
-
-  inline bool is_valid() const {
-    return get_id() != meta_id_t::invalid && get_kind() != Kind::Unknown;
-  }
-};
-
-template <class MetaClass>
-inline bool operator==(const Ref<MetaClass>& lhs, const Ref<MetaClass>& rhs) {
-  return lhs.get_kind() == rhs.get_kind() && lhs.get_id() == rhs.get_id();
-}
 
 class Meta {
   Kind kind;
   meta_id_t id;
 
  protected:
-  std::vector<Ref<Meta>> refs;
+  std::vector<Meta*> refs;
 
-  inline Meta(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs) : kind(kind), id(id), refs(std::move(refs)) {
+  inline Meta(meta_id_t id, Kind kind, std::vector<Meta*> refs) : kind(kind), id(id), refs(std::move(refs)) {
   }
 
  public:
@@ -225,18 +146,18 @@ class Meta {
     id = new_id;
   }
 
-  inline const std::vector<Ref<Meta>>& get_refs() const {
+  inline const std::vector<Meta*>& get_refs() const {
     return refs;
   }
 
-  inline std::vector<Ref<Meta>>& get_refs() {
+  inline std::vector<Meta*>& get_refs() {
     return refs;
   }
 };
 
 bool operator==(const Meta& lhs, const Meta& rhs);
 
-std::unique_ptr<Meta> make_meta(Kind kind, std::vector<Ref<Meta>> refs);
+std::unique_ptr<Meta> make_meta(Kind kind);
 
 template <class To, class = std::enable_if_t<std::is_base_of_v<Meta, To>>>
 To* dyn_cast(Meta* meta) {
@@ -254,26 +175,16 @@ const To* dyn_cast(const Meta* meta) {
   return To::classof(meta->get_kind()) ? static_cast<const To*>(meta) : nullptr;
 }
 
-template <class To, class = std::enable_if_t<std::is_base_of_v<Meta, To>>>
-Ref<To> dyn_cast(const Ref<Meta>& ref) {
-  if (auto ptr = ref.get(); ptr != nullptr) {
-    if (auto casted = dyn_cast<To>(ptr); casted != nullptr) {
-      return {*casted};
-    }
-  } else {
-    if (To::classof(ref.get_kind())) {
-      return {ref.get_id(), ref.get_kind()};
-    }
-  }
-  return {};
-}
-
 class Integer final : public Meta {
   META_CLASS(Meta, Integer)
   int64_t data;
 
  public:
   inline Integer(meta_id_t id, int64_t data) : Meta(id, Kind::Integer, {}), data(data) {
+  }
+
+  inline operator int64_t() const {
+    return data;
   }
 
   inline int64_t get_data() const {
@@ -293,6 +204,10 @@ class String final : public Meta {
   inline String(meta_id_t id, std::string data) : Meta(id, Kind::String, {}), data(std::move(data)) {
   }
 
+  inline operator const std::string&() const {
+    return data;
+  }
+
   inline const std::string& get_data() const {
     return data;
   }
@@ -302,16 +217,28 @@ class String final : public Meta {
   }
 };
 
-class Tuple final : public Meta {
-  META_CLASS(Meta, Tuple)
-
- public:
-  using size_type = std::vector<Ref<Meta>>::size_type;
-
- public:
-  inline Tuple(meta_id_t id, std::vector<Ref<Meta>> refs) : Meta(id, Kind::Tuple, std::move(refs)) {
+class TupleBase : public Meta {
+ protected:
+  inline TupleBase(meta_id_t id, Kind kind, std::vector<Meta*> refs) : Meta(id, kind, std::move(refs)) {
   }
 
+ public:
+  static inline bool classof(Kind kind) {
+    switch (kind) {
+      case Kind::Tuple:
+      case Kind::Optional:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  virtual ~TupleBase();
+
+ public:
+  using size_type = std::vector<Meta*>::size_type;
+
+ public:
   inline auto size() const {
     return get_refs().size();
   }
@@ -333,6 +260,13 @@ class Tuple final : public Meta {
   }
 };
 
+class Tuple final : public TupleBase {
+  META_CLASS(TupleBase, Tuple)
+
+ public:
+  using size_type = std::vector<Meta*>::size_type;
+};
+
 template <class MetaClass>
 class TupleProxy final {
   const Tuple* tuple;
@@ -342,7 +276,7 @@ class TupleProxy final {
 
  public:
   class const_iterator {
-    using base_type = std::vector<Ref<Meta>>::const_iterator;
+    using base_type = std::vector<Meta*>::const_iterator;
     base_type it;
 
    public:
@@ -401,15 +335,15 @@ class TupleProxy final {
     }
 
     reference operator*() const {
-      return *dyn_cast<MetaClass>(it->get());
+      return *dyn_cast<MetaClass>(*it);
     }
 
     pointer operator->() const {
-      return dyn_cast<MetaClass>(it->get());
+      return dyn_cast<MetaClass>(*it);
     }
 
     reference operator[](size_type n) const {
-      return *dyn_cast<MetaClass>(it[n].get());
+      return *dyn_cast<MetaClass>(it[n]);
     }
 
     friend bool operator==(const const_iterator& lhs, const const_iterator& rhs) {
@@ -454,9 +388,44 @@ class TupleProxy final {
   }
 };
 
+class Optional final : public TupleBase {
+  META_CLASS(TupleBase, Optional)
+
+ public:
+  using size_type = std::vector<Meta*>::size_type;
+
+  inline bool has_value() const {
+    return get_refs().size() == 1;
+  }
+
+  inline Meta& value() const {
+    return *get_refs()[0];
+  }
+};
+
+template <class MetaClass>
+class OptionalProxy final {
+  const Optional* optional;
+
+ public:
+  using size_type = Optional::size_type;
+
+ public:
+  OptionalProxy(const Optional& optional) : optional(&optional) {
+  }
+
+  inline bool has_value() const {
+    return optional->has_value();
+  }
+
+  inline MetaClass& value() const {
+    return *dyn_cast<MetaClass>(&optional->value());
+  }
+};
+
 class Node : public Meta {
  protected:
-  inline Node(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs) : Meta(id, kind, std::move(refs)) {
+  inline Node(meta_id_t id, Kind kind, std::vector<Meta*> refs) : Meta(id, kind, std::move(refs)) {
   }
 
  public:
@@ -497,7 +466,7 @@ namespace di {
 
 class Node : public meta::Node {
  protected:
-  inline Node(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs) : meta::Node(id, kind, std::move(refs)) {
+  inline Node(meta_id_t id, Kind kind, std::vector<Meta*> refs) : meta::Node(id, kind, std::move(refs)) {
   }
 
  public:
@@ -577,7 +546,7 @@ class Member final : public di::Node {
 
 class Scope : public di::Node {
  protected:
-  inline Scope(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs) : di::Node(id, kind, std::move(refs)) {
+  inline Scope(meta_id_t id, Kind kind, std::vector<Meta*> refs) : di::Node(id, kind, std::move(refs)) {
   }
 
  public:
@@ -664,7 +633,7 @@ class Namespace final : public di::Scope {
 
 class Type : public di::Scope {
  protected:
-  inline Type(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs) : di::Scope(id, kind, std::move(refs)) {
+  inline Type(meta_id_t id, Kind kind, std::vector<Meta*> refs) : di::Scope(id, kind, std::move(refs)) {
   }
 
  public:
@@ -885,7 +854,7 @@ typename Visitor::return_type visit_type(const Type& type, Visitor&& visitor) {
 
 class LocalScope : public di::Scope {
  protected:
-  inline LocalScope(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs) : di::Scope(id, kind, std::move(refs)) {
+  inline LocalScope(meta_id_t id, Kind kind, std::vector<Meta*> refs) : di::Scope(id, kind, std::move(refs)) {
   }
 
  public:
@@ -907,7 +876,7 @@ class LocalScope : public di::Scope {
 
 class LexicalBlockBase : public di::LocalScope {
  protected:
-  inline LexicalBlockBase(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs)
+  inline LexicalBlockBase(meta_id_t id, Kind kind, std::vector<Meta*> refs)
       : di::LocalScope(id, kind, std::move(refs)) {
   }
 
@@ -968,7 +937,7 @@ class Location final : public meta::Node {
 
 class Variable : public di::Node {
  protected:
-  inline Variable(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs) : di::Node(id, kind, std::move(refs)) {
+  inline Variable(meta_id_t id, Kind kind, std::vector<Meta*> refs) : di::Node(id, kind, std::move(refs)) {
   }
 
   virtual ~Variable();
@@ -1011,7 +980,7 @@ class GlobalVariable final : public Variable {
 
 class Allocation : public Meta {
  public:
-  inline Allocation(meta_id_t id, Kind kind, std::vector<Ref<Meta>> refs) : Meta(id, kind, std::move(refs)) {
+  inline Allocation(meta_id_t id, Kind kind, std::vector<Meta*> refs) : Meta(id, kind, std::move(refs)) {
   }
 
   virtual const di::Type& get_type() const = 0;
@@ -1035,7 +1004,8 @@ class Allocation : public Meta {
 class StackAllocation final : public Allocation {
   META_CLASS(Allocation, StackAllocation,
              ((REF, di::LocalVariable, local_variable),  //
-              (REF, di::Location, location)))
+              (REF, di::Location, location),             //
+              (OPTIONAL, Integer, count)))
 
   const di::Type& get_type() const override {
     return get_local_variable().get_type();

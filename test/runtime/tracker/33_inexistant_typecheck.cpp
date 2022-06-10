@@ -10,9 +10,8 @@ using namespace typeart;
 
 int main(int argc, char** argv) {
   const int addr      = 2;
-  const auto alloc_id = create_inexistent_meta_alloc_id();
   const size_t extent = 2;
-  typeart_tracker_alloc((const void*)addr, alloc_id.value(), extent);
+  typeart_tracker_alloc((const void*)addr, meta_id_t::invalid.value(), extent);
 
   auto pointer_info_result = PointerInfo::get((const void*)addr);
 
@@ -24,5 +23,5 @@ int main(int argc, char** argv) {
   return 0;
 }
 
-// CHECK: [Error] Allocation info with unknown meta_id! Skipping...
+// CHECK: [Error] Allocation with unknown meta_id! Skipping...
 // CHECK: [Error] Status not OK: UNKNOWN_ADDRESS

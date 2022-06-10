@@ -65,7 +65,7 @@ size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
 
     IRBuilder<> IRB(insertBefore);
 
-    auto allocIdConst  = args.get_value(ArgMap::ID::alloc_id);
+    auto metaIdConst   = args.get_value(ArgMap::ID::meta_id);
     auto typeSizeConst = args.get_value(ArgMap::ID::type_size);
 
     bool single_byte_type{false};
@@ -117,7 +117,7 @@ size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
     }
 
     const auto callback = omp ? type_art_functions.tracker_alloc_omp : type_art_functions.tracker_alloc;
-    IRB.CreateCall(callback, ArrayRef<Value*>{malloc_call, allocIdConst, elementCount});
+    IRB.CreateCall(callback, ArrayRef<Value*>{malloc_call, metaIdConst, elementCount});
     ++counter;
   }
 
@@ -167,13 +167,13 @@ size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
   Function* function{nullptr};
   for (const auto& [sdata, args] : stack) {
     auto* alloca         = args.get_as<Instruction>(ArgMap::ID::pointer);
-    auto* allocIdConst   = args.get_value(ArgMap::ID::alloc_id);
+    auto* metaIdConst    = args.get_value(ArgMap::ID::meta_id);
     auto* numElementsVal = args.get_value(ArgMap::ID::element_count);
 
     const auto instrument_stack = [&](IRBuilder<>& IRB, Value* data_ptr, Instruction* anchor) {
       const auto callback = util::omp::isOmpContext(anchor->getFunction()) ? type_art_functions.tracker_alloc_stacks_omp
                                                                            : type_art_functions.tracker_alloc_stack;
-      IRB.CreateCall(callback, ArrayRef<Value*>{data_ptr, allocIdConst, numElementsVal});
+      IRB.CreateCall(callback, ArrayRef<Value*>{data_ptr, metaIdConst, numElementsVal});
       ++counter;
 
       auto* bblock = anchor->getParent();
@@ -211,11 +211,10 @@ size_t InstrumentationStrategy::instrumentGlobal(const GlobalArgList& globals) {
     for (const auto& [gdata, args] : globals) {
       // Instruction* global = args.get_as<llvm::Instruction>("pointer");
       auto global         = gdata.global;
-      auto allocIdConst   = args.get_value(ArgMap::ID::alloc_id);
+      auto metaIdConst    = args.get_value(ArgMap::ID::meta_id);
       auto numElementsVal = args.get_value(ArgMap::ID::element_count);
       auto globalPtr      = IRB.CreateBitOrPointerCast(global, instr_helper.getTypeFor(IType::ptr));
-      IRB.CreateCall(type_art_functions.tracker_alloc_global,
-                     ArrayRef<Value*>{globalPtr, allocIdConst, numElementsVal});
+      IRB.CreateCall(type_art_functions.tracker_alloc_global, ArrayRef<Value*>{globalPtr, metaIdConst, numElementsVal});
       ++counter;
     }
   };

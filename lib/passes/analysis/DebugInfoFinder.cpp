@@ -1,5 +1,7 @@
 #include "DebugInfoFinder.hpp"
 
+#include "support/Logger.hpp"
+
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/Transforms/Utils/Local.h>
 
@@ -82,8 +84,6 @@ llvm::DIType* backtrackDIType(llvm::Value* value) {
         } else {
           auto composite_type = llvm::dyn_cast<llvm::DICompositeType>(type);
           assert(composite_type != nullptr);
-          gep_inst->print(llvm::errs());
-          llvm::errs() << "\n";
           assert(gep_inst->getSourceElementType()->isStructTy());
           assert(gep_inst->getNumIndices() == 1 || gep_inst->getNumIndices() == 2);
           auto index_it    = gep_inst->indices().begin();
@@ -103,16 +103,14 @@ llvm::DIType* backtrackDIType(llvm::Value* value) {
               return derived_type;
             }
           }
-          llvm::errs() << "Couln't determine gep type!\n";
+          LOG_FATAL("Couln't determine gep type!");
           abort();
         }
       }
       case llvm::Instruction::BitCast:
         return backtrackDIType(llvm::cast<llvm::BitCastInst>(inst)->getOperand(0));
       default:
-        llvm::errs() << "backtrackDIType: Unknown instruction type " << value->getValueID() << "!\n";
-        value->print(llvm::errs());
-        llvm::errs() << "\n";
+        LOG_FATAL("backtrackDIType: Unknown instruction type {}!", value->getValueID());
         abort();
     }
   } else {
@@ -131,9 +129,7 @@ llvm::DIType* backtrackDIType(llvm::Value* value) {
       converted_inst->deleteValue();
       return result;
     } else {
-      llvm::errs() << "backtrackDIType: Unknown value type " << value->getValueID() << "!\n";
-      value->print(llvm::errs());
-      llvm::errs() << "\n";
+      LOG_FATAL("backtrackDIType: Unknown value type {}!", value->getValueID());
       abort();
     }
   }
@@ -167,15 +163,11 @@ bool shouldFollowUser(llvm::Value* operand, llvm::User* user) {
         return false;
 
       default:
-        llvm::errs() << "should_follow_user: Unknown instruction type!\n";
-        user->print(llvm::errs());
-        llvm::errs() << "\n";
+        LOG_FATAL("should_follow_user: Unknown instruction type!");
         abort();
     }
   } else {
-    llvm::errs() << "should_follow_isre: Unknown user type!\n";
-    user->print(llvm::errs());
-    llvm::errs() << "\n";
+    LOG_FATAL("should_follow_isre: Unknown user type!");
     abort();
   }
 }
@@ -232,15 +224,11 @@ llvm::SmallVector<llvm::DIType*, 4> findDITypes(llvm::CallBase& call) {
           break;
         }
         default:
-          llvm::errs() << "findDITypes: Unknown instruction type!\n";
-          use->getUser()->print(llvm::errs());
-          llvm::errs() << "\n";
+          LOG_FATAL("findDITypes: Unknown instruction type!");
           abort();
       }
     } else {
-      llvm::errs() << "findDITypes: Unknown value type!\n";
-      use->getUser()->print(llvm::errs());
-      llvm::errs() << "\n";
+      LOG_FATAL("findDITypes: Unknown value type!");
       abort();
     }
   }

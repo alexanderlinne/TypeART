@@ -28,34 +28,6 @@ Database::Database() {
 Database::~Database() {
 }
 
-alloc_id_t Database::getOrCreateAllocationId(meta_id_t meta_id, std::optional<size_t> count) {
-  auto it = std::find_if(allocation_info.begin(), allocation_info.end(),
-                         [&](auto& info) { return info.meta_id == meta_id && info.count == count; });
-  if (it != allocation_info.end()) {
-    return it->alloc_id;
-  }
-  AllocationInfo info;
-  info.alloc_id = static_cast<alloc_id_t::value_type>(allocation_info.size() + 1);
-  info.meta_id  = meta_id;
-  info.count    = count;
-  allocation_info.push_back(std::move(info));
-  return allocation_info.back().alloc_id;
-}
-
-void Database::registerAllocations(std::vector<AllocationInfo> allocations) {
-  allocation_info = std::move(allocations);
-  for (size_t i = 0; i < allocation_info.size(); ++i) {
-    assert(allocation_info[i].alloc_id.value() - 1 == static_cast<alloc_id_t::value_type>(i));
-  }
-}
-
-const AllocationInfo* Database::getAllocationInfo(alloc_id_t alloc_id) const {
-  if (alloc_id.value() == 0 || alloc_id.value() > static_cast<alloc_id_t::value_type>(allocation_info.size())) {
-    return nullptr;
-  }
-  return &allocation_info[alloc_id.value() - 1];
-}
-
 [[nodiscard]] meta::Meta* Database::registerMeta(std::unique_ptr<meta::Meta> meta) {
   const auto id = meta->get_id();
   if (id != meta_id_t::invalid && id.value() <= static_cast<meta_id_t::value_type>(meta_info.size()) &&
@@ -74,16 +46,6 @@ const AllocationInfo* Database::getAllocationInfo(alloc_id_t alloc_id) const {
     if (!registerMeta(std::move(elem))) {
       fmt::print(stderr, "Duplicate meta id {} found!\n", id.value());
       abort();
-    }
-  }
-  for (const auto& elem : meta_info) {
-    if (!elem) {
-      continue;
-    }
-    for (auto& ref : elem->get_refs()) {
-      if (ref.get() == nullptr) {
-        ref.set(*getMeta(ref.get_id()));
-      }
     }
   }
   for (const auto& elem : meta_info) {
@@ -195,8 +157,8 @@ void Database::replaceRefs(const meta::Meta& original, meta::Meta& replacement) 
       continue;
     }
     for (auto& ref : info->get_refs()) {
-      if (ref.get() == &original) {
-        ref.set(replacement);
+      if (ref == &original) {
+        ref = &replacement;
       }
     }
   }

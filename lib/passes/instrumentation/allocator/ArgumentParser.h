@@ -26,7 +26,7 @@ class ArgumentParser final : public instrumentation::ArgumentParser {
   tracker::ArgumentParser tracker_parser;
 
  public:
-  ArgumentParser(llvm::Module& m, Database& db, meta::LLVMMetadataConverter& converter);
+  ArgumentParser(llvm::Module& m, meta::LLVMMetadataConverter& converter);
   HeapArgList collectHeap(const MallocDataList& mallocs) override;
   FreeArgList collectFree(const FreeDataList& frees) override;
   StackArgList collectStack(const AllocaDataList& allocs) override;

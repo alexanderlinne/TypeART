@@ -8,12 +8,12 @@
 using namespace typeart;
 
 int main(int argc, char** argv) {
-  auto alloc_id = create_fake_double_heap_alloc_id().value();
+  auto meta_id = create_fake_double_heap_allocation().value();
 
-  typeart_tracker_alloc((const void*)0, alloc_id, 1);
-  typeart_tracker_alloc((const void*)1, alloc_id, 0);
-  typeart_tracker_alloc((const void*)0, alloc_id, 0);
-  typeart_tracker_alloc((const void*)2, alloc_id, 1);  // OK
+  typeart_tracker_alloc((const void*)0, meta_id, 1);
+  typeart_tracker_alloc((const void*)1, meta_id, 0);
+  typeart_tracker_alloc((const void*)0, meta_id, 0);
+  typeart_tracker_alloc((const void*)2, meta_id, 1);  // OK
 
   return 0;
 }

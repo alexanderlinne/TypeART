@@ -99,12 +99,11 @@ thread_local ThreadData threadData;
 Tracker::Tracker() {
 }
 
-void Tracker::onAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
-  const auto status = doAlloc(addr, alloc_id, count, retAddr);
-  if (!(status & AllocState::ERROR)) {
-    const auto alloc_info = getDatabase().getAllocationInfo(alloc_id);
-    const auto meta       = getDatabase().getMeta(alloc_info->meta_id);
-    const auto alloc      = meta::dyn_cast<meta::HeapAllocation>(meta);
+void Tracker::onAlloc(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr) {
+  const auto status = doAlloc(addr, meta_id, count, retAddr);
+  if (!(status & AllocState::UNKNOWN_META_ID)) {
+    const auto meta  = getDatabase().getMeta(meta_id);
+    const auto alloc = meta::dyn_cast<meta::HeapAllocation>(meta);
     if (unlikely(alloc == nullptr)) {
       LOG_ERROR("Unexpected meta type. Expected HeapAllocation, but found {}", meta->get_kind());
       return;
@@ -117,12 +116,11 @@ void Tracker::onAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const
   }
 }
 
-void Tracker::onAllocStack(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
-  const auto status = doAlloc(addr, alloc_id, count, retAddr);
-  if (!(status & AllocState::ERROR)) {
-    const auto alloc_info = getDatabase().getAllocationInfo(alloc_id);
-    const auto meta       = getDatabase().getMeta(alloc_info->meta_id);
-    const auto alloc      = meta::dyn_cast<meta::StackAllocation>(meta);
+void Tracker::onAllocStack(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr) {
+  const auto status = doAlloc(addr, meta_id, count, retAddr);
+  if (!(status & AllocState::UNKNOWN_META_ID)) {
+    const auto meta  = getDatabase().getMeta(meta_id);
+    const auto alloc = meta::dyn_cast<meta::StackAllocation>(meta);
     if (unlikely(alloc == nullptr)) {
       LOG_ERROR("Unexpected meta type. Expected StackAllocation, but found {}", meta->get_kind());
       return;
@@ -136,12 +134,11 @@ void Tracker::onAllocStack(const void* addr, alloc_id_t alloc_id, size_t count, 
   }
 }
 
-void Tracker::onAllocGlobal(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
-  const auto status = doAlloc(addr, alloc_id, count, retAddr);
-  if (!(status & AllocState::ERROR)) {
-    const auto alloc_info = getDatabase().getAllocationInfo(alloc_id);
-    const auto meta       = getDatabase().getMeta(alloc_info->meta_id);
-    const auto alloc      = meta::dyn_cast<meta::GlobalAllocation>(meta);
+void Tracker::onAllocGlobal(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr) {
+  const auto status = doAlloc(addr, meta_id, count, retAddr);
+  if (!(status & AllocState::UNKNOWN_META_ID)) {
+    const auto meta  = getDatabase().getMeta(meta_id);
+    const auto alloc = meta::dyn_cast<meta::GlobalAllocation>(meta);
     if (unlikely(alloc == nullptr)) {
       LOG_ERROR("Unexpected meta type. Expected GlobalAllocation, but found {}", meta->get_kind());
       return;
@@ -154,17 +151,11 @@ void Tracker::onAllocGlobal(const void* addr, alloc_id_t alloc_id, size_t count,
   }
 }
 
-AllocState Tracker::doAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr) {
-  auto alloc_info = getDatabase().getAllocationInfo(alloc_id);
-  if (unlikely(alloc_info == nullptr)) {
-    auto status = AllocState::ERROR | AllocState::UNKNOWN_ALLOC_ID | AllocState::ADDR_SKIPPED;
-    LOG_ERROR("Allocation with unknown alloc_id! Skipping...");
-    return status;
-  }
-  const auto meta = getDatabase().getMeta(alloc_info->meta_id);
+AllocState Tracker::doAlloc(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr) {
+  const auto meta = getDatabase().getMeta(meta_id);
   if (unlikely(meta == nullptr)) {
-    LOG_ERROR("Allocation info with unknown meta_id! Skipping...");
-    return AllocState::ERROR | AllocState::ADDR_SKIPPED;
+    LOG_ERROR("Allocation with unknown meta_id! Skipping...");
+    return AllocState::UNKNOWN_META_ID | AllocState::ADDR_SKIPPED;
   }
   const auto alloc = meta::dyn_cast<meta::Allocation>(meta);
 

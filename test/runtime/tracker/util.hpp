@@ -7,13 +7,13 @@
 #include <typeart/TypeART.hpp>
 
 extern "C" {
-void typeart_tracker_alloc(const void* addr, alloc_id_value alloc_id, size_t count);
+void typeart_tracker_alloc(const void* addr, meta_id_value alloc_id, size_t count);
 void typeart_tracker_free(const void* addr);
-void typeart_tracker_alloc_stack(const void* addr, alloc_id_value alloc_id, size_t count);
+void typeart_tracker_alloc_stack(const void* addr, meta_id_value alloc_id, size_t count);
 void typeart_tracker_leave_scope(int alloca_count);
 }
 
-typeart::alloc_id_t create_fake_double_heap_alloc_id() {
+typeart::meta_id_t create_fake_double_heap_allocation() {
   double* d                = (double*)malloc(sizeof(double));
   auto pointer_info_result = typeart::PointerInfo::get(d);
   if (pointer_info_result.has_error()) {
@@ -22,22 +22,26 @@ typeart::alloc_id_t create_fake_double_heap_alloc_id() {
   }
   auto pointer_info = pointer_info_result.value();
   free(d);
-  return typeart::getDatabase().getOrCreateAllocationId(pointer_info.getAllocation().get_id(), {});
+  return pointer_info.getAllocation().get_id();
 }
 
-typeart::alloc_id_t create_fake_double_stack_alloc_id() {
+typeart::meta_id_t create_fake_double_stack_allocation() {
+  using namespace typeart;
   double d;
-  auto pointer_info_result = typeart::PointerInfo::get(&d);
+  auto pointer_info_result = PointerInfo::get(&d);
   if (pointer_info_result.has_error()) {
     fprintf(stderr, "Error: could not create fake allocation!\n");
     abort();
   }
   auto pointer_info = pointer_info_result.value();
-  return typeart::getDatabase().getOrCreateAllocationId(pointer_info.getAllocation().get_id(), {});
-}
-
-typeart::alloc_id_t create_inexistent_meta_alloc_id() {
-  return typeart::getDatabase().getOrCreateAllocationId(typeart::meta_id_t::invalid, {});
+  auto instr_alloc  = meta::dyn_cast<meta::StackAllocation>(&pointer_info.getAllocation());
+  assert(instr_alloc != nullptr);
+  auto stack_alloc = std::make_unique<meta::StackAllocation>();
+  stack_alloc->set_local_variable_raw(instr_alloc->get_local_variable_raw());
+  stack_alloc->set_location_raw(instr_alloc->get_location_raw());
+  auto optional = meta::dyn_cast<meta::Optional>(getDatabase().addMeta(std::make_unique<meta::Optional>()));
+  stack_alloc->set_count_raw(optional);
+  return getDatabase().addMeta(std::move(stack_alloc))->get_id();
 }
 
 void check(void* addr, const char* type_name, int count, bool resolveStructs) {

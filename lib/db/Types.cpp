@@ -8,13 +8,6 @@
 
 namespace typeart {
 
-const alloc_id_t alloc_id_t::invalid = {};
-
-std::ostream& operator<<(std::ostream& os, const alloc_id_t& alloc_id) {
-  os << "alloc_id(" << alloc_id.value() << ")";
-  return os;
-}
-
 const meta_id_t meta_id_t::invalid = {};
 
 namespace meta {
@@ -108,6 +101,9 @@ std::ostream& operator<<(std::ostream& os, const Kind& kind) {
     case Kind::Tuple:
       os << "Tuple";
       break;
+    case Kind::Optional:
+      os << "Optional";
+      break;
     default:
       LOG_FATAL("Missing switch case {}", static_cast<int>(kind));
       abort();
@@ -176,6 +172,8 @@ std::istream& operator>>(std::istream& is, std::optional<Kind>& value) {
     value = Kind::Integer;
   } else if (input == "Tuple") {
     value = Kind::Tuple;
+  } else if (input == "Optional") {
+    value = Kind::Optional;
   } else {
     value = {};
   }
@@ -202,7 +200,7 @@ bool operator==(const Meta& lhs, const Meta& rhs) {
   }
 }
 
-std::unique_ptr<Meta> make_meta(Kind kind, std::vector<Ref<Meta>> refs) {
+std::unique_ptr<Meta> make_meta(Kind kind) {
   auto result = std::unique_ptr<Meta>{};
   switch (kind) {
     case Kind::String:
@@ -213,6 +211,9 @@ std::unique_ptr<Meta> make_meta(Kind kind, std::vector<Ref<Meta>> refs) {
       break;
     case Kind::Tuple:
       result = std::make_unique<Tuple>();
+      break;
+    case Kind::Optional:
+      result = std::make_unique<Optional>();
       break;
     case Kind::GlobalOrBuiltin:
       result = std::make_unique<di::GlobalOrBuiltin>();
@@ -293,7 +294,6 @@ std::unique_ptr<Meta> make_meta(Kind kind, std::vector<Ref<Meta>> refs) {
       LOG_FATAL("Missing switch case {}", kind);
       abort();
   }
-  result->get_refs() = std::move(refs);
   return result;
 }
 
@@ -301,7 +301,12 @@ META_CLASS_IMPL(Meta, Integer)
 
 META_CLASS_IMPL(Meta, String)
 
+TupleBase::~TupleBase() {
+}
+
 META_CLASS_IMPL(Meta, Tuple)
+
+META_CLASS_IMPL(TupleBase, Optional)
 
 Node::~Node() {
 }
@@ -620,7 +625,7 @@ size_t ArrayType::get_flattened_count() const {
   }
   auto result = 1;
   for (auto& count : get_counts()) {
-    result *= dyn_cast<Integer>(count)->get_data();
+    result *= dyn_cast<Integer>(&count)->get_data();
   }
   return result;
 }
@@ -628,7 +633,7 @@ size_t ArrayType::get_flattened_count() const {
 std::string ArrayType::get_pretty_name() const {
   std::vector<std::string> counts;
   std::transform(get_counts().begin(), get_counts().end(), std::back_inserter(counts),
-                 [](auto& count) { return fmt::format("[{}]", meta::dyn_cast<meta::Integer>(count)->get_data()); });
+                 [](auto& count) { return fmt::format("[{}]", meta::dyn_cast<meta::Integer>(&count)->get_data()); });
   return fmt::format("{}{}", get_base_type().get_pretty_name(), fmt::join(counts, ""));
 }
 
@@ -816,7 +821,8 @@ Allocation::~Allocation() {
 
 META_CLASS_IMPL(Allocation, StackAllocation,
                 ((REF, di::LocalVariable, local_variable),  //
-                 (REF, di::Location, location)))
+                 (REF, di::Location, location),             //
+                 (OPTIONAL, Integer, count)))
 
 META_CLASS_IMPL(Allocation, HeapAllocation,
                 ((REF, di::Type, type),  //

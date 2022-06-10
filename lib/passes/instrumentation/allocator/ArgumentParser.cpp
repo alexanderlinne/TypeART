@@ -17,8 +17,8 @@
 
 namespace typeart::instrumentation::allocator {
 
-ArgumentParser::ArgumentParser(llvm::Module& m, Database& db, meta::LLVMMetadataConverter& converter)
-    : instrumentation::ArgumentParser(), instr_helper(m), tracker_parser(m, db, converter) {
+ArgumentParser::ArgumentParser(llvm::Module& m, meta::LLVMMetadataConverter& converter)
+    : instrumentation::ArgumentParser(), instr_helper(m), tracker_parser(m, converter) {
 }
 
 HeapArgList ArgumentParser::collectHeap(const MallocDataList& mallocs) {

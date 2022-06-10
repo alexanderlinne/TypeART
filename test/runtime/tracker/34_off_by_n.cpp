@@ -8,14 +8,14 @@
 #include <stdio.h>
 
 int main(int argc, char** argv) {
-  const auto alloc_id = create_fake_double_heap_alloc_id();
-  const auto extent   = 6;
+  const auto meta_id = create_fake_double_heap_allocation();
+  const auto extent  = 6;
   const size_t expected_count{1};
 
   auto* d = new double[extent];
 
-  typeart_tracker_alloc(reinterpret_cast<const void*>(&d[0]), alloc_id.value(), 1);
-  typeart_tracker_alloc(reinterpret_cast<const void*>(&d[1]), alloc_id.value(), 1);
+  typeart_tracker_alloc(reinterpret_cast<const void*>(&d[0]), meta_id.value(), 1);
+  typeart_tracker_alloc(reinterpret_cast<const void*>(&d[1]), meta_id.value(), 1);
 
   // CHECK-NOT: [Error]
   check(&d[0], "double", 1, false);

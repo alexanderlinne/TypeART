@@ -27,16 +27,14 @@ class Optional;
 namespace typeart::tracker {
 
 enum class AllocState : unsigned {
-  NO_INIT          = 1 << 0,
-  OK               = 1 << 1,
-  ADDR_SKIPPED     = 1 << 2,
-  NULL_PTR         = 1 << 3,
-  ZERO_COUNT       = 1 << 4,
-  NULL_ZERO        = 1 << 5,
-  ADDR_REUSE       = 1 << 6,
-  UNKNOWN_TYPE_ID  = 1 << 7,
-  UNKNOWN_ALLOC_ID = 1 << 8,
-  ERROR            = 1 << 9
+  NO_INIT         = 1 << 0,
+  OK              = 1 << 1,
+  ADDR_SKIPPED    = 1 << 2,
+  NULL_PTR        = 1 << 3,
+  ZERO_COUNT      = 1 << 4,
+  NULL_ZERO       = 1 << 5,
+  ADDR_REUSE      = 1 << 6,
+  UNKNOWN_META_ID = 1 << 7
 };
 
 inline unsigned operator&(const AllocState& lhs, const AllocState& rhs) {
@@ -65,11 +63,11 @@ class Tracker {
   Tracker();
 
  public:
-  void onAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr);
+  void onAlloc(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr);
 
-  void onAllocStack(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr);
+  void onAllocStack(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr);
 
-  void onAllocGlobal(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr);
+  void onAllocGlobal(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr);
 
   void onFreeHeap(const void* addr, const void* retAddr);
 
@@ -78,7 +76,7 @@ class Tracker {
   std::optional<PointerInfo> getPointerInfo(const void* addr);
 
  private:
-  AllocState doAlloc(const void* addr, alloc_id_t alloc_id, size_t count, const void* retAddr);
+  AllocState doAlloc(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr);
 
   FreeState doFreeHeap(const void* addr, const void* retAddr);
 };

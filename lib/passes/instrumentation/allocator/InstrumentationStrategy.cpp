@@ -53,7 +53,7 @@ size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
   for (const auto& [malloc, args] : heap) {
     auto malloc_call = llvm::dyn_cast<llvm::CallBase>(args.get_as<llvm::Instruction>(ArgMap::ID::pointer));
     llvm::IRBuilder<> builder(malloc_call);
-    auto alloc_id  = args.get_value(ArgMap::ID::alloc_id);
+    auto meta_id   = args.get_value(ArgMap::ID::meta_id);
     auto type_size = args.get_value(ArgMap::ID::type_size);
     bool single_byte_type{false};
     if (auto const_int = llvm::dyn_cast<llvm::ConstantInt>(type_size)) {
@@ -124,10 +124,10 @@ size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
     auto function_name = malloc_call->getCalledFunction()->getName();
     if (function_name == "malloc" || function_name == "_Znwm" || function_name == "_Znam") {
       replace_call_base(malloc_call, function_map[function_name],
-                        {alloc_id, element_count, malloc_call->getArgOperand(0)});
+                        {meta_id, element_count, malloc_call->getArgOperand(0)});
     } else if (function_name == "calloc" || function_name == "realloc") {
       replace_call_base(malloc_call, function_map[function_name],
-                        {alloc_id, element_count, malloc_call->getArgOperand(0), malloc_call->getArgOperand(1)});
+                        {meta_id, element_count, malloc_call->getArgOperand(0), malloc_call->getArgOperand(1)});
     } else {
       malloc_call->print(llvm::errs());
       fprintf(stderr, "\nUnknown malloc function %s\n", function_name.str().c_str());
@@ -215,7 +215,7 @@ size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
     auto& ctx      = alloca->getContext();
     const auto& dl = alloca->getModule()->getDataLayout();
     llvm::IRBuilder<> IRB(alloca->getNextNode());
-    auto allocIdConst         = args.get_value(ArgMap::ID::alloc_id);
+    auto metaIdConst          = args.get_value(ArgMap::ID::meta_id);
     auto elementCountConst    = args.get_value(ArgMap::ID::element_count);
     const auto wrapper_alloca = createWrapperAlloca(alloca, sdata.is_vla);
 
@@ -226,8 +226,8 @@ size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
                       llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), config::stack::region_offset_for(byte_size)));
     auto offset_alloca = IRB.CreateBitCast(offset_casted, wrapper_alloca->getAllocatedType()->getPointerTo());
 
-    const auto alloc_id = IRB.CreateStructGEP(offset_alloca, sdata.is_vla ? 4 : 2);
-    IRB.CreateStore(allocIdConst, alloc_id, true);
+    const auto meta_id = IRB.CreateStructGEP(offset_alloca, sdata.is_vla ? 4 : 2);
+    IRB.CreateStore(metaIdConst, meta_id, true);
 
     if (sdata.is_vla) {
       const auto element_count = IRB.CreateStructGEP(offset_alloca, 2);

@@ -36,8 +36,8 @@ using namespace llvm;
 
 namespace typeart::instrumentation::tracker {
 
-ArgumentParser::ArgumentParser(llvm::Module& m, Database& db, meta::LLVMMetadataConverter& converter)
-    : instrumentation::ArgumentParser(), module(&m), instr_helper(m), db(&db), converter(&converter) {
+ArgumentParser::ArgumentParser(llvm::Module& m, meta::LLVMMetadataConverter& converter)
+    : instrumentation::ArgumentParser(), module(&m), instr_helper(m), converter(&converter) {
 }
 
 HeapArgList ArgumentParser::collectHeap(const MallocDataList& mallocs) {
@@ -112,16 +112,15 @@ HeapArgList ArgumentParser::collectHeap(const MallocDataList& mallocs) {
     }
 
     assert(mdata.type != nullptr && mdata.location != nullptr);
-    const auto meta         = converter->createHeapAllocation(*mdata.type, *mdata.location);
-    const auto allocId      = db->getOrCreateAllocationId(meta->get_id(), {});
-    const auto allocIdConst = instr_helper.getConstantFor(IType::alloc_id, allocId.value());
+    const auto meta        = converter->createHeapAllocation(*mdata.type, *mdata.location);
+    const auto metaIdConst = instr_helper.getConstantFor(IType::alloc_id, meta->get_id().value());
 
     arg_map[ArgMap::ID::pointer]       = pointer;
     arg_map[ArgMap::ID::type_size]     = typeSizeConst;
     arg_map[ArgMap::ID::byte_count]    = byte_count;
     arg_map[ArgMap::ID::element_count] = elementCount;
     arg_map[ArgMap::ID::realloc_ptr]   = realloc_ptr;
-    arg_map[ArgMap::ID::alloc_id]      = allocIdConst;
+    arg_map[ArgMap::ID::meta_id]       = metaIdConst;
     list.emplace_back(HeapArgList::value_type{mdata, arg_map});
   }
 
@@ -185,13 +184,12 @@ StackArgList ArgumentParser::collectStack(const AllocaDataList& allocs) {
     }
 
     assert(adata.location != nullptr);
-    const auto meta         = converter->createStackAllocation(*adata.local_variable, *adata.location);
-    const auto allocId      = db->getOrCreateAllocationId(meta->get_id(), constantArraySize);
-    const auto allocIdConst = instr_helper.getConstantFor(IType::alloc_id, allocId.value());
+    const auto meta = converter->createStackAllocation(*adata.local_variable, *adata.location, constantArraySize);
+    const auto metaIdConst = instr_helper.getConstantFor(IType::alloc_id, meta->get_id().value());
 
     arg_map[ArgMap::ID::pointer]       = alloca;
     arg_map[ArgMap::ID::element_count] = numElementsVal;
-    arg_map[ArgMap::ID::alloc_id]      = allocIdConst;
+    arg_map[ArgMap::ID::meta_id]       = metaIdConst;
 
     list.emplace_back(StackArgList::value_type{adata, arg_map});
   }
@@ -222,12 +220,12 @@ GlobalArgList ArgumentParser::collectGlobal(const GlobalDataList& globals) {
 
     auto* numElementsConst = instr_helper.getConstantFor(IType::extent, numElements);
 
-    const auto allocId      = db->getOrCreateAllocationId(meta_id_t::invalid, {});
-    const auto allocIdConst = instr_helper.getConstantFor(IType::alloc_id, allocId.value());
+    // const auto meta = converter->createGlobalAllocation(...);
+    const auto metaIdConst = instr_helper.getConstantFor(IType::alloc_id, 0);
 
     arg_map[ArgMap::ID::pointer]       = global;
     arg_map[ArgMap::ID::element_count] = numElementsConst;
-    arg_map[ArgMap::ID::alloc_id]      = allocIdConst;
+    arg_map[ArgMap::ID::meta_id]       = metaIdConst;
 
     list.emplace_back(GlobalArgList::value_type{gdata, arg_map});
   }
