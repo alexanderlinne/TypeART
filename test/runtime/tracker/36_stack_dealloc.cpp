@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
   double d[6];
 
   // CHECK: [Trace] Free stack 0x{{[0-9a-f]+}} of type [1 x int]
-  // CHECK: [Trace] Free stack 0x{{[0-9a-f]+}} of type [1 x const typeart::meta_id_t]
+  // CHECK: [Trace] Free stack 0x{{[0-9a-f]+}} of type [1 x const meta::meta_id_t]
   // CHECK: [Trace] Free stack 0x{{[0-9a-f]+}} of type [1 x double[6]]
   typeart_tracker_leave_scope(3);
   // CHECK: [Error]{{.*}}Stack is smaller than requested de-allocation count. alloca_count: 12. size: 0

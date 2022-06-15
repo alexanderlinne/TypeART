@@ -5,8 +5,8 @@
 
 namespace typeart::allocator {
 
-void* malloc(meta_id_t meta_id, size_t count, size_t size);
-void* realloc(meta_id_t meta_id, size_t count, void* ptr, size_t new_size);
+void* malloc(meta::meta_id_t meta_id, size_t count, size_t size);
+void* realloc(meta::meta_id_t meta_id, size_t count, void* ptr, size_t new_size);
 bool free(void* addr);
 
 std::optional<PointerInfo> getPointerInfo(const void* addr);

@@ -63,11 +63,11 @@ void TypeArtPass::getAnalysisUsage(llvm::AnalysisUsage& info) const {
 
 bool TypeArtPass::doInitialization(llvm::Module& m) {
   filename  = cl::getTypeFilepath();
-  db        = std::make_unique<Database>();
+  db        = std::make_unique<meta::Database>();
   converter = std::make_unique<meta::LLVMMetadataConverter>(*db);
 
   LOG_DEBUG("Propagating type infos.");
-  auto loaded = Database::load(filename);
+  auto loaded = meta::Database::load(filename);
   if (loaded) {
     LOG_DEBUG("Existing type configuration successfully loaded from {}", filename);
     *db = std::move(loaded).value();
@@ -76,7 +76,7 @@ bool TypeArtPass::doInitialization(llvm::Module& m) {
   }
 
 #ifdef TYPEART_USE_ALLOCATOR
-  auto parser   = std::make_unique<instrumentation::allocator::ArgumentParser>(m, *db, *converter);
+  auto parser   = std::make_unique<instrumentation::allocator::ArgumentParser>(m, *converter);
   auto strategy = std::make_unique<instrumentation::allocator::InstrumentationStrategy>(m);
 #else
   auto parser = std::make_unique<instrumentation::tracker::ArgumentParser>(m, *converter);

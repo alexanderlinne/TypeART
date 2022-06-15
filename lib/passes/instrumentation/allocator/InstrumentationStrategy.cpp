@@ -13,7 +13,7 @@
 #include "InstrumentationStrategy.h"
 
 #include "analysis/MemOpData.h"
-#include "db/Database.hpp"
+#include "meta/Database.hpp"
 #include "runtime/allocator/Config.h"
 #include "support/Logger.hpp"
 #include "support/OmpUtil.h"

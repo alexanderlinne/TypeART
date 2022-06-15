@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "Types.hpp"
+#include "Meta.hpp"
 
 #include <map>
 #include <memory>
@@ -24,7 +24,7 @@
 #include <utility>
 #include <vector>
 
-namespace typeart {
+namespace meta {
 
 class Database {
  public:
@@ -63,4 +63,4 @@ class Database {
   std::vector<std::unique_ptr<meta::Meta>> meta_info;
 };
 
-}  // namespace typeart
+}  // namespace meta

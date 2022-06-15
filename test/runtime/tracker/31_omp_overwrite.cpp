@@ -15,7 +15,7 @@
 using namespace typeart;
 
 template <typename S, typename E>
-void repeat_alloc(meta_id_t meta_id, S s, E e) {
+void repeat_alloc(meta::meta_id_t meta_id, S s, E e) {
   std::for_each(s, e,
                 [&](auto elem) { typeart_tracker_alloc(reinterpret_cast<const void*>(elem), meta_id.value(), 20); });
 }

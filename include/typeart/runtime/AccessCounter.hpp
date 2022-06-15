@@ -13,7 +13,7 @@
 #ifndef TYPEART_ACCESSCOUNTER_H
 #define TYPEART_ACCESSCOUNTER_H
 
-#include "../db/Types.hpp"
+#include "../meta/Meta.hpp"
 
 #include <atomic>
 #include <cmath>

@@ -1,4 +1,4 @@
-add_subdirectory(db)
+add_subdirectory(meta)
 add_subdirectory(support)
 add_subdirectory(passes)
 add_subdirectory(runtime)

@@ -11,16 +11,16 @@
 // clang-format on
 
 #include <cstdio>
-#include <typeart/db/Database.hpp>
+#include <typeart/meta/Database.hpp>
 
 int main() {
-  auto database = typeart::Database::load("types-missing-file.yaml");
+  auto database = typeart::Meta::load("types-missing-file.yaml");
   if (database) {
     printf("hasValue: 1\n");
   } else {
     printf("hasValue: 0\n");
   }
-  typeart::Database db;
+  typeart::Meta db;
   printf("isValid: %i\n", db.isValid(typeart::type_id_t{256}));
   printf("isValid: %i\n", db.isValid(typeart::type_id_t{1}));
   printf("isValid: %i\n", db.isValid(typeart::type_id_t{258}));

@@ -1,6 +1,7 @@
 #include "runtime/allocator/Allocator.hpp"
 
 #include "Config.h"
+#include "runtime/Internals.hpp"
 #include "runtime/Runtime.hpp"
 #include "runtime/tracker/Tracker.hpp"
 
@@ -86,7 +87,7 @@ struct Region {
   std::optional<PointerInfo> getPointerInfo(const void* addr) {
     if (addr >= begin && addr < end) {
       auto bucket_ptr = (void*)((uintptr_t)addr & ~(allocation_size - 1));
-      auto meta_id    = *(meta_id_t*)bucket_ptr;
+      auto meta_id    = *(meta::meta_id_t*)bucket_ptr;
       const auto meta = getDatabase().getMeta(meta_id);
       if (meta == nullptr) {
         fmt::print(stderr, "Found invalid meta_id {}!\n", meta_id.value());
@@ -171,7 +172,7 @@ std::optional<PointerInfo> getPointerInfo(const void* addr) {
 
 }  // namespace heap
 
-void* malloc(meta_id_t meta_id, size_t count, size_t size) {
+void* malloc(meta::meta_id_t meta_id, size_t count, size_t size) {
   if (!heap::initialized) {
     return ::malloc(size);
   }
@@ -188,7 +189,7 @@ void* malloc(meta_id_t meta_id, size_t count, size_t size) {
                region->allocation_size);
     return ::malloc(size);
   }
-  *(meta_id_t*)allocation = meta_id;
+  *(meta::meta_id_t*)allocation = meta_id;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-align"
   *(size_t*)((int8_t*)allocation + config::heap::count_offset) = count;
@@ -196,7 +197,7 @@ void* malloc(meta_id_t meta_id, size_t count, size_t size) {
   return (void*)((int8_t*)allocation + heap::min_alignment);
 }
 
-void* realloc(meta_id_t meta_id, size_t count, void* ptr, size_t new_size) {
+void* realloc(meta::meta_id_t meta_id, size_t count, void* ptr, size_t new_size) {
   if (ptr == nullptr) {
     return malloc(meta_id, count, new_size);
   }
@@ -344,7 +345,7 @@ std::optional<PointerInfo> getPointerInfo(const void* addr) {
     auto bucket_ptr            = (void*)((uintptr_t)addr & ~(allocation_size - 1));
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-align"
-    auto meta_id = *(meta_id_t*)((int8_t*)bucket_ptr + allocation_size - sizeof(meta_id_value));
+    auto meta_id = *(meta::meta_id_t*)((int8_t*)bucket_ptr + allocation_size - sizeof(meta_id_value));
 #pragma clang diagnostic pop
     const auto meta = getDatabase().getMeta(meta_id);
     if (meta == nullptr) {

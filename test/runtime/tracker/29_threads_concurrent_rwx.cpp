@@ -23,13 +23,13 @@ std::atomic_bool stop{false};
 const size_t extent{1};
 
 template <typename S, typename E>
-void repeat_alloc(meta_id_t meta_id, S s, E e) {
+void repeat_alloc(meta::meta_id_t meta_id, S s, E e) {
   std::for_each(
       s, e, [&](auto elem) { typeart_tracker_alloc(reinterpret_cast<const void*>(elem), meta_id.value(), extent); });
 }
 
 template <typename S, typename E>
-void repeat_alloc_free_v2(meta_id_t meta_id, S s, E e) {
+void repeat_alloc_free_v2(meta::meta_id_t meta_id, S s, E e) {
   using namespace std::chrono_literals;
   std::for_each(s, e, [&](auto elem) {
     typeart_tracker_alloc(reinterpret_cast<const void*>(elem), meta_id.value(), extent);
@@ -39,7 +39,7 @@ void repeat_alloc_free_v2(meta_id_t meta_id, S s, E e) {
 }
 
 template <typename S, typename E>
-void repeat_type_check(meta_id_t meta_id, S s, E e) {
+void repeat_type_check(meta::meta_id_t meta_id, S s, E e) {
   do {
     std::for_each(s, e, [&](auto addr) {
       auto pointer_info_result = PointerInfo::get(reinterpret_cast<const void*>(addr));

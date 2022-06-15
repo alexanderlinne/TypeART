@@ -13,9 +13,9 @@
 #ifndef _LIB_MUSTSUPPORTPASS_H
 #define _LIB_MUSTSUPPORTPASS_H
 
-#include "db/Database.hpp"
-#include "db/LLVMMetadataConverter.hpp"
 #include "instrumentation/TypeARTInstrumentation.h"
+#include "meta/Database.hpp"
+#include "meta/LLVMMetadataConverter.hpp"
 
 #include "llvm/Pass.h"
 
@@ -46,7 +46,7 @@ class TypeArtPass : public llvm::ModulePass {
   std::unique_ptr<analysis::MemInstFinder> meminst_finder;
 
   std::string filename;
-  std::unique_ptr<Database> db;
+  std::unique_ptr<meta::Database> db;
   std::unique_ptr<meta::LLVMMetadataConverter> converter;
   std::unique_ptr<instrumentation::TypeArtInstrumentation> instrumentation;
 

@@ -10,7 +10,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "db/Database.hpp"
+#include "meta/Database.hpp"
 
 #include "support/Logger.hpp"
 
@@ -20,7 +20,7 @@
 #include <stack>
 #include <utility>
 
-namespace typeart {
+namespace meta {
 
 Database::Database() {
 }
@@ -164,4 +164,4 @@ void Database::replaceRefs(const meta::Meta& original, meta::Meta& replacement) 
   }
 }
 
-}  // namespace typeart
+}  // namespace meta

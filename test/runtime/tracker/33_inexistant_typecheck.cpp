@@ -11,7 +11,7 @@ using namespace typeart;
 int main(int argc, char** argv) {
   const int addr      = 2;
   const size_t extent = 2;
-  typeart_tracker_alloc((const void*)addr, meta_id_t::invalid.value(), extent);
+  typeart_tracker_alloc((const void*)addr, meta::meta_id_t::invalid.value(), extent);
 
   auto pointer_info_result = PointerInfo::get((const void*)addr);
 

@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <cstddef>
-#include <db/Database.hpp>
+#include <meta/Database.hpp>
 #include <unistd.h>
 
 namespace typeart::allocator::config {
@@ -12,7 +12,7 @@ namespace heap {
 // Offset from the pointer to an alloc_id to the pointer of the
 // corresponding count in bytes, if the count is stored within the
 // allocation.
-constexpr ptrdiff_t count_offset = std::max(sizeof(meta_id_t), alignof(size_t));
+constexpr ptrdiff_t count_offset = std::max(sizeof(meta::meta_id_t), alignof(size_t));
 
 constexpr size_t region_size         = 1UL << 32;  // 4GB
 constexpr size_t min_allocation_size = 1UL << 5;   // 32B
@@ -55,11 +55,11 @@ namespace stack {
 // Offset from the pointer to an alloc_id to the pointer of the
 // corresponding count in bytes, if the count is stored within the
 // allocation.
-constexpr ptrdiff_t count_offset = -(sizeof(size_t) + std::max(sizeof(meta_id_t), alignof(size_t)));
+constexpr ptrdiff_t count_offset = -(sizeof(size_t) + std::max(sizeof(meta::meta_id_t), alignof(size_t)));
 
 // Computes the required padding between the allocation id and the count,
 // if the count is stored in the actual allocation.
-constexpr size_t count_padding = -count_offset - sizeof(meta_id_t) - sizeof(size_t);
+constexpr size_t count_padding = -count_offset - sizeof(meta::meta_id_t) - sizeof(size_t);
 
 constexpr size_t thread_count        = 16;
 constexpr size_t stack_size          = 1UL << 24;  // 16MB
@@ -121,7 +121,7 @@ constexpr ptrdiff_t metadata_byte_size(bool is_vla) {
   if (is_vla) {
     return count_offset + sizeof(size_t);
   } else {
-    return sizeof(meta_id_t);
+    return sizeof(meta::meta_id_t);
   }
 }
 

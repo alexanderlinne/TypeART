@@ -1,16 +1,27 @@
-#include "db/Types.hpp"
+#include "meta/Meta.hpp"
 
-#include "db/Database.hpp"
+#include "meta/Database.hpp"
 #include "support/Logger.hpp"
 
+#include <iostream>
 #include <limits>
 #include <queue>
 
-namespace typeart {
+namespace meta {
 
 const meta_id_t meta_id_t::invalid = {};
 
-namespace meta {
+std::ostream& operator<<(std::ostream& os, const byte_size& value) {
+  os << value.value() << "B";
+  return os;
+}
+
+byte_offset byte_offset::zero = byte_offset{0};
+
+std::ostream& operator<<(std::ostream& os, const byte_offset& value) {
+  os << value.value() << "B";
+  return os;
+}
 
 std::ostream& operator<<(std::ostream& os, const Kind& kind) {
   switch (kind) {
@@ -831,5 +842,3 @@ META_CLASS_IMPL(Allocation, HeapAllocation,
 META_CLASS_IMPL(Allocation, GlobalAllocation, ((REF, di::GlobalVariable, global_variable)))
 
 }  // namespace meta
-
-}  // namespace typeart

@@ -13,8 +13,9 @@
 #include "runtime/tracker/Tracker.hpp"
 
 #include "CallbackInterface.h"
-#include "db/Database.hpp"
+#include "meta/Database.hpp"
 #include "runtime/AccessCounter.hpp"
+#include "runtime/Internals.hpp"
 #include "runtime/Runtime.hpp"
 #include "support/Logger.hpp"
 
@@ -99,7 +100,7 @@ thread_local ThreadData threadData;
 Tracker::Tracker() {
 }
 
-void Tracker::onAlloc(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr) {
+void Tracker::onAlloc(const void* addr, meta::meta_id_t meta_id, size_t count, const void* retAddr) {
   const auto status = doAlloc(addr, meta_id, count, retAddr);
   if (!(status & AllocState::UNKNOWN_META_ID)) {
     const auto meta  = getDatabase().getMeta(meta_id);
@@ -116,7 +117,7 @@ void Tracker::onAlloc(const void* addr, meta_id_t meta_id, size_t count, const v
   }
 }
 
-void Tracker::onAllocStack(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr) {
+void Tracker::onAllocStack(const void* addr, meta::meta_id_t meta_id, size_t count, const void* retAddr) {
   const auto status = doAlloc(addr, meta_id, count, retAddr);
   if (!(status & AllocState::UNKNOWN_META_ID)) {
     const auto meta  = getDatabase().getMeta(meta_id);
@@ -134,7 +135,7 @@ void Tracker::onAllocStack(const void* addr, meta_id_t meta_id, size_t count, co
   }
 }
 
-void Tracker::onAllocGlobal(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr) {
+void Tracker::onAllocGlobal(const void* addr, meta::meta_id_t meta_id, size_t count, const void* retAddr) {
   const auto status = doAlloc(addr, meta_id, count, retAddr);
   if (!(status & AllocState::UNKNOWN_META_ID)) {
     const auto meta  = getDatabase().getMeta(meta_id);
@@ -151,7 +152,7 @@ void Tracker::onAllocGlobal(const void* addr, meta_id_t meta_id, size_t count, c
   }
 }
 
-AllocState Tracker::doAlloc(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr) {
+AllocState Tracker::doAlloc(const void* addr, meta::meta_id_t meta_id, size_t count, const void* retAddr) {
   const auto meta = getDatabase().getMeta(meta_id);
   if (unlikely(meta == nullptr)) {
     LOG_ERROR("Allocation with unknown meta_id! Skipping...");

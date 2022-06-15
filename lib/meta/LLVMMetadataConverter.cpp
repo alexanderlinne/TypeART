@@ -1,12 +1,12 @@
-#include "db/LLVMMetadataConverter.hpp"
+#include "meta/LLVMMetadataConverter.hpp"
 
-#include "db/Database.hpp"
+#include "meta/Database.hpp"
 #include "support/Logger.hpp"
 
 #include <fmt/core.h>
 #include <llvm/IR/DebugInfo.h>
 
-namespace typeart::meta {
+namespace meta {
 
 template <class MetaClass>
 MetaClass* LLVMMetadataConverter::lookup_meta(const llvm::Metadata& llvm_meta) {
@@ -583,4 +583,4 @@ di::Language fromLLVMDILanguage(unsigned int language) {
   });
 }
 
-}  // namespace typeart::meta
+}  // namespace meta

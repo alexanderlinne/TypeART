@@ -40,7 +40,7 @@ add_library(typeart::Runtime ALIAS ${TYPEART_PREFIX}_Runtime)
 
 target_link_libraries(
   ${TYPEART_PREFIX}_Runtime
-  PRIVATE typeart::DatabaseStatic
+  PRIVATE typeart::MetaStatic
           typeart::SystemStatic
           LLVMCore
           LLVMSupport

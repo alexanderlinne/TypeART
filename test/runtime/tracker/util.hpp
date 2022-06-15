@@ -6,14 +6,18 @@
 #include <string.h>
 #include <typeart/TypeART.hpp>
 
+// Declare some of TypeART's internal APIs
 extern "C" {
 void typeart_tracker_alloc(const void* addr, meta_id_value alloc_id, size_t count);
 void typeart_tracker_free(const void* addr);
 void typeart_tracker_alloc_stack(const void* addr, meta_id_value alloc_id, size_t count);
 void typeart_tracker_leave_scope(int alloca_count);
 }
+namespace typeart {
+meta::Database& getDatabase();
+}
 
-typeart::meta_id_t create_fake_double_heap_allocation() {
+meta::meta_id_t create_fake_double_heap_allocation() {
   double* d                = (double*)malloc(sizeof(double));
   auto pointer_info_result = typeart::PointerInfo::get(d);
   if (pointer_info_result.has_error()) {
@@ -25,7 +29,7 @@ typeart::meta_id_t create_fake_double_heap_allocation() {
   return pointer_info.getAllocation().get_id();
 }
 
-typeart::meta_id_t create_fake_double_stack_allocation() {
+meta::meta_id_t create_fake_double_stack_allocation() {
   using namespace typeart;
   double d;
   auto pointer_info_result = PointerInfo::get(&d);

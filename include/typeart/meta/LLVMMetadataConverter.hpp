@@ -1,6 +1,6 @@
 #pragma once
 
-#include "db/Types.hpp"
+#include "meta/Meta.hpp"
 
 #include <map>
 #include <set>
@@ -27,7 +27,7 @@ class DISubprogram;
 class DINamespace;
 };  // namespace llvm
 
-namespace typeart::meta {
+namespace meta {
 
 class LLVMMetadataConverter {
   Database* db;

@@ -4,7 +4,7 @@
 
 #include <cstdio>
 #include <typeart/TypeART.h>
-#include <typeart/db/Database.hpp>
+#include <typeart/meta/Database.hpp>
 
 struct Datastruct {
   int start;
@@ -21,12 +21,12 @@ int main(int argc, char** argv) {
   Datastruct data     = {0};
   Secondstruct data_2 = {0};
 
-  auto invalid_db = typeart::Database::load("random_missing_types.yaml");
+  auto invalid_db = typeart::Meta::load("random_missing_types.yaml");
   if (!invalid_db.has_value()) {
     printf("Test database not loaded.\n");
   }
 
-  auto db = typeart::Database::load("44_typedb.types.yaml");
+  auto db = typeart::Meta::load("44_typedb.types.yaml");
   if (!db.has_value()) {
     printf("Error not loaded type file.\n");
     abort();

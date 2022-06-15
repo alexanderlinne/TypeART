@@ -17,7 +17,7 @@ set(PASS_SOURCES
 typeart_make_llvm_module(
   ${TYPEART_PREFIX}_TransformPass "${PASS_SOURCES}"
   LINK_LIBS typeart::MemInstFinder
-            typeart::DatabaseStatic
+            typeart::MetaStatic
   INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/lib/
                ${PROJECT_SOURCE_DIR}/lib/passes/
                ${PROJECT_SOURCE_DIR}/include/typeart

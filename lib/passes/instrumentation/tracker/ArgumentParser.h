@@ -15,8 +15,8 @@
 #include "../TypeARTInstrumentation.h"
 #include "../common/InstrumentationHelper.h"
 #include "analysis/MemOpData.h"
-#include "db/Database.hpp"
-#include "db/LLVMMetadataConverter.hpp"
+#include "meta/Database.hpp"
+#include "meta/LLVMMetadataConverter.hpp"
 
 namespace typeart::instrumentation::tracker {
 

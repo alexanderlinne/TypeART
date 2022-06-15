@@ -14,7 +14,7 @@
 #define TYPEART_ALLOCATIONTRACKING_H
 
 #include "AllocMapWrapper.hpp"
-#include "db/Database.hpp"
+#include "meta/Database.hpp"
 #include "runtime/AccessCounter.hpp"
 
 #include <cstddef>
@@ -63,11 +63,11 @@ class Tracker {
   Tracker();
 
  public:
-  void onAlloc(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr);
+  void onAlloc(const void* addr, meta::meta_id_t meta_id, size_t count, const void* retAddr);
 
-  void onAllocStack(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr);
+  void onAllocStack(const void* addr, meta::meta_id_t meta_id, size_t count, const void* retAddr);
 
-  void onAllocGlobal(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr);
+  void onAllocGlobal(const void* addr, meta::meta_id_t meta_id, size_t count, const void* retAddr);
 
   void onFreeHeap(const void* addr, const void* retAddr);
 
@@ -76,7 +76,7 @@ class Tracker {
   std::optional<PointerInfo> getPointerInfo(const void* addr);
 
  private:
-  AllocState doAlloc(const void* addr, meta_id_t meta_id, size_t count, const void* retAddr);
+  AllocState doAlloc(const void* addr, meta::meta_id_t meta_id, size_t count, const void* retAddr);
 
   FreeState doFreeHeap(const void* addr, const void* retAddr);
 };

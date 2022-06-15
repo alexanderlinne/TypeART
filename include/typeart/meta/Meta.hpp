@@ -13,7 +13,7 @@
 #pragma once
 
 #include "Macros.hpp"
-#include "Types.h"
+#include "Meta.h"
 
 #include <cassert>
 #include <iosfwd>
@@ -24,11 +24,7 @@
 #include <variant>
 #include <vector>
 
-namespace llvm {
-class Metadata;
-}
-
-namespace typeart {
+namespace meta {
 
 template <typename ReturnType, typename... Lambdas>
 struct lambda_visitor : public Lambdas... {
@@ -44,6 +40,130 @@ lambda_visitor<ReturnType, Lambdas...> make_lambda_visitor(Lambdas... lambdas) {
 }
 
 class Database;
+
+class pointer {
+  const void* value;
+
+ public:
+  explicit pointer(const void* value) : value(value) {
+  }
+
+  const void* get() const {
+    return value;
+  }
+
+  operator const void*() const {
+    return value;
+  }
+};
+
+inline bool operator==(pointer lhs, pointer rhs) {
+  return lhs.get() == rhs.get();
+}
+
+inline pointer operator+(pointer p, ptrdiff_t offset) {
+  return pointer{static_cast<const int8_t*>(p.get()) + offset};
+}
+
+class byte_size {
+  using value_type = size_t;
+
+  value_type _value;
+
+  explicit byte_size(value_type value) : _value(value) {
+  }
+
+ public:
+  static byte_size from_bits(value_type bits) {
+    assert(bits % 8 == 0);
+    return byte_size{bits / 8};
+  }
+
+  static byte_size from_bytes(value_type bytes) {
+    return byte_size{bytes};
+  }
+
+  value_type value() const {
+    return _value;
+  }
+
+  value_type as_bits() const {
+    return _value * 8;
+  }
+};
+
+std::ostream& operator<<(std::ostream& os, const byte_size& value);
+
+inline byte_size operator*(size_t lhs, byte_size rhs) {
+  return byte_size::from_bytes(lhs * rhs.value());
+}
+
+inline pointer operator+(pointer p, byte_size offset) {
+  return pointer{static_cast<const int8_t*>(p.get()) + offset.value()};
+}
+
+class byte_offset {
+  using value_type = ssize_t;
+
+  value_type _value;
+
+  explicit byte_offset(value_type value) : _value(value) {
+  }
+
+ public:
+  static byte_offset zero;
+
+  static byte_offset from_bits(value_type bits) {
+    assert(bits % 8 == 0);
+    return byte_offset{bits / 8};
+  }
+
+  static byte_offset from_bytes(value_type bytes) {
+    return byte_offset{bytes};
+  }
+
+  value_type value() const {
+    return _value;
+  }
+
+  value_type as_bits() const {
+    return _value * 8;
+  }
+};
+
+std::ostream& operator<<(std::ostream& os, const byte_offset& value);
+
+inline bool operator==(byte_offset lhs, byte_offset rhs) {
+  return lhs.value() == rhs.value();
+}
+
+inline bool operator>=(byte_offset lhs, byte_offset rhs) {
+  return lhs.value() >= rhs.value();
+}
+
+inline byte_offset operator-(pointer lhs, pointer rhs) {
+  return byte_offset::from_bytes(static_cast<const int8_t*>(lhs.get()) - static_cast<const int8_t*>(rhs.get()));
+}
+
+inline byte_offset operator-(byte_offset lhs, byte_offset rhs) {
+  return byte_offset::from_bytes(lhs.value() - rhs.value());
+}
+
+inline pointer operator+(pointer p, byte_offset offset) {
+  return pointer{static_cast<const int8_t*>(p.get()) + offset.value()};
+}
+
+inline pointer operator-(pointer p, byte_offset offset) {
+  return pointer{static_cast<const int8_t*>(p.get()) - offset.value()};
+}
+
+inline byte_offset operator%(byte_offset lhs, byte_size rhs) {
+  return byte_offset::from_bytes(lhs.value() % rhs.value());
+}
+
+inline ssize_t operator/(byte_offset lhs, byte_size rhs) {
+  return lhs.value() / rhs.value();
+}
 
 struct meta_id_t {
   using value_type = meta_id_value;
@@ -74,8 +194,6 @@ inline bool operator==(const meta_id_t& lhs, const meta_id_t& rhs) {
 inline bool operator!=(const meta_id_t& lhs, const meta_id_t& rhs) {
   return !(lhs == rhs);
 }
-
-namespace meta {
 
 enum class Kind {
   Unknown,
@@ -1051,5 +1169,3 @@ class GlobalAllocation final : public Allocation {
 };
 
 }  // namespace meta
-
-}  // namespace typeart

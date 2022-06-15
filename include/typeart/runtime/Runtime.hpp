@@ -13,7 +13,7 @@
 #ifndef TYPEART_RUNTIME_H
 #define TYPEART_RUNTIME_H
 
-#include "../db/Database.hpp"
+#include "../meta/Database.hpp"
 #include "AccessCounter.hpp"
 
 #include <cstddef>
@@ -36,144 +36,18 @@ enum class Status {
 
 std::ostream& operator<<(std::ostream& os, const Status& status);
 
-class pointer {
-  const void* value;
-
- public:
-  explicit pointer(const void* value) : value(value) {
-  }
-
-  const void* get() const {
-    return value;
-  }
-
-  operator const void*() const {
-    return value;
-  }
-};
-
-inline bool operator==(pointer lhs, pointer rhs) {
-  return lhs.get() == rhs.get();
-}
-
-inline pointer operator+(pointer p, ptrdiff_t offset) {
-  return pointer{static_cast<const int8_t*>(p.get()) + offset};
-}
-
-class byte_size {
-  using value_type = size_t;
-
-  value_type _value;
-
-  byte_size(value_type value) : _value(value) {
-  }
-
- public:
-  static byte_size from_bits(value_type bits) {
-    assert(bits % 8 == 0);
-    return {bits / 8};
-  }
-
-  static byte_size from_bytes(value_type bytes) {
-    return {bytes};
-  }
-
-  value_type value() const {
-    return _value;
-  }
-
-  value_type as_bits() const {
-    return _value * 8;
-  }
-};
-
-inline std::ostream& operator<<(std::ostream& os, const byte_size& value) {
-  os << value.value() << "B";
-  return os;
-}
-
-inline byte_size operator*(size_t lhs, byte_size rhs) {
-  return byte_size::from_bytes(lhs * rhs.value());
-}
-
-inline pointer operator+(pointer p, byte_size offset) {
-  return pointer{static_cast<const int8_t*>(p.get()) + offset.value()};
-}
-
-class byte_offset {
-  using value_type = ssize_t;
-
-  value_type _value;
-
-  byte_offset(value_type value) : _value(value) {
-  }
-
- public:
-  static byte_offset zero;
-
-  static byte_offset from_bits(value_type bits) {
-    assert(bits % 8 == 0);
-    return {bits / 8};
-  }
-
-  static byte_offset from_bytes(value_type bytes) {
-    return {bytes};
-  }
-
-  value_type value() const {
-    return _value;
-  }
-
-  value_type as_bits() const {
-    return _value * 8;
-  }
-};
-
-inline std::ostream& operator<<(std::ostream& os, const byte_offset& value) {
-  os << value.value() << "B";
-  return os;
-}
-
-inline bool operator==(byte_offset lhs, byte_offset rhs) {
-  return lhs.value() == rhs.value();
-}
-
-inline bool operator>=(byte_offset lhs, byte_offset rhs) {
-  return lhs.value() >= rhs.value();
-}
-
-inline byte_offset operator-(pointer lhs, pointer rhs) {
-  return byte_offset::from_bytes(static_cast<const int8_t*>(lhs.get()) - static_cast<const int8_t*>(rhs.get()));
-}
-
-inline byte_offset operator-(byte_offset lhs, byte_offset rhs) {
-  return byte_offset::from_bytes(lhs.value() - rhs.value());
-}
-
-inline pointer operator+(pointer p, byte_offset offset) {
-  return pointer{static_cast<const int8_t*>(p.get()) + offset.value()};
-}
-
-inline pointer operator-(pointer p, byte_offset offset) {
-  return pointer{static_cast<const int8_t*>(p.get()) - offset.value()};
-}
-
-inline byte_offset operator%(byte_offset lhs, byte_size rhs) {
-  return byte_offset::from_bytes(lhs.value() % rhs.value());
-}
-
-inline ssize_t operator/(byte_offset lhs, byte_size rhs) {
-  return lhs.value() / rhs.value();
-}
+using pointer     = meta::pointer;
+using byte_size   = meta::byte_size;
+using byte_offset = meta::byte_offset;
 
 class PointerInfo final {
-  // The base address of the whole allocation.
-  pointer base_addr = pointer{nullptr};
+  // The base address for the subrange this pointer info represents.
+  meta::pointer base_addr = meta::pointer{nullptr};
 
-  // The meta info for this allocation.
+  // The meta info for the whole allocation, **not** just the subrange beginning at base_addr.
   const meta::Allocation* allocation = nullptr;
 
-  // The exact type of the element within the allocation which the pointer points to.
+  // The exact type of the element within the allocation which base_addr points to.
   const meta::di::Type* type = nullptr;
 
   // The element count of the allocation w.r.t. the address this instance was
@@ -306,22 +180,6 @@ struct ArrayElementInfo final {
 
   std::optional<PointerInfo> intoPointerInfo(const PointerInfo& original) const;
 };
-
-struct ScopeGuard final {
-  ScopeGuard();
-  ~ScopeGuard();
-
-  ScopeGuard(const ScopeGuard&) = delete;
-  ScopeGuard(ScopeGuard&&)      = delete;
-
-  ScopeGuard& operator=(const ScopeGuard&) = delete;
-  ScopeGuard& operator=(ScopeGuard&&) = delete;
-
-  bool shouldTrack() const;
-};
-
-Recorder& getRecorder();
-Database& getDatabase();
 
 }  // namespace typeart
 

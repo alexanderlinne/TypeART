@@ -12,9 +12,10 @@
 
 #include "runtime/Runtime.hpp"
 
-#include "AccessCountPrinter.h"
-#include "db/Database.hpp"
+#include "meta/Database.hpp"
+#include "runtime/AccessCountPrinter.h"
 #include "runtime/AccessCounter.hpp"
+#include "runtime/Internals.hpp"
 #include "runtime/tracker/Tracker.hpp"
 #include "support/Logger.hpp"
 #include "support/System.hpp"
@@ -68,8 +69,6 @@ std::ostream& operator<<(std::ostream& os, const Status& status) {
   return os;
 }
 
-byte_offset byte_offset::zero = {0};
-
 static constexpr const char* defaultTypeFileName = "types.yaml";
 
 class Runtime {
@@ -89,7 +88,7 @@ class Runtime {
   };
 
   Initializer init;
-  Database db{};
+  meta::Database db{};
   Recorder recorder{};
 
  public:
@@ -107,7 +106,7 @@ class Runtime {
     return Runtime::get().recorder;
   }
 
-  static Database& getDatabase() {
+  static meta::Database& getDatabase() {
     return Runtime::get().db;
   }
 
@@ -117,7 +116,7 @@ class Runtime {
     LOG_TRACE("*********************");
 
     auto loadTypes = [this](const std::string& file, std::error_code& ec) -> bool {
-      auto database = Database::load(file);
+      auto database = meta::Database::load(file);
       if (database.has_value()) {
         db = std::move(database).value();
         return true;
@@ -191,7 +190,7 @@ cpp::result<PointerInfo, Status> PointerInfo::get(pointer addr) {
 }
 
 bool PointerInfo::contains(pointer p) const {
-  return p >= base_addr && (base_addr + byte_size::from_bits(count * type->get_size_in_bits())) > p;
+  return base_addr <= p && p < (base_addr + byte_size::from_bits(count * type->get_size_in_bits()));
 }
 
 // Returns this pointer info with it's type canonicalized.
@@ -284,7 +283,7 @@ cpp::result<PointerInfo, Status> PointerInfo::resolveSubtype(pointer addr) const
   assert(type != nullptr);
   return meta::di::visit_type(
       canonical_type,
-      make_lambda_visitor<cpp::result<PointerInfo, Status>>(
+      meta::make_lambda_visitor<cpp::result<PointerInfo, Status>>(
           [](const meta::di::VoidType&) { return cpp::fail(Status::UNSUPPORTED_TYPE); },
           [](const meta::di::BasicType&) { return cpp::fail(Status::BAD_ALIGNMENT); },
           [](const meta::di::DerivedType&) { return cpp::fail(Status::BAD_ALIGNMENT); },
@@ -406,7 +405,7 @@ Recorder& getRecorder() {
   return Runtime::getRecorder();
 }
 
-Database& getDatabase() {
+meta::Database& getDatabase() {
   return Runtime::getDatabase();
 }
 
