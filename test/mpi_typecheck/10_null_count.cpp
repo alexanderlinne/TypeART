@@ -14,8 +14,6 @@
 int main(int argc, char** argv) {
   MPI_Init(&argc, &argv);
 
-  // CHECK: [Trace] TypeART Runtime Trace
-
   double f[4];
 
   // clang-format off
