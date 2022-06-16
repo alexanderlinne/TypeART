@@ -28,41 +28,8 @@ Database::Database() {
 Database::~Database() {
 }
 
-[[nodiscard]] meta::Meta* Database::registerMeta(std::unique_ptr<meta::Meta> meta) {
-  const auto id = meta->get_id();
-  if (id != meta_id_t::invalid && id.value() <= static_cast<meta_id_t::value_type>(meta_info.size()) &&
-      meta_info[id.value() - 1]) {
-    return nullptr;
-  }
-  return storeMeta(std::move(meta));
-}
-
-[[nodiscard]] bool Database::registerMeta(std::vector<std::unique_ptr<meta::Meta>> meta) {
-  for (auto&& elem : meta) {
-    if (!elem) {
-      continue;
-    }
-    auto id = elem->get_id();
-    if (!registerMeta(std::move(elem))) {
-      fmt::print(stderr, "Duplicate meta id {} found!\n", id.value());
-      abort();
-    }
-  }
-  for (const auto& elem : meta_info) {
-    if (!elem) {
-      continue;
-    }
-    if (auto structure_type = meta::dyn_cast<meta::di::StructureType>(elem.get())) {
-      structure_store.try_emplace(structure_type->get_identifier(), structure_type);
-    }
-    if (auto subprogram = meta::dyn_cast<meta::di::Subprogram>(elem.get())) {
-      subprogram_store.try_emplace(subprogram->get_linkage_name(), subprogram);
-    }
-  }
-  return true;
-}
-
 [[nodiscard]] meta::Meta* Database::addMeta(std::unique_ptr<meta::Meta> meta) {
+  createMappings();
   if (meta.get() == nullptr) {
     LOG_FATAL("Database::addMeta argument must not be nullptr");
     abort();
@@ -73,16 +40,12 @@ Database::~Database() {
     return existing_meta;
   }
   meta->set_id(reserveMetaId());
-  if (auto structure_type = meta::dyn_cast<meta::di::StructureType>(meta.get())) {
-    structure_store.try_emplace(structure_type->get_identifier(), structure_type);
-  }
-  if (auto subprogram = meta::dyn_cast<meta::di::Subprogram>(meta.get())) {
-    subprogram_store.try_emplace(subprogram->get_linkage_name(), subprogram);
-  }
+  addMappingsFor(*meta);
   return storeMeta(std::move(meta));
 }
 
 [[nodiscard]] meta::di::StructureType* Database::lookupStructureType(const std::string& identifier) {
+  createMappings();
   if (auto it = structure_store.find(identifier); it != structure_store.end()) {
     return it->second;
   }
@@ -90,6 +53,7 @@ Database::~Database() {
 }
 
 [[nodiscard]] meta::di::Subprogram* Database::lookupSubprogram(const std::string& linkage_name) {
+  createMappings();
   if (auto it = subprogram_store.find(linkage_name); it != subprogram_store.end()) {
     return it->second;
   }
@@ -139,9 +103,6 @@ const meta::Meta* Database::getMeta(meta_id_t meta_id) const {
 }
 
 [[nodiscard]] meta::Meta* Database::storeMeta(std::unique_ptr<meta::Meta> meta) {
-  if (auto meta_string = meta::dyn_cast<meta::String>(meta.get())) {
-    string_store.try_emplace(meta_string->get_data(), meta_string);
-  }
   const auto id = meta->get_id();
   if (id.value() > static_cast<meta_id_t::value_type>(meta_info.size())) {
     meta_info.resize(id.value());
@@ -161,6 +122,32 @@ void Database::replaceRefs(const meta::Meta& original, meta::Meta& replacement) 
         ref = &replacement;
       }
     }
+  }
+}
+
+void Database::addMappingsFor(meta::Meta& meta) {
+  if (auto meta_string = meta::dyn_cast<meta::String>(&meta)) {
+    string_store.try_emplace(meta_string->get_data(), meta_string);
+  }
+  if (auto structure_type = meta::dyn_cast<meta::di::StructureType>(&meta)) {
+    structure_store.try_emplace(structure_type->get_identifier(), structure_type);
+  }
+  if (auto subprogram = meta::dyn_cast<meta::di::Subprogram>(&meta)) {
+    subprogram_store.try_emplace(subprogram->get_linkage_name(), subprogram);
+  }
+}
+
+void Database::createMappings() {
+  // We create mappings lazily as they are only needed when elements are added
+  // to the database.
+  if (!has_mappings) {
+    for (const auto& elem : meta_info) {
+      if (!elem) {
+        continue;
+      }
+      addMappingsFor(*elem);
+    }
+    has_mappings = true;
   }
 }
 

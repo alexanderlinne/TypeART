@@ -41,8 +41,6 @@ class Database {
   Database(Database&&) = default;
   Database& operator=(Database&&) = default;
 
-  [[nodiscard]] meta::Meta* registerMeta(std::unique_ptr<meta::Meta> meta);
-  [[nodiscard]] bool registerMeta(std::vector<std::unique_ptr<meta::Meta>> meta);
   [[nodiscard]] meta::Meta* addMeta(std::unique_ptr<meta::Meta> meta);
   [[nodiscard]] meta::di::StructureType* lookupStructureType(const std::string& identifier);
   [[nodiscard]] meta::di::Subprogram* lookupSubprogram(const std::string& linkage_name);
@@ -57,6 +55,10 @@ class Database {
   void replaceRefs(const meta::Meta& original, meta::Meta& replacement);
 
  private:
+  void addMappingsFor(meta::Meta& meta);
+  void createMappings();
+
+  bool has_mappings = false;
   std::unordered_map<std::string, meta::String*> string_store;
   std::unordered_map<std::string, meta::di::StructureType*> structure_store;
   std::unordered_map<std::string, meta::di::Subprogram*> subprogram_store;

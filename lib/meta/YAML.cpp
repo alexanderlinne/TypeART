@@ -197,16 +197,10 @@ std::optional<Database> Database::load(const std::string& file) {
     return {};
   }
 
-  std::vector<std::unique_ptr<meta::Meta>> meta_info;
-  auto meta_info_file = MetaInfoFile{0, meta_info};
+  Database db;
+  auto meta_info_file = MetaInfoFile{0, db.meta_info};
   yaml::Input in(memBuffer.get()->getMemBufferRef(), &meta_info_file);
   in >> meta_info_file;
-
-  Database db;
-  if (!db.registerMeta(std::move(meta_info))) {
-    fmt::print(stderr, "Couln't register meta information!\n");
-    abort();
-  }
   return db;
 }
 
