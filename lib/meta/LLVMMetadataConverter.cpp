@@ -14,8 +14,10 @@ MetaClass* LLVMMetadataConverter::lookup_meta(const llvm::Metadata& llvm_meta) {
     auto meta = dyn_cast<MetaClass>(it->second);
     if (meta == nullptr) {
       LOG_FATAL("Unexpected Meta type! actual: {} (id: {}) expected: {}, llvm actual: {}, llvm expected: {}\n",
-                (int)it->second->get_kind(), it->second->get_id().value(), (int)MetaClass::META_KIND,
-                it->first->getMetadataID(), llvm_meta.getMetadataID());
+                it->second->get_kind(), it->second->get_id().value(), MetaClass::META_KIND, it->first->getMetadataID(),
+                llvm_meta.getMetadataID());
+      llvm_meta.print(llvm::errs());
+      llvm::errs() << "\n";
       abort();
     }
     return meta;
@@ -33,8 +35,13 @@ MetaClass* LLVMMetadataConverter::make_meta(const llvm::Metadata& llvm_meta, Ini
   llvm_to_meta[&llvm_meta] = meta.get();
   initializer_fn(meta);
   parents.pop_back();
-  auto result              = db->addMeta(std::move(meta));
-  llvm_to_meta[&llvm_meta] = result;
+  if (auto result = db_cache.lookup(*meta); result != nullptr && result != meta.get()) {
+    llvm_to_meta[&llvm_meta] = result;
+    return dyn_cast<MetaClass>(result);
+  }
+  auto result = meta.get();
+  db->addMeta(std::move(meta));
+  db_cache.add(*result);
   return dyn_cast<MetaClass>(result);
 }
 
@@ -42,7 +49,13 @@ template <class MetaClass, class InitializerFn>
 MetaClass* LLVMMetadataConverter::make_meta(InitializerFn&& initializer_fn) {
   auto meta = std::make_unique<MetaClass>();
   initializer_fn(meta);
-  return dyn_cast<MetaClass>(db->addMeta(std::move(meta)));
+  if (auto result = db_cache.lookup(*meta); result != nullptr && result != meta.get()) {
+    return dyn_cast<MetaClass>(result);
+  }
+  auto result = meta.get();
+  db->addMeta(std::move(meta));
+  db_cache.add(*result);
+  return dyn_cast<MetaClass>(result);
 }
 
 [[nodiscard]] StackAllocation* LLVMMetadataConverter::createStackAllocation(const llvm::DILocalVariable& di_local,
@@ -275,16 +288,17 @@ di::Encoding fromLLVMEncoding(unsigned int encoding) {
 
 [[nodiscard]] di::StructureType* LLVMMetadataConverter::convertStructureOrClassType(
     const llvm::DICompositeType& di_type) {
-  if (auto result = db->lookupStructureType(di_type.getIdentifier()); result != nullptr) {
+  if (auto result = db_cache.lookup_structure_type(di_type.getIdentifier()); result != nullptr) {
     return result;
   }
   return make_meta<di::StructureType>(di_type, [this, &di_type](auto& result) {
+    result->set_identifier_raw(convertString(di_type.getIdentifier()));
     result->set_name_raw(convertString(di_type.getName()));
     result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
-    result->set_identifier_raw(convertString(di_type.getIdentifier()));
     result->set_file_raw(convertDIFile(di_type.getFile()));
-    result->set_scope_raw(convertDIScope(di_type.getScope()));
     result->set_line_raw(convertInteger(di_type.getLine()));
+    db_cache.add(*result);
+    result->set_scope_raw(convertDIScope(di_type.getScope()));
     auto inheritance_refs = std::vector<Meta*>{};
     auto method_refs      = std::vector<Meta*>{};
     auto member_refs      = std::vector<Meta*>{};
@@ -498,15 +512,16 @@ di::DerivedKind fromLLVMDerivedTypeTag(unsigned int tag) {
 }
 
 [[nodiscard]] di::Subprogram* LLVMMetadataConverter::convertDISubprogram(const llvm::DISubprogram& di_subprogram) {
-  if (auto result = db->lookupSubprogram(di_subprogram.getLinkageName()); result != nullptr) {
+  if (auto result = db_cache.lookup_subprogram(di_subprogram.getLinkageName()); result != nullptr) {
     return result;
   }
   return make_meta<di::Subprogram>(di_subprogram, [this, &di_subprogram](auto& result) {
-    result->set_name_raw(convertString(di_subprogram.getName()));
     result->set_linkage_name_raw(convertString(di_subprogram.getLinkageName()));
+    result->set_name_raw(convertString(di_subprogram.getName()));
     result->set_file_raw(convertDIFile(di_subprogram.getFile()));
-    result->set_scope_raw(convertDIScope(di_subprogram.getScope()));
     result->set_line_raw(convertInteger(di_subprogram.getLine()));
+    db_cache.add(*result);
+    result->set_scope_raw(convertDIScope(di_subprogram.getScope()));
     result->set_type_raw(convertDISubroutineType(*di_subprogram.getType()));
   });
 }
@@ -566,8 +581,16 @@ di::Language fromLLVMDILanguage(unsigned int language) {
   return make_meta<Integer>([&value](auto& result) { result->set_data(value); });
 }
 
-[[nodiscard]] String* LLVMMetadataConverter::convertString(std::string str) {
-  return make_meta<String>([str = std::move(str)](auto& result) { result->set_data(std::move(str)); });
+[[nodiscard]] String* LLVMMetadataConverter::convertString(const std::string& value) {
+  if (auto result = db_cache.lookup_string(value)) {
+    return result;
+  }
+  auto meta = std::make_unique<String>();
+  meta->set_data(value);
+  auto result = meta.get();
+  db->addMeta(std::move(meta));
+  db_cache.add(*result);
+  return result;
 }
 
 [[nodiscard]] Tuple* LLVMMetadataConverter::convertTuple(std::vector<Meta*> refs) {

@@ -1,4 +1,4 @@
-set(META_LIB_SOURCES Database.cpp LLVMMetadataConverter.cpp Meta.cpp YAML.cpp)
+set(META_LIB_SOURCES Cache.cpp Database.cpp LLVMMetadataConverter.cpp Meta.cpp YAML.cpp)
 
 add_library(${TYPEART_PREFIX}_MetaObj OBJECT ${META_LIB_SOURCES})
 

@@ -228,6 +228,17 @@ enum class Kind {
   Optional,
 };
 
+static const Kind KINDS[] = {
+    Kind::Unknown,        Kind::GlobalOrBuiltin, Kind::CompileUnit,      Kind::File,
+    Kind::Subprogram,     Kind::Namespace,       Kind::VoidType,         Kind::BasicType,
+    Kind::StructureType,  Kind::UnionType,       Kind::ArrayType,        Kind::EnumerationType,
+    Kind::DerivedType,    Kind::SubroutineType,  Kind::Location,         Kind::LocalVariable,
+    Kind::GlobalVariable, Kind::HeapAllocation,  Kind::StackAllocation,  Kind::GlobalAllocation,
+    Kind::Subrange,       Kind::LexicalBlock,    Kind::LexicalBlockFile, Kind::Enumerator,
+    Kind::Inheritance,    Kind::Member,          Kind::String,           Kind::Integer,
+    Kind::Tuple,          Kind::Optional,
+};
+
 std::ostream& operator<<(std::ostream& os, const Kind& kind);
 std::istream& operator>>(std::istream& is, std::optional<Kind>& value);
 

@@ -43,9 +43,13 @@ meta::meta_id_t create_fake_double_stack_allocation() {
   auto stack_alloc = std::make_unique<meta::StackAllocation>();
   stack_alloc->set_local_variable_raw(instr_alloc->get_local_variable_raw());
   stack_alloc->set_location_raw(instr_alloc->get_location_raw());
-  auto optional = meta::dyn_cast<meta::Optional>(getDatabase().addMeta(std::make_unique<meta::Optional>()));
+  auto meta     = std::make_unique<meta::Optional>();
+  auto optional = meta.get();
+  getDatabase().addMeta(std::move(meta));
   stack_alloc->set_count_raw(optional);
-  return getDatabase().addMeta(std::move(stack_alloc))->get_id();
+  auto result = stack_alloc.get();
+  getDatabase().addMeta(std::move(stack_alloc));
+  return result->get_id();
 }
 
 void check(void* addr, const char* type_name, int count, bool resolveStructs) {

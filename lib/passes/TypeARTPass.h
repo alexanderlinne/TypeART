@@ -14,6 +14,7 @@
 #define _LIB_MUSTSUPPORTPASS_H
 
 #include "instrumentation/TypeARTInstrumentation.h"
+#include "meta/Cache.hpp"
 #include "meta/Database.hpp"
 #include "meta/LLVMMetadataConverter.hpp"
 

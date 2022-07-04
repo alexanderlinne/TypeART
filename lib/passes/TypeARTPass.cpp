@@ -62,9 +62,8 @@ void TypeArtPass::getAnalysisUsage(llvm::AnalysisUsage& info) const {
 }
 
 bool TypeArtPass::doInitialization(llvm::Module& m) {
-  filename  = cl::getTypeFilepath();
-  db        = std::make_unique<meta::Database>();
-  converter = std::make_unique<meta::LLVMMetadataConverter>(*db);
+  filename = cl::getTypeFilepath();
+  db       = std::make_unique<meta::Database>();
 
   LOG_DEBUG("Propagating type infos.");
   auto loaded = meta::Database::load(filename);
@@ -74,6 +73,8 @@ bool TypeArtPass::doInitialization(llvm::Module& m) {
   } else {
     LOG_DEBUG("No valid existing type configuration found: {}", filename);
   }
+
+  converter = std::make_unique<meta::LLVMMetadataConverter>(*db);
 
 #ifdef TYPEART_USE_ALLOCATOR
   auto parser   = std::make_unique<instrumentation::allocator::ArgumentParser>(m, *converter);
@@ -157,7 +158,6 @@ bool TypeArtPass::doFinalization(llvm::Module&) {
    * Persist the accumulated type definition information for this module.
    */
   LOG_DEBUG("Writing type file to {}", cl::getTypeFilepath());
-
   const auto stored = db->store(filename);
   if (stored) {
     LOG_DEBUG("Success!");

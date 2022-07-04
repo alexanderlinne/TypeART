@@ -743,6 +743,8 @@ std::string DerivedType::get_pretty_name() const {
         return fmt::format("{}*", get_base_type().get_pretty_name());
       case DerivedKind::Const:
         return fmt::format("const {}", get_base_type().get_pretty_name());
+      case DerivedKind::Volatile:
+        return fmt::format("volatile {}", get_base_type().get_pretty_name());
       default:
         LOG_WARNING("Derived type with tag {} cannot be formatted!", get_tag());
         return "";

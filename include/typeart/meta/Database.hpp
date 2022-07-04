@@ -35,33 +35,22 @@ class Database {
   Database();
   ~Database();
 
-  Database(const Database&) = delete;
+  Database(const Database&)            = delete;
   Database& operator=(const Database&) = delete;
 
-  Database(Database&&) = default;
+  Database(Database&&)            = default;
   Database& operator=(Database&&) = default;
 
-  [[nodiscard]] meta::Meta* addMeta(std::unique_ptr<meta::Meta> meta);
-  [[nodiscard]] meta::di::StructureType* lookupStructureType(const std::string& identifier);
-  [[nodiscard]] meta::di::Subprogram* lookupSubprogram(const std::string& linkage_name);
+  void addMeta(std::unique_ptr<meta::Meta> meta);
 
+  [[nodiscard]] const std::vector<std::unique_ptr<Meta>>& getMeta() const;
   [[nodiscard]] meta::Meta* getMeta(meta_id_t meta_id);
   [[nodiscard]] const meta::Meta* getMeta(meta_id_t meta_id) const;
 
  private:
   [[nodiscard]] meta_id_t reserveMetaId();
-  [[nodiscard]] meta::Meta* lookupMeta(const meta::Meta& meta);
-  [[nodiscard]] meta::Meta* storeMeta(std::unique_ptr<meta::Meta> meta);
-  void replaceRefs(const meta::Meta& original, meta::Meta& replacement);
+  void storeMeta(std::unique_ptr<meta::Meta> meta);
 
- private:
-  void addMappingsFor(meta::Meta& meta);
-  void createMappings();
-
-  bool has_mappings = false;
-  std::unordered_map<std::string, meta::String*> string_store;
-  std::unordered_map<std::string, meta::di::StructureType*> structure_store;
-  std::unordered_map<std::string, meta::di::Subprogram*> subprogram_store;
   std::vector<std::unique_ptr<meta::Meta>> meta_info;
 };
 

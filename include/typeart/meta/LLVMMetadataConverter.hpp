@@ -1,5 +1,6 @@
 #pragma once
 
+#include "meta/Cache.hpp"
 #include "meta/Meta.hpp"
 
 #include <map>
@@ -31,11 +32,12 @@ namespace meta {
 
 class LLVMMetadataConverter {
   Database* db;
+  Cache db_cache;
   std::vector<const llvm::Metadata*> parents;
   std::map<const llvm::Metadata*, Meta*> llvm_to_meta;
 
  public:
-  inline LLVMMetadataConverter(Database& db) : db(&db) {
+  inline LLVMMetadataConverter(Database& db) : db(&db), db_cache(db) {
   }
 
   [[nodiscard]] StackAllocation* createStackAllocation(const llvm::DILocalVariable& di_local,
@@ -78,9 +80,9 @@ class LLVMMetadataConverter {
   [[nodiscard]] di::Namespace* convertDINamespace(const llvm::DINamespace& di_namespace);
   [[nodiscard]] di::Location* convertDILocation(const llvm::DILocation& di_location);
   [[nodiscard]] Integer* convertInteger(int64_t value);
-  [[nodiscard]] String* convertString(std::string str);
+  [[nodiscard]] String* convertString(const std::string& value);
   [[nodiscard]] Tuple* convertTuple(std::vector<Meta*> refs);
   [[nodiscard]] Optional* convertOptional(std::optional<Meta*> value);
 };
 
-}  // namespace typeart::meta
+}  // namespace meta
