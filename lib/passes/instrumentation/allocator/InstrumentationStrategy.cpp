@@ -42,11 +42,12 @@ class Value;
 
 namespace typeart::instrumentation::allocator {
 
-InstrumentationStrategy::InstrumentationStrategy(llvm::Module& m)
+InstrumentationStrategy::InstrumentationStrategy(llvm::Module& m, bool instrument_lifetime)
     : instrumentation::InstrumentationStrategy(),
       type_art_functions(m),
       instr_helper(m),
-      tracker_instrumentation(m, false) {
+      tracker_instrumentation(m, false),
+      instrument_lifetime(instrument_lifetime) {
 }
 
 size_t InstrumentationStrategy::instrumentHeap(const HeapArgList& heap) {
@@ -227,7 +228,16 @@ size_t InstrumentationStrategy::instrumentStack(const StackArgList& stack) {
     auto offset_alloca = IRB.CreateBitCast(offset_casted, wrapper_alloca->getAllocatedType()->getPointerTo());
 
     const auto meta_id = IRB.CreateStructGEP(offset_alloca, sdata.is_vla ? 4 : 2);
-    IRB.CreateStore(metaIdConst, meta_id, true);
+
+    const auto& lifetime_starts = sdata.lifetime_start;
+    if (lifetime_starts.empty() || !instrument_lifetime) {
+      IRB.CreateStore(metaIdConst, meta_id, true);
+    } else {
+      for (auto* lifetime_s : lifetime_starts) {
+        llvm::IRBuilder<> LifetimeIRB(lifetime_s->getNextNode());
+        LifetimeIRB.CreateStore(metaIdConst, meta_id, true);
+      }
+    }
 
     if (sdata.is_vla) {
       const auto element_count = IRB.CreateStructGEP(offset_alloca, 2);

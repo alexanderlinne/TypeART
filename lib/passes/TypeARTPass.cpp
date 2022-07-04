@@ -78,7 +78,7 @@ bool TypeArtPass::doInitialization(llvm::Module& m) {
 
 #ifdef TYPEART_USE_ALLOCATOR
   auto parser   = std::make_unique<instrumentation::allocator::ArgumentParser>(m, *converter);
-  auto strategy = std::make_unique<instrumentation::allocator::InstrumentationStrategy>(m);
+  auto strategy = std::make_unique<instrumentation::allocator::InstrumentationStrategy>(m, cl::getInstrumentStackLifetime());
 #else
   auto parser = std::make_unique<instrumentation::tracker::ArgumentParser>(m, *converter);
   auto strategy =
