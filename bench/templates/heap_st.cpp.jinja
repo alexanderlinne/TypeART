@@ -1,0 +1,6 @@
+int main() {
+    {% for i in range(num_vars) %}
+    volatile auto v_{{i}} = new int;
+    delete v_{{i}};
+    {% endfor %} 
+}

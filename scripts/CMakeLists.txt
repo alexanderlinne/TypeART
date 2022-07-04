@@ -59,6 +59,7 @@ function(typeart_configure_script input output)
     set(TYPEART_HAS_MPI_TOOL 0)
   endif()
 
+  set(TYPEART_RUNTIME_LIB "libtypeartRuntime${CMAKE_DEBUG_POSTFIX}.so")
   set(TYPEART_PRELOAD_LIB "libtypeartPreload${CMAKE_DEBUG_POSTFIX}.so")
 
   if(ARG_COMPILER)

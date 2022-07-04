@@ -1,0 +1,7 @@
+#include <cstddef>
+
+int main() {
+    for (size_t i = 0; i < {{num_vars}}; ++i) {
+        volatile auto v_{{i}} = 0;
+    }
+}

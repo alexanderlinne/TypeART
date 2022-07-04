@@ -1,0 +1,9 @@
+int main() {
+    // Make sure the Runtime is at least initialized.
+    volatile auto v = new int;
+    delete v;
+
+    {% for i in range(num_vars) %}
+    volatile auto v_{{i}} = 0;
+    {% endfor %} 
+}

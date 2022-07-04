@@ -1,0 +1,22 @@
+#include <thread>
+#include <random>
+
+void f() {
+    std::mt19937 gen(rand());
+    std::uniform_int_distribution<> distr(0, 65536);
+
+    for (size_t i = 0; i < {{num_vars}}; ++i) {
+        volatile auto v_{{i}} = malloc(distr(gen));
+        free(v_{{i}});
+    }
+}
+
+int main() {
+    srand(time(NULL));
+    {% for i in range(num_threads) %}
+    auto thread_{{i}} = std::thread(f);
+    {% endfor %} 
+    {% for i in range(num_threads) %}
+    thread_{{i}}.join();
+    {% endfor %} 
+}

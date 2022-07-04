@@ -23,6 +23,9 @@ function parse_cmd_line() {
   compile_flags=""
   show_ir=0
   clean_types_file=0
+  measure_time=0
+  only_compile=0
+  only_execute=0
 
   shift # skip over $1
   while (("$#")); do
@@ -103,6 +106,18 @@ function parse_cmd_line() {
       ;;
     --clean_types)
         clean_types_file=1
+        shift
+      ;;
+    --time)
+        measure_time=1
+        shift
+      ;;
+    --only_compile)
+        only_compile=1
+        shift
+      ;;
+    --only_execute)
+        only_execute=1
         shift
       ;;
     *) # preserve other arguments
@@ -306,19 +321,21 @@ function execute() {
   if [ $with_omp == 1 ]; then
     export TSAN_OPTIONS='ignore_noninstrumented_modules=1'
   fi
+  if [ $measure_time == 1 ]; then
+    command="command time --format \"%U user, %S sys, %e real, %Mk RSS\" ${command}"
+  fi
 
   if [ $with_intercept == 1 ]; then
     if [ $typeart_has_interceptor == 1 ]; then
       echo -e Executing with runtime and interceptor lib
-      LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${typeart_lib_dir}" LD_PRELOAD="${typeart_interceptor} ${typeart_preload}" TYPEART_TYPE_FILE=${types_file} ${command}
+      LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${typeart_lib_dir}" LD_PRELOAD="${typeart_interceptor} ${typeart_preload}" TYPEART_TYPE_FILE=${types_file} eval "${command}"
     else
       echo -e Interceptor lib not compiled with TypeART, exiting!
       exit 1
     fi
   else
     echo -e Executing with runtime lib
-    echo -e "command: LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${typeart_lib_dir}" LD_PRELOAD="${typeart_preload}" TYPEART_TYPE_FILE=${types_file} ${command}"
-    LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${typeart_lib_dir}" LD_PRELOAD="${typeart_preload}" TYPEART_TYPE_FILE=${types_file} ${command}
+    LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${typeart_lib_dir}" LD_PRELOAD="${typeart_preload}" TYPEART_TYPE_FILE=${types_file} eval "${command}"
   fi
 }
 
@@ -326,11 +343,19 @@ function main_in() {
   parse_cmd_line "$@"
   global_init
   toolchain_init
-  compile
-  if [ @TYPEART_RUN_SCRIPT@ == 1 -a $show_ir == 0 ]; then
-    main_link
-    execute
-  fi
+
+  # if [ only_compile == 1 ]; then
+  #   compile
+  #   main_link
+  # elif [ only_execute == 1 ]; then
+  #   execute
+  # else
+    compile
+    if [ @TYPEART_RUN_SCRIPT@ == 1 -a $show_ir == 0 ]; then
+      main_link
+      execute
+    fi
+  # fi
 }
 
 main_in "$@"

@@ -10,10 +10,16 @@
 #include "Util.hpp"
 
 #include <mpi.h>
+#include <random>
 
 constexpr auto n = 16;
 
 int main(int argc, char** argv) {
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> distr(0, 65536);
+  distr(gen);
+
   MPI_Init(&argc, &argv);
 
   // CHECK: [Trace] TypeART Runtime Trace
