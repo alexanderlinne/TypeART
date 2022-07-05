@@ -20,6 +20,7 @@
 namespace typeart::analysis {
 
 std::pair<llvm::DILocalVariable*, llvm::DILocation*> findDbgInfoFor(llvm::AllocaInst* alloca);
+llvm::DIGlobalVariable* findDbgInfoFor(llvm::GlobalVariable& global);
 llvm::SmallVector<llvm::DIType*, 4> findDITypes(llvm::CallBase& call);
 
 }  // namespace typeart::analysis

@@ -75,7 +75,7 @@ void MemOpVisitor::collect(llvm::Function& function) {
 
 void MemOpVisitor::collectGlobals(Module& module) {
   for (auto& g : module.globals()) {
-    globals.emplace_back(GlobalData{&g});
+    globals.emplace_back(GlobalData{&g, findDbgInfoFor(g)});
   }
 }
 

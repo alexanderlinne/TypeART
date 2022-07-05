@@ -198,30 +198,21 @@ StackArgList ArgumentParser::collectStack(const AllocaDataList& allocs) {
 }
 
 GlobalArgList ArgumentParser::collectGlobal(const GlobalDataList& globals) {
-  return {};  // TODO
   GlobalArgList list;
   list.reserve(globals.size());
 
   for (const GlobalData& gdata : globals) {
     ArgMap arg_map;
     auto global = gdata.global;
-    auto type   = global->getValueType();
 
-    unsigned numElements = 1;
-    if (type->isArrayTy()) {
-      numElements = tu::getArrayLengthFlattened(type);
-      type        = tu::getArrayElementType(type);
+    if (gdata.global_variable == nullptr) {
+      LOG_WARNING("Unknown global type for {}. Not instrumenting. ", util::dump(*gdata.global));
+      continue;
     }
 
-    // if (typeId == type_id_t::unknown_type) {
-    //   LOG_ERROR("Unknown global type. Not instrumenting. " << util::dump(*type));
-    //   continue;
-    // }
-
-    auto* numElementsConst = instr_helper.getConstantFor(IType::extent, numElements);
-
-    // const auto meta = converter->createGlobalAllocation(...);
-    const auto metaIdConst = instr_helper.getConstantFor(IType::alloc_id, 0);
+    auto* numElementsConst = instr_helper.getConstantFor(IType::extent, 1);
+    const auto meta        = converter->createGlobalAllocation(*gdata.global_variable);
+    const auto metaIdConst = instr_helper.getConstantFor(IType::alloc_id, meta->get_id().value());
 
     arg_map[ArgMap::ID::pointer]       = global;
     arg_map[ArgMap::ID::element_count] = numElementsConst;

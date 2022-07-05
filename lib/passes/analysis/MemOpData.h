@@ -156,6 +156,7 @@ struct AllocaData {
 
 struct GlobalData {
   llvm::GlobalVariable* global{nullptr};
+  llvm::DIGlobalVariable* global_variable = nullptr;
 };
 
 using GlobalDataList = llvm::SmallVector<GlobalData, 8>;

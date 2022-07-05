@@ -32,6 +32,15 @@ std::pair<llvm::DILocalVariable*, llvm::DILocation*> findDbgInfoFor(llvm::Alloca
   return {nullptr, nullptr};
 }
 
+llvm::DIGlobalVariable* findDbgInfoFor(llvm::GlobalVariable& global) {
+  llvm::SmallVector<llvm::DIGlobalVariableExpression*, 1> results;
+  global.getDebugInfo(results);
+  if (results.empty()) {
+    return nullptr;
+  }
+  return results.front()->getVariable();
+}
+
 llvm::DIType* removeIrrelevantDerivedTypes(llvm::DIType* type) {
   while (type->getTag() == llvm::dwarf::DW_TAG_typedef || type->getTag() == llvm::dwarf::DW_TAG_member) {
     type = llvm::dyn_cast<llvm::DIDerivedType>(type)->getBaseType();
