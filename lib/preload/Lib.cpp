@@ -5,13 +5,18 @@
 #include "runtime/allocator/Allocator.hpp"
 #include "runtime/allocator/Config.h"
 
+#include <cstring>
 #include <dlfcn.h>
 
 extern "C" {
 void* typeart_preload_thread_start(void*, void*);
+void typeart_preload_reclaim_capture_stack_ptr();
 }
 
 namespace typeart::preload {
+
+static thread_local void* entry_stack_ptr       = nullptr;
+static thread_local void* instr_entry_stack_ptr = nullptr;
 
 static void* find_next_symbol(const char* function_name) {
   void* function = dlsym(RTLD_NEXT, function_name);
@@ -71,13 +76,23 @@ extern "C" {
 
 void typeart_preload_reclaim_stack(void* args) {
   using namespace typeart;
-  // TODO
+  // calls typeart_preload_reclaim_stack_impl with the current stack ptr
+  typeart_preload_reclaim_capture_stack_ptr();
+}
+
+void* typeart_preload_reclaim_stack_impl(void* stack_ptr) {
+  using namespace typeart;
+  auto size          = (uint8_t*)preload::instr_entry_stack_ptr - (uint8_t*)stack_ptr;
+  auto new_stack_ptr = (uint8_t*)preload::entry_stack_ptr - size;
+  memcpy(new_stack_ptr, stack_ptr, size);
+  return new_stack_ptr;
 }
 
 void* typeart_preload_allocate_stack(void** stack_ptr) {
   using namespace typeart;
-  auto current_thread  = pthread_self();
-  auto new_stack_begin = allocator::stack::allocate(current_thread);
+  preload::entry_stack_ptr = stack_ptr;
+  auto current_thread      = pthread_self();
+  auto new_stack_begin     = allocator::stack::allocate(current_thread);
 
   pthread_attr_t attr;
   if (pthread_getattr_np(current_thread, &attr) != 0) {
@@ -104,6 +119,7 @@ void* typeart_preload_allocate_stack(void** stack_ptr) {
   // We don't have to actuall copy the stack as in the function where we swap the
   // stack pointer we also swap it back.
 
+  preload::instr_entry_stack_ptr = new_stack_ptr;
   return new_stack_ptr;
 }
 

@@ -1,18 +1,22 @@
 // clang-format off
-// RUN: %run %s --thread --compile_flags "-std=c++17" 2>&1 | %filecheck %s
+// RUN: %run %s --thread 2>&1 | %filecheck %s
 // REQUIRES: thread
 // REQUIRES: allocator
 // clang-format on
 
-#include "../tracker/util.h"
+#include "../tracker/util.hpp"
 
 #include <cassert>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <typeart/runtime/allocator/Allocator.hpp>
 
-using namespace typeart::runtime::allocator;
+namespace typeart::allocator::stack {
+bool is_owner(pthread_t thread);
+bool is_instrumented(void* addr);
+}  // namespace typeart::allocator::stack
+
+using namespace typeart::allocator;
 
 void* f(void*) {
   if (!stack::is_owner(pthread_self())) {
@@ -21,8 +25,8 @@ void* f(void*) {
 
   char c[7];
   double d = 5;
-  check(c, 0, 7, 0);
-  check(&d, 6, 1, 0);
+  check(c, "char[7]", 1, 0);
+  check(&d, "double", 1, 0);
 
   if (!stack::is_instrumented(c)) {
     fprintf(stderr, "[Error] Stack was not replaced!\n");

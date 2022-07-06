@@ -38,3 +38,22 @@ typeart_preload_thread_start:
 	addq $32, %rsp
 	popq %rbp
 	retq
+
+	.global typeart_preload_reclaim_capture_stack_ptr
+	.align 16, 0x90
+	.type typeart_preload_reclaim_capture_stack_ptr,@function
+typeart_preload_reclaim_capture_stack_ptr:
+	pushq %rbp
+	movq %rsp, %rbp
+
+	movq %rsp, %rdi  /* pass the stack pointer as the first argument */
+	movabsq $typeart_preload_reclaim_stack_impl, %rax
+	callq *%rax
+	movq %rax, %rsp  /* copy the result of the call into the stack pointer */
+
+	/* free the allocated stack */
+	movabsq $typeart_preload_free_stack, %rax
+	callq *%rax
+
+	popq %rbp
+	retq
