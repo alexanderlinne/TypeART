@@ -173,7 +173,7 @@ AllocState Tracker::doAlloc(const void* addr, meta::meta_id_t meta_id, size_t co
     LOG_WARNING("Zero-size allocation {}", pointer_info);
     if (addr == nullptr) {
       recorder.incZeroLengthAndNullAddr();
-      LOG_ERROR("Zero-size and nullptr allocation {}", pointer_info);
+      LOG_WARNING("Zero-size and nullptr allocation {}", pointer_info);
       return status | AllocState::NULL_ZERO | AllocState::ADDR_SKIPPED;
     }
   } else if (unlikely(addr == nullptr)) {
