@@ -23,10 +23,10 @@
 
 #ifndef TYPEART_LOG_LEVEL
 /*
- * Usually set at compile time: -DTYPEART_LOG_LEVEL=<N>, N in [0, 3] for output
- * 3 being most verbose
+ * Usually set at compile time: -DTYPEART_LOG_LEVEL=<N>, N in [0, 5] for output
+ * 5 being most verbose
  */
-#define TYPEART_LOG_LEVEL 3
+#define TYPEART_LOG_LEVEL 5
 #endif
 
 #ifndef TYPEART_MPI_LOGGER
@@ -56,25 +56,25 @@ std::shared_ptr<spdlog::logger>& logger();
 
 }  // namespace typeart
 
-#if TYPEART_LOG_LEVEL >= 3
+#if TYPEART_LOG_LEVEL >= 5
 #define LOG_TRACE(...) SPDLOG_LOGGER_TRACE(typeart::logger(), __VA_ARGS__)
 #else
 #define LOG_TRACE(...) (void)0
 #endif
 
-#if TYPEART_LOG_LEVEL >= 3
+#if TYPEART_LOG_LEVEL >= 4
 #define LOG_DEBUG(...) SPDLOG_LOGGER_DEBUG(typeart::logger(), __VA_ARGS__)
 #else
 #define LOG_DEBUG(...) (void)0
 #endif
 
-#if TYPEART_LOG_LEVEL >= 2
+#if TYPEART_LOG_LEVEL >= 3
 #define LOG_INFO(...) SPDLOG_LOGGER_INFO(typeart::logger(), __VA_ARGS__)
 #else
 #define LOG_INFO(...) (void)0
 #endif
 
-#if TYPEART_LOG_LEVEL >= 1
+#if TYPEART_LOG_LEVEL >= 2
 #define LOG_WARNING(...) SPDLOG_LOGGER_WARN(typeart::logger(), __VA_ARGS__)
 #else
 #define LOG_WARNING(...) (void)0

@@ -38,8 +38,8 @@ else()
   set(TYPEART_USE_ALLOCATOR OFF)
 endif()
 
-set(TYPEART_LOG_LEVEL 1 CACHE STRING "Granularity of LLVM pass logger. 3 ist most verbose, 0 is least.")
-set(TYPEART_LOG_LEVEL_RT 1 CACHE STRING "Granularity of runtime logger. 3 ist most verbose, 0 is least.")
+set(TYPEART_LOG_LEVEL 1 CACHE STRING "Granularity of LLVM pass logger. 5 ist most verbose, 0 is least.")
+set(TYPEART_LOG_LEVEL_RT 1 CACHE STRING "Granularity of runtime logger. 5 ist most verbose, 0 is least.")
 
 option(TYPEART_SHOW_STATS "Passes show the statistics vars." ON)
 add_feature_info(SHOW_STATS TYPEART_SHOW_STATS "Show compile time statistics of TypeART's LLVM passes.")
@@ -127,8 +127,8 @@ include(modules/sanitizer-targets)
 include(modules/target-util)
 
 if(TYPEART_TEST_CONFIG)
-  set(TYPEART_LOG_LEVEL 2 CACHE STRING "" FORCE)
-  set(TYPEART_LOG_LEVEL_RT 3 CACHE STRING "" FORCE)
+  set(TYPEART_LOG_LEVEL 4 CACHE STRING "" FORCE)
+  set(TYPEART_LOG_LEVEL_RT 5 CACHE STRING "" FORCE)
 endif()
 
 set(THREADS_PREFER_PTHREAD_FLAG 1)
