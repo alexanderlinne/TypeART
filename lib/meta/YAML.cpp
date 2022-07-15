@@ -150,15 +150,20 @@ struct MappingTraits<std::unique_ptr<meta::Meta>> {
     if (value != nullptr) {
       io.mapRequired("refs", self->get_refs());
     }
-    if (auto integer = meta::dyn_cast<meta::Integer>(self)) {
-      auto data = integer->get_data();
-      io.mapRequired("data", data);
-      integer->set_data(data);
-    }
     if (auto string = meta::dyn_cast<meta::String>(self)) {
       auto data = string->get_data();
       io.mapRequired("data", data);
       string->set_data(std::move(data));
+    }
+    for (size_t i = 0; i < self->get_member_count(); ++i) {
+      if (io.outputting()) {
+        auto serialized = self->serialize_member(i);
+        io.mapRequired(self->get_member_name(i), serialized);
+      } else {
+        auto serialized = std::string{};
+        io.mapRequired(self->get_member_name(i), serialized);
+        self->deserialize_member(i, serialized);
+      }
     }
   }
 };

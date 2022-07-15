@@ -223,7 +223,6 @@ enum class Kind {
   Inheritance,
   Member,
   String,
-  Integer,
   Tuple,
   Optional,
 };
@@ -235,8 +234,8 @@ static const Kind KINDS[] = {
     Kind::DerivedType,    Kind::SubroutineType,  Kind::Location,         Kind::LocalVariable,
     Kind::GlobalVariable, Kind::HeapAllocation,  Kind::StackAllocation,  Kind::GlobalAllocation,
     Kind::Subrange,       Kind::LexicalBlock,    Kind::LexicalBlockFile, Kind::Enumerator,
-    Kind::Inheritance,    Kind::Member,          Kind::String,           Kind::Integer,
-    Kind::Tuple,          Kind::Optional,
+    Kind::Inheritance,    Kind::Member,          Kind::String,           Kind::Tuple,
+    Kind::Optional,
 };
 
 std::ostream& operator<<(std::ostream& os, const Kind& kind);
@@ -251,6 +250,8 @@ class Meta {
 
   inline Meta(meta_id_t id, Kind kind, std::vector<Meta*> refs) : kind(kind), id(id), refs(std::move(refs)) {
   }
+
+  virtual bool compare(const Meta& other) const = 0;
 
  public:
   static inline bool classof(Kind kind) {
@@ -282,9 +283,14 @@ class Meta {
   inline std::vector<Meta*>& get_refs() {
     return refs;
   }
-};
 
-bool operator==(const Meta& lhs, const Meta& rhs);
+  virtual size_t get_member_count() const                               = 0;
+  virtual const char* get_member_name(size_t idx) const                 = 0;
+  virtual std::string serialize_member(size_t idx) const                = 0;
+  virtual void deserialize_member(size_t idx, const std::string& value) = 0;
+
+  friend bool operator==(const Meta& lhs, const Meta& rhs);
+};
 
 std::unique_ptr<Meta> make_meta(Kind kind);
 
@@ -304,29 +310,10 @@ const To* dyn_cast(const Meta* meta) {
   return To::classof(meta->get_kind()) ? static_cast<const To*>(meta) : nullptr;
 }
 
-class Integer final : public Meta {
-  META_CLASS(Meta, Integer)
-  int64_t data;
-
- public:
-  inline Integer(meta_id_t id, int64_t data) : Meta(id, Kind::Integer, {}), data(data) {
-  }
-
-  inline operator int64_t() const {
-    return data;
-  }
-
-  inline int64_t get_data() const {
-    return data;
-  }
-
-  inline void set_data(int64_t new_data) {
-    data = new_data;
-  }
-};
-
 class String final : public Meta {
-  META_CLASS(Meta, String)
+  META_CLASS(Meta, String,  //
+             (0, ()),       //
+             (0, ()))
   std::string data;
 
  public:
@@ -390,7 +377,9 @@ class TupleBase : public Meta {
 };
 
 class Tuple final : public TupleBase {
-  META_CLASS(TupleBase, Tuple)
+  META_CLASS(TupleBase, Tuple,  //
+             (0, ()),           //
+             (0, ()))
 
  public:
   using size_type = std::vector<Meta*>::size_type;
@@ -518,7 +507,9 @@ class TupleProxy final {
 };
 
 class Optional final : public TupleBase {
-  META_CLASS(TupleBase, Optional)
+  META_CLASS(TupleBase, Optional,  //
+             (0, ()),              //
+             (0, ()))
 
  public:
   using size_type = std::vector<Meta*>::size_type;
@@ -636,39 +627,40 @@ class Scope;
 class Type;
 
 class Subrange final : public di::Node {
-  META_CLASS(di::Node, Subrange,
-             ((INTEGER, size_t, lower_bound),  //
-              (INTEGER, size_t, count)))
+  META_CLASS(di::Node, Subrange,          //
+             (0, ()),                     //
+             (2, ((size_t, lower_bound),  //
+                  (size_t, count))))
 };
 
 class Enumerator final : public di::Node {
-  META_CLASS(di::Node, Enumerator,
-             ((STRING, name),             //
-              (INTEGER, ssize_t, value),  //
-              (INTEGER, bool, is_unsigned)))
+  META_CLASS(di::Node, Enumerator,   //
+             (1, ((STRING, name))),  //
+             (2, ((ssize_t, value),  //
+                  (bool, is_unsigned))))
 };
 
 class StructureType;
 
 class Inheritance final : public di::Node {
-  META_CLASS(di::Node, Inheritance,
-             ((REF, di::Scope, scope),  //
-              (REF, di::Type, base),    //
-              (INTEGER, size_t, offset_in_bits)))
+  META_CLASS(di::Node, Inheritance,         //
+             (2, ((REF, di::Scope, scope),  //
+                  (REF, di::Type, base))),  //
+             (1, ((size_t, offset_in_bits))))
 
  public:
   const StructureType& get_base_structure_type() const;
 };
 
 class Member final : public di::Node {
-  META_CLASS(di::Node, Member,
-             ((STRING, name),                     //
-              (REF, di::File, file),              //
-              (REF, di::Scope, scope),            //
-              (REF, di::Type, type),              //
-              (INTEGER, size_t, line),            //
-              (INTEGER, size_t, offset_in_bits),  //
-              (INTEGER, size_t, size_in_bits)))
+  META_CLASS(di::Node, Member,               //
+             (4, ((STRING, name),            //
+                  (REF, di::File, file),     //
+                  (REF, di::Scope, scope),   //
+                  (REF, di::Type, type))),   //
+             (3, ((size_t, line),            //
+                  (size_t, offset_in_bits),  //
+                  (size_t, size_in_bits))))
 
   std::string get_pretty_name() const;
 };
@@ -722,7 +714,9 @@ std::ostream& operator<<(std::ostream& os, const Language& language);
 std::istream& operator>>(std::istream& is, std::optional<Language>& value);
 
 class GlobalOrBuiltin final : public di::Scope {
-  META_CLASS(di::Scope, GlobalOrBuiltin)
+  META_CLASS(di::Scope, GlobalOrBuiltin,  //
+             (0, ()),                     //
+             (0, ()))
 
  public:
   std::string get_pretty_name() const override;
@@ -730,8 +724,9 @@ class GlobalOrBuiltin final : public di::Scope {
 
 class File final : public di::Scope {
   META_CLASS(di::Scope, File,
-             ((STRING, filename),  //
-              (STRING, directory)))
+             (2, ((STRING, filename),     //
+                  (STRING, directory))),  //
+             (0, ()))
 
  public:
   bool is_unknown() const;
@@ -741,11 +736,11 @@ class File final : public di::Scope {
 
 class CompileUnit final : public di::Scope {
   META_CLASS(di::Scope, CompileUnit,
-             ((REF, di::File, file),          //
-              (STRING, producer),             //
-              (INTEGER, Language, language),  //
-              (INTEGER, bool, is_optimized),  //
-              (INTEGER, size_t, runtime_version)))
+             (2, ((REF, di::File, file),  //
+                  (STRING, producer))),   //
+             (3, ((Language, language),   //
+                  (bool, is_optimized),   //
+                  (size_t, runtime_version))))
 
  public:
   std::string get_pretty_name() const override;
@@ -753,8 +748,9 @@ class CompileUnit final : public di::Scope {
 
 class Namespace final : public di::Scope {
   META_CLASS(di::Scope, Namespace,
-             ((STRING, name),  //
-              (REF, di::Scope, scope)))
+             (2, ((STRING, name),             //
+                  (REF, di::Scope, scope))),  //
+             (0, ()))
 
  public:
   std::string get_pretty_name() const override;
@@ -822,7 +818,9 @@ class Type : public di::Scope {
 };
 
 class VoidType final : public di::Type {
-  META_CLASS(di::Type, VoidType)
+  META_CLASS(di::Type, VoidType,  //
+             (0, ()),             //
+             (0, ()))
 
  public:
   std::string get_pretty_name() const override;
@@ -844,10 +842,10 @@ std::ostream& operator<<(std::ostream& os, const Encoding& encoding);
 std::istream& operator>>(std::istream& is, std::optional<Encoding>& value);
 
 class BasicType final : public di::Type {
-  META_CLASS(di::Type, BasicType,
-             ((STRING, name),                 //
-              (INTEGER, Encoding, encoding),  //
-              (INTEGER, size_t, size_in_bits, override)))
+  META_CLASS(di::Type, BasicType,        //
+             (1, ((STRING, name))),      //
+             (2, ((Encoding, encoding),  //
+                  (size_t, size_in_bits, override))))
 
  public:
   std::string get_pretty_name() const override;
@@ -857,15 +855,15 @@ class Subprogram;
 
 class StructureType final : public di::Type {
   META_CLASS(di::Type, StructureType,
-             ((STRING, name),                             //
-              (STRING, identifier),                       //
-              (REF, di::File, file),                      //
-              (REF, di::Scope, scope),                    //
-              (INTEGER, size_t, line),                    //
-              (INTEGER, size_t, size_in_bits, override),  //
-              (TUPLE, di::Inheritance, base_classes),     //
-              (TUPLE, di::Subprogram, methods),           //
-              (TUPLE, di::Member, direct_members)))
+             (7, ((STRING, name),                          //
+                  (STRING, identifier),                    //
+                  (REF, di::File, file),                   //
+                  (REF, di::Scope, scope),                 //
+                  (TUPLE, di::Inheritance, base_classes),  //
+                  (TUPLE, di::Subprogram, methods),        //
+                  (TUPLE, di::Member, direct_members))),
+             (2, ((size_t, line),                      //
+                  (size_t, size_in_bits, override))))  //
 
  public:
   std::string get_pretty_name() const override;
@@ -877,24 +875,24 @@ class StructureType final : public di::Type {
 
 class UnionType final : public di::Type {
   META_CLASS(di::Type, UnionType,
-             ((STRING, name),                             //
-              (STRING, identifier),                       //
-              (REF, di::File, file),                      //
-              (REF, di::Scope, scope),                    //
-              (INTEGER, size_t, line),                    //
-              (INTEGER, size_t, size_in_bits, override),  //
-              (TUPLE, di::Subprogram, methods),           //
-              (TUPLE, di::Member, members)))
+             (6, ((STRING, name),                    //
+                  (STRING, identifier),              //
+                  (REF, di::File, file),             //
+                  (REF, di::Scope, scope),           //
+                  (TUPLE, di::Subprogram, methods),  //
+                  (TUPLE, di::Member, members))),
+             (2, ((size_t, line),                      //
+                  (size_t, size_in_bits, override))))  //
 
  public:
   std::string get_pretty_name() const override;
 };
 
 class ArrayType final : public di::Type {
-  META_CLASS(di::Type, ArrayType,
-             ((REF, di::Type, base_type),                 //
-              (INTEGER, size_t, size_in_bits, override),  //
-              (TUPLE, Integer, counts)))
+  META_CLASS(di::Type, ArrayType,  //
+             (1, ((REF, di::Type, base_type))),
+             (2, ((size_t, size_in_bits, override),  //
+                  (std::vector<size_t>, counts))))   //
 
  public:
   size_t get_flattened_count() const;
@@ -903,13 +901,13 @@ class ArrayType final : public di::Type {
 
 class EnumerationType final : public di::Type {
   META_CLASS(di::Type, EnumerationType,
-             ((STRING, name),                             //
-              (STRING, identifier),                       //
-              (REF, di::File, file),                      //
-              (REF, di::Scope, scope),                    //
-              (INTEGER, size_t, line),                    //
-              (INTEGER, size_t, size_in_bits, override),  //
-              (TUPLE, di::Node, elements)))
+             (5, ((STRING, name),           //
+                  (STRING, identifier),     //
+                  (REF, di::File, file),    //
+                  (REF, di::Scope, scope),  //
+                  (TUPLE, di::Node, elements))),
+             (2, ((size_t, line),                      //
+                  (size_t, size_in_bits, override))))  //
 
  public:
   std::string get_pretty_name() const override;
@@ -931,14 +929,14 @@ std::istream& operator>>(std::istream& is, std::optional<DerivedKind>& value);
 
 class DerivedType final : public di::Type {
   META_CLASS(di::Type, DerivedType,
-             ((STRING, name),                     //
-              (REF, di::File, file),              //
-              (REF, di::Scope, scope),            //
-              (REF, di::Type, base_type),         //
-              (INTEGER, DerivedKind, tag),        //
-              (INTEGER, size_t, line),            //
-              (INTEGER, size_t, offset_in_bits),  //
-              (INTEGER, size_t, size_in_bits, override)))
+             (4, ((STRING, name),                //
+                  (REF, di::File, file),         //
+                  (REF, di::Scope, scope),       //
+                  (REF, di::Type, base_type))),  //
+             (4, ((DerivedKind, tag),            //
+                  (size_t, line),                //
+                  (size_t, offset_in_bits),      //
+                  (size_t, size_in_bits, override))))
 
  public:
   std::string get_pretty_name() const override;
@@ -946,8 +944,9 @@ class DerivedType final : public di::Type {
 
 class SubroutineType final : public di::Type {
   META_CLASS(di::Type, SubroutineType,
-             ((REF, di::Type, return_type),  //
-              (TUPLE, di::Type, argument_types)))
+             (2, ((REF, di::Type, return_type),         //
+                  (TUPLE, di::Type, argument_types))),  //
+             (0, ()))
 
  public:
   std::string get_pretty_name() const override;
@@ -1025,10 +1024,10 @@ class LexicalBlockBase : public di::LocalScope {
 
 class LexicalBlock final : public di::LexicalBlockBase {
   META_CLASS(di::LexicalBlockBase, LexicalBlock,
-             ((REF, di::Scope, scope),          //
-              (REF, di::File, file, override),  //
-              (INTEGER, size_t, line),          //
-              (INTEGER, size_t, column)))
+             (2, ((REF, di::Scope, scope),            //
+                  (REF, di::File, file, override))),  //
+             (2, ((size_t, line),                     //
+                  (size_t, column))))
 
  public:
   std::string get_pretty_name() const override;
@@ -1036,9 +1035,9 @@ class LexicalBlock final : public di::LexicalBlockBase {
 
 class LexicalBlockFile final : public di::LexicalBlockBase {
   META_CLASS(di::LexicalBlockBase, LexicalBlockFile,
-             ((REF, di::Scope, scope),          //
-              (REF, di::File, file, override),  //
-              (INTEGER, size_t, discriminator)))
+             (2, ((REF, di::Scope, scope),            //
+                  (REF, di::File, file, override))),  //
+             (1, ((size_t, discriminator))))
 
  public:
   std::string get_pretty_name() const override;
@@ -1046,22 +1045,22 @@ class LexicalBlockFile final : public di::LexicalBlockBase {
 
 class Subprogram final : public di::LocalScope {
   META_CLASS(di::LocalScope, Subprogram,
-             ((STRING, name),                   //
-              (STRING, linkage_name),           //
-              (REF, di::File, file, override),  //
-              (REF, di::Scope, scope),          //
-              (REF, di::SubroutineType, type),  //
-              (INTEGER, size_t, line)))
+             (5, ((STRING, name),                     //
+                  (STRING, linkage_name),             //
+                  (REF, di::File, file, override),    //
+                  (REF, di::Scope, scope),            //
+                  (REF, di::SubroutineType, type))),  //
+             (1, ((size_t, line))))
 
  public:
   std::string get_pretty_name() const override;
 };
 
 class Location final : public meta::Node {
-  META_CLASS(meta::Node, Location,
-             ((REF, di::LocalScope, scope),  //
-              (INTEGER, size_t, line),       //
-              (INTEGER, size_t, column)))
+  META_CLASS(meta::Node, Location,                 //
+             (1, ((REF, di::LocalScope, scope))),  //
+             (2, ((size_t, line),                  //
+                  (size_t, column))))
 };
 
 class Variable : public di::Node {
@@ -1085,24 +1084,24 @@ class Variable : public di::Node {
 
 class LocalVariable final : public Variable {
   META_CLASS(Variable, LocalVariable,
-             ((STRING, name),          //
-              (STRING, linkage_name),  //
-              (REF, Scope, scope),     //
-              (REF, File, file),       //
-              (REF, Type, type),       //
-              (INTEGER, size_t, line)))
+             (5, ((STRING, name),          //
+                  (STRING, linkage_name),  //
+                  (REF, Scope, scope),     //
+                  (REF, File, file),       //
+                  (REF, Type, type))),     //
+             (1, ((size_t, line))))
 };
 
 class GlobalVariable final : public Variable {
   META_CLASS(Variable, GlobalVariable,
-             ((STRING, name),             //
-              (STRING, linkage_name),     //
-              (REF, Scope, scope),        //
-              (REF, File, file),          //
-              (REF, Type, type),          //
-              (INTEGER, size_t, line),    //
-              (INTEGER, bool, is_local),  //
-              (INTEGER, bool, is_definition)))
+             (5, ((STRING, name),          //
+                  (STRING, linkage_name),  //
+                  (REF, Scope, scope),     //
+                  (REF, File, file),       //
+                  (REF, Type, type))),     //
+             (3, ((size_t, line),          //
+                  (bool, is_local),        //
+                  (bool, is_definition))))
 };
 
 }  // namespace di
@@ -1132,9 +1131,9 @@ class Allocation : public Meta {
 
 class StackAllocation final : public Allocation {
   META_CLASS(Allocation, StackAllocation,
-             ((REF, di::LocalVariable, local_variable),  //
-              (REF, di::Location, location),             //
-              (OPTIONAL, Integer, count)))
+             (2, ((REF, di::LocalVariable, local_variable),  //
+                  (REF, di::Location, location))),           //
+             (1, ((std::optional<size_t>, count))))
 
   const di::Type& get_type() const override {
     return get_local_variable().get_type();
@@ -1151,8 +1150,9 @@ class StackAllocation final : public Allocation {
 
 class HeapAllocation final : public Allocation {
   META_CLASS(Allocation, HeapAllocation,
-             ((REF, di::Type, type, override),  //
-              (REF, di::Location, location)))
+             (2, ((REF, di::Type, type, override),  //
+                  (REF, di::Location, location))),  //
+             (0, ()))
 
   const di::File& get_file() const override {
     return get_location().get_scope().get_file();
@@ -1164,7 +1164,9 @@ class HeapAllocation final : public Allocation {
 };
 
 class GlobalAllocation final : public Allocation {
-  META_CLASS(Allocation, GlobalAllocation, ((REF, di::GlobalVariable, global_variable)))
+  META_CLASS(Allocation, GlobalAllocation,                       //
+             (1, ((REF, di::GlobalVariable, global_variable))),  //
+             (0, ()))
 
   inline const di::Type& get_type() const override {
     return get_global_variable().get_type();

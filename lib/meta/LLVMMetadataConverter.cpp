@@ -65,9 +65,9 @@ MetaClass* LLVMMetadataConverter::make_meta(InitializerFn&& initializer_fn) {
     result->set_local_variable_raw(convertDILocalVariable(di_local));
     result->set_location_raw(convertDILocation(di_location));
     if (count.has_value()) {
-      result->set_count_raw(convertOptional({convertInteger(count.value())}));
+      result->set_count({count.value()});
     } else {
-      result->set_count_raw(convertOptional({}));
+      result->set_count({});
     }
   });
 }
@@ -92,7 +92,7 @@ MetaClass* LLVMMetadataConverter::make_meta(InitializerFn&& initializer_fn) {
     result->set_linkage_name_raw(name);
     result->set_scope_raw(convertDIScope(di_local.getScope()));
     result->set_file_raw(convertDIFile(di_local.getFile()));
-    result->set_line_raw(convertInteger(di_local.getLine()));
+    result->set_line(di_local.getLine());
     result->set_type_raw(convertDIType(di_local.getType()));
   });
 }
@@ -104,10 +104,10 @@ MetaClass* LLVMMetadataConverter::make_meta(InitializerFn&& initializer_fn) {
     result->set_linkage_name_raw(convertString(di_global.getLinkageName()));
     result->set_scope_raw(convertDIScope(di_global.getScope()));
     result->set_file_raw(convertDIFile(di_global.getFile()));
-    result->set_line_raw(convertInteger(di_global.getLine()));
+    result->set_line(di_global.getLine());
     result->set_type_raw(convertDIType(di_global.getType()));
-    result->set_is_local_raw(convertInteger(di_global.isLocalToUnit()));
-    result->set_is_definition_raw(convertInteger(di_global.isDefinition()));
+    result->set_is_local(di_global.isLocalToUnit());
+    result->set_is_definition(di_global.isDefinition());
   });
 }
 
@@ -137,25 +137,24 @@ MetaClass* LLVMMetadataConverter::make_meta(InitializerFn&& initializer_fn) {
 [[nodiscard]] di::Subrange* LLVMMetadataConverter::convertDISubrange(const llvm::DISubrange& di_subrange) {
   const auto& count = di_subrange.getCount();
   if (count.is<llvm::ConstantInt*>()) {
-    return make_meta<di::Subrange>(di_subrange, [this, &di_subrange](auto& result) {
+    return make_meta<di::Subrange>(di_subrange, [&di_subrange](auto& result) {
       const auto& count         = di_subrange.getCount();
       const auto& integer_count = count.get<llvm::ConstantInt*>()->getZExtValue();
-      result->set_count_raw(convertInteger(integer_count));
-      result->set_lower_bound_raw(convertInteger(di_subrange.getLowerBound()));
+      result->set_count(integer_count);
+      result->set_lower_bound(di_subrange.getLowerBound());
     });
   } else {
     fmt::print(stderr, "DISubranges with non-const count are currently not supported!\n");
-    return make_meta<di::Subrange>(di_subrange, [this, &di_subrange](auto& result) {
-      result->set_lower_bound_raw(convertInteger(di_subrange.getLowerBound()));
-    });
+    return make_meta<di::Subrange>(
+        di_subrange, [&di_subrange](auto& result) { result->set_lower_bound(di_subrange.getLowerBound()); });
   }
 }
 
 [[nodiscard]] di::Enumerator* LLVMMetadataConverter::convertDIEnumerator(const llvm::DIEnumerator& di_enum) {
   return make_meta<di::Enumerator>(di_enum, [this, &di_enum](auto& result) {
     result->set_name_raw(convertString(di_enum.getName()));
-    result->set_value_raw(convertInteger(di_enum.getValue()));
-    result->set_is_unsigned_raw(convertInteger(di_enum.isUnsigned()));
+    result->set_value(di_enum.getValue());
+    result->set_is_unsigned(di_enum.isUnsigned());
   });
 }
 
@@ -249,19 +248,19 @@ di::Encoding fromLLVMEncoding(unsigned int encoding) {
 [[nodiscard]] di::BasicType* LLVMMetadataConverter::convertDIBasicType(const llvm::DIBasicType& di_type) {
   return make_meta<di::BasicType>(di_type, [this, &di_type](auto& result) {
     result->set_name_raw(convertString(di_type.getName()));
-    result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
-    result->set_encoding_raw(convertInteger((int)fromLLVMEncoding(di_type.getEncoding())));
+    result->set_size_in_bits(di_type.getSizeInBits());
+    result->set_encoding(fromLLVMEncoding(di_type.getEncoding()));
   });
 }
 
 [[nodiscard]] di::Type* LLVMMetadataConverter::convertDICompositeType(const llvm::DICompositeType& di_type) {
   auto build_result = [this, &di_type](auto& result) {
     result->set_name_raw(convertString(di_type.getName()));
-    result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
+    result->set_size_in_bits(di_type.getSizeInBits());
     result->set_identifier_raw(convertString(di_type.getIdentifier()));
     result->set_file_raw(convertDIFile(di_type.getFile()));
     result->set_scope_raw(convertDIScope(di_type.getScope()));
-    result->set_line_raw(convertInteger(di_type.getLine()));
+    result->set_line(di_type.getLine());
     auto refs = std::vector<Meta*>{};
     if (di_type.getRawElements() != nullptr) {
       const auto& di_elements = di_type.getElements();
@@ -294,9 +293,9 @@ di::Encoding fromLLVMEncoding(unsigned int encoding) {
   return make_meta<di::StructureType>(di_type, [this, &di_type](auto& result) {
     result->set_identifier_raw(convertString(di_type.getIdentifier()));
     result->set_name_raw(convertString(di_type.getName()));
-    result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
+    result->set_size_in_bits(di_type.getSizeInBits());
     result->set_file_raw(convertDIFile(di_type.getFile()));
-    result->set_line_raw(convertInteger(di_type.getLine()));
+    result->set_line(di_type.getLine());
     db_cache.add(*result);
     result->set_scope_raw(convertDIScope(di_type.getScope()));
     auto inheritance_refs = std::vector<Meta*>{};
@@ -331,11 +330,11 @@ di::Encoding fromLLVMEncoding(unsigned int encoding) {
 [[nodiscard]] di::UnionType* LLVMMetadataConverter::convertUnionType(const llvm::DICompositeType& di_type) {
   return make_meta<di::UnionType>(di_type, [this, &di_type](auto& result) {
     result->set_name_raw(convertString(di_type.getName()));
-    result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
+    result->set_size_in_bits(di_type.getSizeInBits());
     result->set_identifier_raw(convertString(di_type.getIdentifier()));
     result->set_file_raw(convertDIFile(di_type.getFile()));
     result->set_scope_raw(convertDIScope(di_type.getScope()));
-    result->set_line_raw(convertInteger(di_type.getLine()));
+    result->set_line(di_type.getLine());
     auto method_refs = std::vector<Meta*>{};
     auto member_refs = std::vector<Meta*>{};
     if (di_type.getRawElements() != nullptr) {
@@ -373,18 +372,18 @@ di::Encoding fromLLVMEncoding(unsigned int encoding) {
   };
   return make_meta<di::ArrayType>(di_type, [this, &di_type, &subrange_to_int](auto& result) {
     result->set_base_type_raw(convertDIType(di_type.getBaseType()));
-    result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
-    auto refs = std::vector<Meta*>{};
+    result->set_size_in_bits(di_type.getSizeInBits());
+    auto refs = std::vector<size_t>{};
     if (di_type.getRawElements() != nullptr) {
       const auto& di_elements = di_type.getElements();
       refs.reserve(di_elements.size());
       for (const auto& di_elem : di_elements) {
         auto di_subrange = llvm::dyn_cast<llvm::DISubrange>(di_elem);
         assert(di_subrange != nullptr);
-        refs.emplace_back(convertInteger(subrange_to_int(di_subrange)));
+        refs.emplace_back(subrange_to_int(di_subrange));
       }
     }
-    result->set_counts_raw(convertTuple(std::move(refs)));
+    result->set_counts(std::move(refs));
   });
 }
 
@@ -424,13 +423,13 @@ di::DerivedKind fromLLVMDerivedTypeTag(unsigned int tag) {
       auto base_type    = convertDIType(di_type.getBaseType());
       auto size_in_bits = di_type.getSizeInBits();
       result->set_name_raw(convertString(di_type.getName()));
-      result->set_size_in_bits_raw(convertInteger(size_in_bits != 0 ? size_in_bits : base_type->get_size_in_bits()));
-      result->set_tag_raw(convertInteger((int)fromLLVMDerivedTypeTag(di_type.getTag())));
+      result->set_size_in_bits(size_in_bits != 0 ? size_in_bits : base_type->get_size_in_bits());
+      result->set_tag(fromLLVMDerivedTypeTag(di_type.getTag()));
       result->set_file_raw(convertDIFile(di_type.getFile()));
       result->set_scope_raw(convertDIScope(di_type.getScope()));
-      result->set_line_raw(convertInteger(di_type.getLine()));
+      result->set_line(di_type.getLine());
       result->set_base_type_raw(base_type);
-      result->set_offset_in_bits_raw(convertInteger(di_type.getOffsetInBits()));
+      result->set_offset_in_bits(di_type.getOffsetInBits());
     });
   }
 }
@@ -447,7 +446,7 @@ di::DerivedKind fromLLVMDerivedTypeTag(unsigned int tag) {
         abort();
       }
       result->set_base_raw(base);
-      result->set_offset_in_bits_raw(convertInteger(di_type.getOffsetInBits()));
+      result->set_offset_in_bits(di_type.getOffsetInBits());
     });
   } else {
     LOG_FATAL(
@@ -461,12 +460,12 @@ di::DerivedKind fromLLVMDerivedTypeTag(unsigned int tag) {
   if (di_type.getTag() == llvm::dwarf::DW_TAG_member) {
     return make_meta<di::Member>(di_type, [this, &di_type](auto& result) {
       result->set_name_raw(convertString(di_type.getName()));
-      result->set_size_in_bits_raw(convertInteger(di_type.getSizeInBits()));
+      result->set_size_in_bits(di_type.getSizeInBits());
       result->set_file_raw(convertDIFile(di_type.getFile()));
       result->set_scope_raw(convertDIScope(di_type.getScope()));
-      result->set_line_raw(convertInteger(di_type.getLine()));
+      result->set_line(di_type.getLine());
       result->set_type_raw(convertDIType(di_type.getBaseType()));
-      result->set_offset_in_bits_raw(convertInteger(di_type.getOffsetInBits()));
+      result->set_offset_in_bits(di_type.getOffsetInBits());
     });
   } else {
     LOG_FATAL(
@@ -497,8 +496,8 @@ di::DerivedKind fromLLVMDerivedTypeTag(unsigned int tag) {
   return make_meta<di::LexicalBlock>(di_block, [this, &di_block](auto& result) {
     result->set_file_raw(convertDIFile(di_block.getFile()));
     result->set_scope_raw(convertDIScope(di_block.getScope()));
-    result->set_line_raw(convertInteger(di_block.getLine()));
-    result->set_column_raw(convertInteger(di_block.getColumn()));
+    result->set_line(di_block.getLine());
+    result->set_column(di_block.getColumn());
   });
 }
 
@@ -507,7 +506,7 @@ di::DerivedKind fromLLVMDerivedTypeTag(unsigned int tag) {
   return make_meta<di::LexicalBlockFile>(di_block, [this, &di_block](auto& result) {
     result->set_file_raw(convertDIFile(di_block.getFile()));
     result->set_scope_raw(convertDIScope(di_block.getScope()));
-    result->set_discriminator_raw(convertInteger(di_block.getDiscriminator()));
+    result->set_discriminator(di_block.getDiscriminator());
   });
 }
 
@@ -519,7 +518,7 @@ di::DerivedKind fromLLVMDerivedTypeTag(unsigned int tag) {
     result->set_linkage_name_raw(convertString(di_subprogram.getLinkageName()));
     result->set_name_raw(convertString(di_subprogram.getName()));
     result->set_file_raw(convertDIFile(di_subprogram.getFile()));
-    result->set_line_raw(convertInteger(di_subprogram.getLine()));
+    result->set_line(di_subprogram.getLine());
     db_cache.add(*result);
     result->set_scope_raw(convertDIScope(di_subprogram.getScope()));
     result->set_type_raw(convertDISubroutineType(*di_subprogram.getType()));
@@ -552,11 +551,11 @@ di::Language fromLLVMDILanguage(unsigned int language) {
 
 [[nodiscard]] di::CompileUnit* LLVMMetadataConverter::convertDICompileUnit(const llvm::DICompileUnit& di_unit) {
   return make_meta<di::CompileUnit>(di_unit, [this, &di_unit](auto& result) {
-    result->set_language_raw(convertInteger((int)fromLLVMDILanguage(di_unit.getSourceLanguage())));
+    result->set_language(fromLLVMDILanguage(di_unit.getSourceLanguage()));
     result->set_file_raw(convertDIFile(di_unit.getFile()));
     result->set_producer_raw(convertString(di_unit.getProducer()));
-    result->set_is_optimized_raw(convertInteger(di_unit.isOptimized()));
-    result->set_runtime_version_raw(convertInteger(di_unit.getRuntimeVersion()));
+    result->set_is_optimized(di_unit.isOptimized());
+    result->set_runtime_version(di_unit.getRuntimeVersion());
   });
 }
 
@@ -569,16 +568,12 @@ di::Language fromLLVMDILanguage(unsigned int language) {
 
 [[nodiscard]] di::Location* LLVMMetadataConverter::convertDILocation(const llvm::DILocation& di_location) {
   return make_meta<di::Location>(di_location, [this, &di_location](auto& result) {
-    result->set_line_raw(convertInteger(di_location.getLine()));
-    result->set_column_raw(convertInteger(di_location.getColumn()));
+    result->set_line(di_location.getLine());
+    result->set_column(di_location.getColumn());
     auto scope = dyn_cast<di::LocalScope>(convertDIScope(di_location.getScope()));
     assert(scope != nullptr);
     result->set_scope_raw(scope);
   });
-}
-
-[[nodiscard]] Integer* LLVMMetadataConverter::convertInteger(int64_t value) {
-  return make_meta<Integer>([&value](auto& result) { result->set_data(value); });
 }
 
 [[nodiscard]] String* LLVMMetadataConverter::convertString(const std::string& value) {

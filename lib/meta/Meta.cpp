@@ -9,6 +9,149 @@
 
 namespace meta {
 
+template <class T>
+std::string serialize(T value) = delete;
+
+template <>
+std::string serialize<size_t>(size_t value) {
+  return fmt::format("{}", value);
+}
+
+template <>
+std::string serialize<ssize_t>(ssize_t value) {
+  return fmt::format("{}", value);
+}
+
+template <>
+std::string serialize<bool>(bool value) {
+  if (value) {
+    return "true";
+  } else {
+    return "false";
+  }
+}
+
+template <>
+std::string serialize<di::Language>(di::Language value) {
+  std::ostringstream buffer;
+  buffer << value;
+  return buffer.str();
+}
+
+template <>
+std::string serialize<di::Encoding>(di::Encoding value) {
+  std::ostringstream buffer;
+  buffer << value;
+  return buffer.str();
+}
+
+template <>
+std::string serialize<di::DerivedKind>(di::DerivedKind value) {
+  std::ostringstream buffer;
+  buffer << value;
+  return buffer.str();
+}
+
+template <>
+std::string serialize<std::vector<size_t>>(std::vector<size_t> value) {
+  std::vector<std::string> strings;
+  for (auto& v : value) {
+    strings.push_back(::meta::serialize<size_t>(v));
+  }
+  return fmt::format("{}", fmt::join(strings, ","));
+}
+
+template <>
+std::string serialize<std::optional<size_t>>(std::optional<size_t> value) {
+  std::vector<std::string> strings;
+  if (value.has_value()) {
+    return ::meta::serialize<size_t>(value.value());
+  } else {
+    return "None";
+  }
+}
+
+template <class T>
+T deserialize(const std::string& str) = delete;
+
+template <>
+size_t deserialize<size_t>(const std::string& str) {
+  return std::stoull(str);
+}
+
+template <>
+ssize_t deserialize<ssize_t>(const std::string& str) {
+  return std::stoll(str);
+}
+
+template <>
+bool deserialize<bool>(const std::string& str) {
+  if (str == "true") {
+    return true;
+  } else if (str == "false") {
+    return false;
+  } else {
+    abort();
+  }
+}
+
+template <>
+di::Language deserialize<di::Language>(const std::string& str) {
+  std::istringstream stream(str);
+  std::optional<di::Language> result;
+  stream >> result;
+  if (!result.has_value()) {
+    abort();
+  }
+  return result.value();
+}
+
+template <>
+di::Encoding deserialize<di::Encoding>(const std::string& str) {
+  std::istringstream stream(str);
+  std::optional<di::Encoding> result;
+  stream >> result;
+  if (!result.has_value()) {
+    abort();
+  }
+  return result.value();
+}
+
+template <>
+di::DerivedKind deserialize<di::DerivedKind>(const std::string& str) {
+  std::istringstream stream(str);
+  std::optional<di::DerivedKind> result;
+  stream >> result;
+  if (!result.has_value()) {
+    abort();
+  }
+  return result.value();
+}
+
+template <>
+std::vector<size_t> deserialize<std::vector<size_t>>(const std::string& str) {
+  std::string s = str;
+  std::vector<size_t> result;
+  size_t pos = 0;
+  std::string token;
+  while ((pos = s.find(",")) != std::string::npos) {
+    token = s.substr(0, pos);
+    result.push_back(::meta::deserialize<size_t>(token));
+    s.erase(0, pos + 1);
+  }
+  result.push_back(::meta::deserialize<size_t>(s));
+  return result;
+}
+
+template <>
+std::optional<size_t> deserialize<std::optional<size_t>>(const std::string& str) {
+  if (str == "None") {
+    return {};
+  } else {
+    return {::meta::deserialize<size_t>(str)};
+  }
+}
+
 const meta_id_t meta_id_t::invalid = {};
 
 std::ostream& operator<<(std::ostream& os, const byte_size& value) {
@@ -106,9 +249,6 @@ std::ostream& operator<<(std::ostream& os, const Kind& kind) {
     case Kind::String:
       os << "String";
       break;
-    case Kind::Integer:
-      os << "Integer";
-      break;
     case Kind::Tuple:
       os << "Tuple";
       break;
@@ -179,8 +319,6 @@ std::istream& operator>>(std::istream& is, std::optional<Kind>& value) {
     value = Kind::Member;
   } else if (input == "String") {
     value = Kind::String;
-  } else if (input == "Integer") {
-    value = Kind::Integer;
   } else if (input == "Tuple") {
     value = Kind::Tuple;
   } else if (input == "Optional") {
@@ -202,12 +340,10 @@ bool operator==(const Meta& lhs, const Meta& rhs) {
     return true;
   }
   switch (lhs.get_kind()) {
-    case Kind::Integer:
-      return static_cast<const Integer&>(lhs).get_data() == static_cast<const Integer&>(rhs).get_data();
     case Kind::String:
       return static_cast<const String&>(lhs).get_data() == static_cast<const String&>(rhs).get_data();
     default:
-      return lhs.get_refs() == rhs.get_refs();
+      return lhs.compare(rhs);
   }
 }
 
@@ -216,9 +352,6 @@ std::unique_ptr<Meta> make_meta(Kind kind) {
   switch (kind) {
     case Kind::String:
       result = std::make_unique<String>();
-      break;
-    case Kind::Integer:
-      result = std::make_unique<Integer>();
       break;
     case Kind::Tuple:
       result = std::make_unique<Tuple>();
@@ -308,16 +441,20 @@ std::unique_ptr<Meta> make_meta(Kind kind) {
   return result;
 }
 
-META_CLASS_IMPL(Meta, Integer)
-
-META_CLASS_IMPL(Meta, String)
+META_CLASS_IMPL(Meta, String,  //
+                (0, ()),       //
+                (0, ()))
 
 TupleBase::~TupleBase() {
 }
 
-META_CLASS_IMPL(Meta, Tuple)
+META_CLASS_IMPL(TupleBase, Tuple,  //
+                (0, ()),           //
+                (0, ()))
 
-META_CLASS_IMPL(TupleBase, Optional)
+META_CLASS_IMPL(TupleBase, Optional,  //
+                (0, ()),              //
+                (0, ()))
 
 Node::~Node() {
 }
@@ -327,32 +464,33 @@ namespace di {
 Node::~Node() {
 }
 
-META_CLASS_IMPL(di::Node, Subrange,
-                ((INTEGER, size_t, lower_bound),  //
-                 (INTEGER, size_t, count)))
+META_CLASS_IMPL(di::Node, Subrange,          //
+                (0, ()),                     //
+                (2, ((size_t, lower_bound),  //
+                     (size_t, count))))
 
-META_CLASS_IMPL(di::Node, Enumerator,
-                ((STRING, name),             //
-                 (INTEGER, ssize_t, value),  //
-                 (INTEGER, bool, is_unsigned)))
+META_CLASS_IMPL(di::Node, Enumerator,   //
+                (1, ((STRING, name))),  //
+                (2, ((ssize_t, value),  //
+                     (bool, is_unsigned))))
 
-META_CLASS_IMPL(di::Node, Inheritance,
-                ((REF, di::Scope, scope),  //
-                 (REF, di::Type, base),    //
-                 (INTEGER, size_t, offset_in_bits)))
+META_CLASS_IMPL(di::Node, Inheritance,         //
+                (2, ((REF, di::Scope, scope),  //
+                     (REF, di::Type, base))),  //
+                (1, ((size_t, offset_in_bits))))
 
 const StructureType& Inheritance::get_base_structure_type() const {
   return *dyn_cast<StructureType>(&get_base().strip_typedefs_and_qualifiers());
 }
 
-META_CLASS_IMPL(di::Node, Member,
-                ((STRING, name),                     //
-                 (REF, di::File, file),              //
-                 (REF, di::Scope, scope),            //
-                 (REF, di::Type, type),              //
-                 (INTEGER, size_t, line),            //
-                 (INTEGER, size_t, offset_in_bits),  //
-                 (INTEGER, size_t, size_in_bits)))
+META_CLASS_IMPL(di::Node, Member,               //
+                (4, ((STRING, name),            //
+                     (REF, di::File, file),     //
+                     (REF, di::Scope, scope),   //
+                     (REF, di::Type, type))),   //
+                (3, ((size_t, line),            //
+                     (size_t, offset_in_bits),  //
+                     (size_t, size_in_bits))))
 
 std::string Member::get_pretty_name() const {
   return fmt::format("{}::{}", get_scope().get_pretty_name(), get_name());
@@ -419,7 +557,9 @@ std::istream& operator>>(std::istream& is, std::optional<Language>& value) {
   return is;
 }
 
-META_CLASS_IMPL(di::Scope, GlobalOrBuiltin)
+META_CLASS_IMPL(di::Scope, GlobalOrBuiltin,  //
+                (0, ()),                     //
+                (0, ()))
 
 std::string GlobalOrBuiltin::get_pretty_name() const {
   return "";
@@ -430,27 +570,29 @@ bool File::is_unknown() const {
 }
 
 META_CLASS_IMPL(di::Scope, File,
-                ((STRING, filename),  //
-                 (STRING, directory)))
+                (2, ((STRING, filename),     //
+                     (STRING, directory))),  //
+                (0, ()))
 
 std::string File::get_pretty_name() const {
   return fmt::format("{}/{}", get_directory(), get_filename());
 }
 
 META_CLASS_IMPL(di::Scope, CompileUnit,
-                ((REF, di::File, file),          //
-                 (STRING, producer),             //
-                 (INTEGER, Language, language),  //
-                 (INTEGER, bool, is_optimized),  //
-                 (INTEGER, size_t, runtime_version)))
+                (2, ((REF, di::File, file),  //
+                     (STRING, producer))),   //
+                (3, ((Language, language),   //
+                     (bool, is_optimized),   //
+                     (size_t, runtime_version))))
 
 std::string CompileUnit::get_pretty_name() const {
   return get_file().get_pretty_name();
 }
 
 META_CLASS_IMPL(di::Scope, Namespace,
-                ((STRING, name),  //
-                 (REF, di::Scope, scope)))
+                (2, ((STRING, name),             //
+                     (REF, di::Scope, scope))),  //
+                (0, ()))
 
 std::string Namespace::get_pretty_name() const {
   auto scope_name = get_scope().get_pretty_name();
@@ -487,7 +629,9 @@ const di::Type& Type::strip_typedefs_and_qualifiers() const {
   return *result;
 }
 
-META_CLASS_IMPL(di::Type, VoidType)
+META_CLASS_IMPL(di::Type, VoidType,  //
+                (0, ()),             //
+                (0, ()))
 
 std::string VoidType::get_pretty_name() const {
   return "void";
@@ -555,25 +699,25 @@ std::istream& operator>>(std::istream& is, std::optional<Encoding>& value) {
   return is;
 }
 
-META_CLASS_IMPL(di::Type, BasicType,
-                ((STRING, name),                 //
-                 (INTEGER, Encoding, encoding),  //
-                 (INTEGER, size_t, size_in_bits)))
+META_CLASS_IMPL(di::Type, BasicType,        //
+                (1, ((STRING, name))),      //
+                (2, ((Encoding, encoding),  //
+                     (size_t, size_in_bits, override))))
 
 std::string BasicType::get_pretty_name() const {
   return get_name();
 }
 
 META_CLASS_IMPL(di::Type, StructureType,
-                ((STRING, name),                          //
-                 (STRING, identifier),                    //
-                 (REF, di::File, file),                   //
-                 (REF, di::Scope, scope),                 //
-                 (INTEGER, size_t, line),                 //
-                 (INTEGER, size_t, size_in_bits),         //
-                 (TUPLE, di::Inheritance, base_classes),  //
-                 (TUPLE, di::Subprogram, methods),        //
-                 (TUPLE, di::Member, direct_members)))
+                (7, ((STRING, name),                          //
+                     (STRING, identifier),                    //
+                     (REF, di::File, file),                   //
+                     (REF, di::Scope, scope),                 //
+                     (TUPLE, di::Inheritance, base_classes),  //
+                     (TUPLE, di::Subprogram, methods),        //
+                     (TUPLE, di::Member, direct_members))),
+                (2, ((size_t, line),                      //
+                     (size_t, size_in_bits, override))))  //
 
 std::string StructureType::get_pretty_name() const {
   auto scope_name = get_scope().get_pretty_name();
@@ -612,50 +756,47 @@ const di::Member* StructureType::find_member(size_t offset_in_bits) const {
 }
 
 META_CLASS_IMPL(di::Type, UnionType,
-                ((STRING, name),                    //
-                 (STRING, identifier),              //
-                 (REF, di::File, file),             //
-                 (REF, di::Scope, scope),           //
-                 (INTEGER, size_t, line),           //
-                 (INTEGER, size_t, size_in_bits),   //
-                 (TUPLE, di::Subprogram, methods),  //
-                 (TUPLE, di::Member, members)))
+                (6, ((STRING, name),                    //
+                     (STRING, identifier),              //
+                     (REF, di::File, file),             //
+                     (REF, di::Scope, scope),           //
+                     (TUPLE, di::Subprogram, methods),  //
+                     (TUPLE, di::Member, members))),
+                (2, ((size_t, line),                      //
+                     (size_t, size_in_bits, override))))  //
 
 std::string UnionType::get_pretty_name() const {
   return get_name();
 }
 
-META_CLASS_IMPL(di::Type, ArrayType,
-                ((REF, di::Type, base_type),       //
-                 (INTEGER, size_t, size_in_bits),  //
-                 (TUPLE, Integer, counts)))
+META_CLASS_IMPL(di::Type, ArrayType,  //
+                (1, ((REF, di::Type, base_type))),
+                (2, ((size_t, size_in_bits, override),  //
+                     (std::vector<size_t>, counts))))   //
 
 size_t ArrayType::get_flattened_count() const {
-  if (get_counts().size() == 0) {
+  if (counts.size() == 0) {
     return 0;
   }
   auto result = 1;
-  for (auto& count : get_counts()) {
-    result *= dyn_cast<Integer>(&count)->get_data();
+  for (auto& count : counts) {
+    result *= count;
   }
   return result;
 }
 
 std::string ArrayType::get_pretty_name() const {
-  std::vector<std::string> counts;
-  std::transform(get_counts().begin(), get_counts().end(), std::back_inserter(counts),
-                 [](auto& count) { return fmt::format("[{}]", meta::dyn_cast<meta::Integer>(&count)->get_data()); });
   return fmt::format("{}{}", get_base_type().get_pretty_name(), fmt::join(counts, ""));
 }
 
 META_CLASS_IMPL(di::Type, EnumerationType,
-                ((STRING, name),                   //
-                 (STRING, identifier),             //
-                 (REF, di::File, file),            //
-                 (REF, di::Scope, scope),          //
-                 (INTEGER, size_t, line),          //
-                 (INTEGER, size_t, size_in_bits),  //
-                 (TUPLE, di::Node, elements)))
+                (5, ((STRING, name),           //
+                     (STRING, identifier),     //
+                     (REF, di::File, file),    //
+                     (REF, di::Scope, scope),  //
+                     (TUPLE, di::Node, elements))),
+                (2, ((size_t, line),                      //
+                     (size_t, size_in_bits, override))))  //
 
 std::string EnumerationType::get_pretty_name() const {
   return get_name();
@@ -720,14 +861,14 @@ std::istream& operator>>(std::istream& is, std::optional<DerivedKind>& value) {
 }
 
 META_CLASS_IMPL(di::Type, DerivedType,
-                ((STRING, name),                     //
-                 (REF, di::File, file),              //
-                 (REF, di::Scope, scope),            //
-                 (REF, di::Type, base_type),         //
-                 (INTEGER, DerivedKind, tag),        //
-                 (INTEGER, size_t, line),            //
-                 (INTEGER, size_t, offset_in_bits),  //
-                 (INTEGER, size_t, size_in_bits)))
+                (4, ((STRING, name),                //
+                     (REF, di::File, file),         //
+                     (REF, di::Scope, scope),       //
+                     (REF, di::Type, base_type))),  //
+                (4, ((DerivedKind, tag),            //
+                     (size_t, line),                //
+                     (size_t, offset_in_bits),      //
+                     (size_t, size_in_bits, override))))
 
 std::string DerivedType::get_pretty_name() const {
   if (get_name() != "") {
@@ -757,8 +898,9 @@ std::string SubroutineType::get_pretty_name() const {
 }
 
 META_CLASS_IMPL(di::Type, SubroutineType,
-                ((REF, di::Type, return_type),  //
-                 (TUPLE, di::Type, argument_types)))
+                (2, ((REF, di::Type, return_type),         //
+                     (TUPLE, di::Type, argument_types))),  //
+                (0, ()))
 
 LocalScope::~LocalScope() {
 }
@@ -767,31 +909,31 @@ LexicalBlockBase::~LexicalBlockBase() {
 }
 
 META_CLASS_IMPL(di::LexicalBlockBase, LexicalBlock,
-                ((REF, di::Scope, scope),  //
-                 (REF, di::File, file),    //
-                 (INTEGER, size_t, line),  //
-                 (INTEGER, size_t, column)))
+                (2, ((REF, di::Scope, scope),            //
+                     (REF, di::File, file, override))),  //
+                (2, ((size_t, line),                     //
+                     (size_t, column))))
 
 std::string LexicalBlock::get_pretty_name() const {
   return get_scope().get_pretty_name();
 }
 
 META_CLASS_IMPL(di::LexicalBlockBase, LexicalBlockFile,
-                ((REF, di::Scope, scope),  //
-                 (REF, di::File, file),    //
-                 (INTEGER, size_t, discriminator)))
+                (2, ((REF, di::Scope, scope),            //
+                     (REF, di::File, file, override))),  //
+                (1, ((size_t, discriminator))))
 
 std::string LexicalBlockFile::get_pretty_name() const {
   return get_scope().get_pretty_name();
 }
 
 META_CLASS_IMPL(di::LocalScope, Subprogram,
-                ((STRING, name),                   //
-                 (STRING, linkage_name),           //
-                 (REF, di::File, file),            //
-                 (REF, di::Scope, scope),          //
-                 (REF, di::SubroutineType, type),  //
-                 (INTEGER, size_t, line)))
+                (5, ((STRING, name),                     //
+                     (STRING, linkage_name),             //
+                     (REF, di::File, file, override),    //
+                     (REF, di::Scope, scope),            //
+                     (REF, di::SubroutineType, type))),  //
+                (1, ((size_t, line))))
 
 std::string Subprogram::get_pretty_name() const {
   if (get_scope().get_kind() != Kind::File) {
@@ -801,31 +943,31 @@ std::string Subprogram::get_pretty_name() const {
   }
 }
 
-META_CLASS_IMPL(meta::Node, Location,
-                ((REF, di::LocalScope, scope),  //
-                 (INTEGER, size_t, line),       //
-                 (INTEGER, size_t, column)))
+META_CLASS_IMPL(meta::Node, Location,                 //
+                (1, ((REF, di::LocalScope, scope))),  //
+                (2, ((size_t, line),                  //
+                     (size_t, column))))
 
 Variable::~Variable() {
 }
 
 META_CLASS_IMPL(Variable, LocalVariable,
-                ((STRING, name),          //
-                 (STRING, linkage_name),  //
-                 (REF, Scope, scope),     //
-                 (REF, File, file),       //
-                 (REF, Type, type),       //
-                 (INTEGER, size_t, line)))
+                (5, ((STRING, name),          //
+                     (STRING, linkage_name),  //
+                     (REF, Scope, scope),     //
+                     (REF, File, file),       //
+                     (REF, Type, type))),     //
+                (1, ((size_t, line))))
 
 META_CLASS_IMPL(Variable, GlobalVariable,
-                ((STRING, name),             //
-                 (STRING, linkage_name),     //
-                 (REF, Scope, scope),        //
-                 (REF, File, file),          //
-                 (REF, Type, type),          //
-                 (INTEGER, size_t, line),    //
-                 (INTEGER, bool, is_local),  //
-                 (INTEGER, bool, is_definition)))
+                (5, ((STRING, name),          //
+                     (STRING, linkage_name),  //
+                     (REF, Scope, scope),     //
+                     (REF, File, file),       //
+                     (REF, Type, type))),     //
+                (3, ((size_t, line),          //
+                     (bool, is_local),        //
+                     (bool, is_definition))))
 
 }  // namespace di
 
@@ -833,14 +975,17 @@ Allocation::~Allocation() {
 }
 
 META_CLASS_IMPL(Allocation, StackAllocation,
-                ((REF, di::LocalVariable, local_variable),  //
-                 (REF, di::Location, location),             //
-                 (OPTIONAL, Integer, count)))
+                (2, ((REF, di::LocalVariable, local_variable),  //
+                     (REF, di::Location, location))),           //
+                (1, ((std::optional<size_t>, count))))
 
 META_CLASS_IMPL(Allocation, HeapAllocation,
-                ((REF, di::Type, type),  //
-                 (REF, di::Location, location)))
+                (2, ((REF, di::Type, type, override),  //
+                     (REF, di::Location, location))),  //
+                (0, ()))
 
-META_CLASS_IMPL(Allocation, GlobalAllocation, ((REF, di::GlobalVariable, global_variable)))
+META_CLASS_IMPL(Allocation, GlobalAllocation,                       //
+                (1, ((REF, di::GlobalVariable, global_variable))),  //
+                (0, ()))
 
 }  // namespace meta

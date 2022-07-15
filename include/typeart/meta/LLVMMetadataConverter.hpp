@@ -79,7 +79,6 @@ class LLVMMetadataConverter {
   [[nodiscard]] di::CompileUnit* convertDICompileUnit(const llvm::DICompileUnit& di_unit);
   [[nodiscard]] di::Namespace* convertDINamespace(const llvm::DINamespace& di_namespace);
   [[nodiscard]] di::Location* convertDILocation(const llvm::DILocation& di_location);
-  [[nodiscard]] Integer* convertInteger(int64_t value);
   [[nodiscard]] String* convertString(const std::string& value);
   [[nodiscard]] Tuple* convertTuple(std::vector<Meta*> refs);
   [[nodiscard]] Optional* convertOptional(std::optional<Meta*> value);
