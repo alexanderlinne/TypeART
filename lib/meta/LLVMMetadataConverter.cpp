@@ -287,7 +287,9 @@ di::Encoding fromLLVMEncoding(unsigned int encoding) {
 
 [[nodiscard]] di::StructureType* LLVMMetadataConverter::convertStructureOrClassType(
     const llvm::DICompositeType& di_type) {
-  if (auto result = db_cache.lookup_structure_type(di_type.getIdentifier()); result != nullptr) {
+  if (auto result = db_cache.lookup_structure_type(di_type.getIdentifier(), di_type.getFile()->getDirectory(),
+                                                   di_type.getFile()->getFilename(), di_type.getLine());
+      result != nullptr) {
     return result;
   }
   return make_meta<di::StructureType>(di_type, [this, &di_type](auto& result) {

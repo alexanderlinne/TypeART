@@ -20,7 +20,8 @@ class Cache {
   [[nodiscard]] Meta* lookup(const Meta& meta) const;
 
   [[nodiscard]] String* lookup_string(const std::string& value) const;
-  [[nodiscard]] di::StructureType* lookup_structure_type(const std::string& identifier) const;
+  [[nodiscard]] di::StructureType* lookup_structure_type(const std::string& identifier, const std::string& directory,
+                                                         const std::string& file, size_t line) const;
   [[nodiscard]] di::Subprogram* lookup_subprogram(const std::string& linkage_name) const;
 
  private:
