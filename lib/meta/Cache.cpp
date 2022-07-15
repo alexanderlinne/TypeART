@@ -61,7 +61,7 @@ void Cache::add_mappings_for(meta::Meta& meta) {
 }
 
 void Cache::create_mappings(const std::vector<std::unique_ptr<Meta>>& db_info) {
-  for (const auto& elem : meta_info) {
+  for (const auto& elem : db_info) {
     if (!elem) {
       continue;
     }
