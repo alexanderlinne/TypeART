@@ -284,6 +284,8 @@ class Meta {
     return refs;
   }
 
+  virtual const char* get_ref_name(size_t idx) const = 0;
+
   virtual size_t get_member_count() const                               = 0;
   virtual const char* get_member_name(size_t idx) const                 = 0;
   virtual std::string serialize_member(size_t idx) const                = 0;

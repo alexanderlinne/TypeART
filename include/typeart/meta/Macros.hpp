@@ -84,6 +84,8 @@
   }                                                                                                              \
   virtual ~KIND();                                                                                               \
                                                                                                                  \
+  const char* get_ref_name(size_t idx) const override;                                                           \
+                                                                                                                 \
   size_t get_member_count() const override;                                                                      \
   const char* get_member_name(size_t idx) const override;                                                        \
   std::string serialize_member(size_t idx) const override;                                                       \
@@ -177,6 +179,20 @@
 #define META_IMPL_MEMBER_COMPARE(R, DATA, ELEM) \
   &&META_CAT2(get_, BOOST_PP_TUPLE_ELEM(1, ELEM))() == other_casted->META_CAT2(get_, BOOST_PP_TUPLE_ELEM(1, ELEM))()
 
+#define META_IMPL_REF_NAME_STRING(ELEM) BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(1, ELEM))
+
+#define META_IMPL_REF_NAME_REF(ELEM) BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2, ELEM))
+
+#define META_IMPL_REF_NAME_TUPLE(ELEM) BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2, ELEM))
+
+#define META_IMPL_REF_NAME_OPTIONAL(ELEM) BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2, ELEM))
+
+#define META_IMPL_REF_NAME_OVERLOAD(ELEM) BOOST_PP_CAT(META_IMPL_REF_NAME_, BOOST_PP_TUPLE_ELEM(0, ELEM))(ELEM)
+
+#define META_IMPL_REF_NAME(R, DATA, I, ELEM) \
+  case I:                                    \
+    return META_IMPL_REF_NAME_OVERLOAD(ELEM);
+
 #define META_IMPL_MEMBER_NAME(R, DATA, I, ELEM) \
   case I:                                       \
     return BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(1, ELEM));
@@ -202,6 +218,14 @@
   }                                                                                                                \
                                                                                                                    \
   KIND::~KIND() {                                                                                                  \
+  }                                                                                                                \
+                                                                                                                   \
+  const char* KIND::get_ref_name(size_t idx) const {                                                               \
+    switch (idx) {                                                                                                 \
+      BOOST_PP_LIST_FOR_EACH_I(META_IMPL_REF_NAME, KIND, BOOST_PP_ARRAY_TO_LIST(REFS))                             \
+      default:                                                                                                     \
+        abort();                                                                                                   \
+    }                                                                                                              \
   }                                                                                                                \
                                                                                                                    \
   size_t KIND::get_member_count() const {                                                                          \

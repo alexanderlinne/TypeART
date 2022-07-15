@@ -148,7 +148,14 @@ struct MappingTraits<std::unique_ptr<meta::Meta>> {
       tuple->get_refs().resize(size);
     }
     if (value != nullptr) {
-      io.mapRequired("refs", self->get_refs());
+      if (auto tuple = meta::dyn_cast<meta::TupleBase>(self)) {
+        io.mapRequired("refs", self->get_refs());
+      } else {
+        auto& refs = self->get_refs();
+        for (size_t i = 0; i < refs.size(); ++i) {
+          io.mapRequired(self->get_ref_name(i), *(MetaWrapper*)&refs[i]);
+        }
+      }
     }
     if (auto string = meta::dyn_cast<meta::String>(self)) {
       auto data = string->get_data();
