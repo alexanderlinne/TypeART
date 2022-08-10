@@ -15,6 +15,8 @@
 #include "CommandLine.h"
 #include "instrumentation/allocator/ArgumentParser.h"
 #include "instrumentation/allocator/InstrumentationStrategy.h"
+#include "instrumentation/hybrid/ArgumentParser.h"
+#include "instrumentation/hybrid/InstrumentationStrategy.h"
 #include "instrumentation/tracker/ArgumentParser.h"
 #include "instrumentation/tracker/InstrumentationStrategy.h"
 #include "support/Logger.hpp"
@@ -77,12 +79,17 @@ bool TypeArtPass::doInitialization(llvm::Module& m) {
   converter = std::make_unique<meta::LLVMMetadataConverter>(*db);
 
 #ifdef TYPEART_USE_ALLOCATOR
-  auto parser   = std::make_unique<instrumentation::allocator::ArgumentParser>(m, *converter);
-  auto strategy = std::make_unique<instrumentation::allocator::InstrumentationStrategy>(m, cl::getInstrumentStackLifetime());
-#else
+  auto parser = std::make_unique<instrumentation::allocator::ArgumentParser>(m, *converter);
+  auto strategy =
+      std::make_unique<instrumentation::allocator::InstrumentationStrategy>(m, cl::getInstrumentStackLifetime());
+#elifdef TYPEART_USE_TRACKER
   auto parser = std::make_unique<instrumentation::tracker::ArgumentParser>(m, *converter);
   auto strategy =
       std::make_unique<instrumentation::tracker::InstrumentationStrategy>(m, cl::getInstrumentStackLifetime());
+#else
+  auto parser = std::make_unique<instrumentation::hybrid::ArgumentParser>(m, *converter);
+  auto strategy =
+      std::make_unique<instrumentation::hybrid::InstrumentationStrategy>(m, cl::getInstrumentStackLifetime());
 #endif
 
   instrumentation = std::make_unique<instrumentation::TypeArtInstrumentation>(std::move(parser), std::move(strategy));
@@ -110,7 +117,7 @@ bool TypeArtPass::runOnModule(llvm::Module& m) {
 bool TypeArtPass::runOnFunc(llvm::Function& f) {
   using namespace typeart;
 
-#ifdef TYPEART_USE_ALLOCATOR
+#if defined(TYPEART_USE_ALLOCATOR) || defined(TYPEART_USE_HYBRID)
   if (f.getName().equals("main")) {
     addPreinitCall(*f.getParent());
   }

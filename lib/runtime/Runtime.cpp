@@ -20,7 +20,7 @@
 #include "support/Logger.hpp"
 #include "support/System.hpp"
 
-#ifdef TYPEART_USE_ALLOCATOR
+#if defined(TYPEART_USE_ALLOCATOR) || defined(TYPEART_USE_HYBRID)
 #include "allocator/Allocator.hpp"
 #endif
 
@@ -175,8 +175,13 @@ cpp::result<PointerInfo, Status> PointerInfo::get(pointer addr) {
   getRecorder().incUsedInRequest(addr);
 #ifdef TYPEART_USE_ALLOCATOR
   auto pointer_info_opt = allocator::getPointerInfo(addr);
-#else
+#elifdef TYPEART_USE_TRACKER
   auto pointer_info_opt = tracker::Tracker::get().getPointerInfo(addr);
+#else
+  auto pointer_info_opt = allocator::getPointerInfo(addr);
+  if (!pointer_info_opt.has_value()) {
+    pointer_info_opt = tracker::Tracker::get().getPointerInfo(addr);
+  }
 #endif
   if (!pointer_info_opt.has_value()) {
     getRecorder().incAddrMissing(addr);

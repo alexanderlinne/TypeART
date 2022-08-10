@@ -111,6 +111,8 @@ static Region regions[region_count];
 
 bool initialized = false;
 
+// For the hybrid instrumentation we just disable the initialization of the heap allocator
+#ifdef TYPEART_USE_ALLOCATOR
 __attribute__((constructor)) void ctor() {
   begin = reserve_virtual_memory(virtual_memory_size);
   end   = (int8_t*)begin + virtual_memory_size;
@@ -132,6 +134,7 @@ __attribute__((constructor)) void ctor() {
 __attribute__((destructor)) void dtor() {
   initialized = false;
 }
+#endif
 
 constexpr static size_t index_for(size_t size) {
   const auto region_idx = 64 - (size_t)__builtin_clzll(size) + 1;

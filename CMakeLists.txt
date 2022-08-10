@@ -30,7 +30,7 @@ list(
 
 include(typeartToolchainOptions)
 
-if(TYPEART_USE_ALLOCATOR)
+if(TYPEART_USE_ALLOCATOR OR TYPEART_USE_HYBRID)
   if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64")
     message(STATUS "Building for system architecture ${CMAKE_SYSTEM_PROCESSOR}")
     enable_language(ASM)

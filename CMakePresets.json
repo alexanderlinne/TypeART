@@ -21,6 +21,13 @@
       }
     },
     {
+      "name": "hybrid",
+      "hidden": true,
+      "cacheVariables": {
+        "TYPEART_INSTRUMENTATION": "Hybrid"
+      }
+    },
+    {
       "name": "clang-toolchain",
       "hidden": true,
       "generator": "Unix Makefiles",
@@ -102,6 +109,12 @@
       "displayName": "Release config w/ Tracker",
       "description": "Release build options for Clang with Tracker instrumentation",
       "inherits": ["clang-toolchain", "release", "tracker"]
+    },
+    {
+      "name": "release-hybrid",
+      "displayName": "Release config w/ Hybrid Instrumentation",
+      "description": "Release build options for Clang with Tracker instrumentation",
+      "inherits": ["clang-toolchain", "release", "hybrid"]
     },
     {
       "name": "release-counter",

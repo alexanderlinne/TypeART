@@ -52,6 +52,7 @@ __attribute__((constructor)) void preload_init() {
 // Preloaded functions
 extern "C" {
 
+#ifdef TYPEART_USE_ALLOCATOR
 void free(void* ptr) {
   using namespace typeart;
   if (!preload::actual_free) {
@@ -61,6 +62,7 @@ void free(void* ptr) {
     preload::actual_free(ptr);
   }
 }
+#endif
 
 int pthread_create(pthread_t* thread, const pthread_attr_t* attr, void* (*start_routine)(void*), void* arg) {
   using namespace typeart;

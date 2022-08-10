@@ -34,6 +34,9 @@ target_include_directories(${TYPEART_PREFIX}_Preload SYSTEM PRIVATE ${LLVM_INCLU
 target_compile_definitions(
   ${TYPEART_PREFIX}_Preload
   PRIVATE LOG_LEVEL=${TYPEART_LOG_LEVEL_RT}
+          $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:TYPEART_USE_ALLOCATOR>
+          $<$<BOOL:${TYPEART_USE_TRACKER}>:TYPEART_USE_TRACKER>
+          $<$<BOOL:${TYPEART_USE_HYBRID}>:TYPEART_USE_HYBRID>
 )
 
 typeart_target_compile_options(${TYPEART_PREFIX}_Preload)

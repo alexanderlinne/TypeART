@@ -11,6 +11,8 @@ set(PASS_SOURCES
   instrumentation/common/TypeARTFunctions.cpp
   instrumentation/tracker/ArgumentParser.cpp
   instrumentation/tracker/InstrumentationStrategy.cpp
+  instrumentation/hybrid/ArgumentParser.cpp
+  instrumentation/hybrid/InstrumentationStrategy.cpp
   instrumentation/TypeARTInstrumentation.cpp
 )
 
@@ -41,6 +43,8 @@ target_link_libraries(
 target_compile_definitions(
   ${TYPEART_PREFIX}_TransformPass PRIVATE TYPEART_LOG_LEVEL=${TYPEART_LOG_LEVEL}
                         $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:TYPEART_USE_ALLOCATOR>
+                        $<$<BOOL:${TYPEART_USE_TRACKER}>:TYPEART_USE_TRACKER>
+                        $<$<BOOL:${TYPEART_USE_HYBRID}>:TYPEART_USE_HYBRID>
                         $<$<BOOL:${TYPEART_SHOW_STATS}>:LLVM_FORCE_ENABLE_STATS=1>
 )
 
