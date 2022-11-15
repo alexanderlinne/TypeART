@@ -1,4 +1,5 @@
-// RUN: echo --- > types.yaml
+// RUN: echo --- > %s.types.yaml
+// RUN: export TYPEART_TYPE_FILE="%s.types.yaml"
 // RUN: %wrapper-mpicxx -g %s -o %s.exe
 // RUN: %mpi-exec -np 1 %s.exe 2>&1 | %filecheck %s
 
@@ -9,15 +10,17 @@
 // REQUIRES: mpicxx
 // UNSUPPORTED: sanitizer
 
-#include "../../lib/runtime/CallbackInterface.h"
-
 #include <mpi.h>
+#include <stdio.h>
 
 int main(int argc, char** argv) {
   MPI_Init(&argc, &argv);
-  __typeart_alloc((const void*)2, 7, 1);  // OK
+  int i;
+  fprintf(stderr, "Expected pointer: %p\n", &i);
+  MPI_Bsend(&i, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
   MPI_Finalize();
   return 0;
 }
 
-// CHECK: [Trace] Alloc 0x2 7 float128 16 1
+// CHECK: R[0][Trace] Alloc [[PTR:0x[0-9a-f]+]] 2 int32 4 1
+// CHECK: Expected pointer: [[PTR]]

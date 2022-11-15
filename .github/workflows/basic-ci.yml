@@ -2,7 +2,7 @@ name: TypeART-CI
 
 on:
   push:
-    branches: [ master, devel ]
+    branches: [master, devel]
   pull_request:
 
 env:
@@ -44,7 +44,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm-version: [ 10, 11, 12 ]
+        llvm-version: [10, 11, 12]
         preset:
           - name: ci-thread-safe-safeptr
           - name: ci-thread-safe
@@ -58,6 +58,9 @@ jobs:
           - name: ci-libcxx
             libcxx: true
             skip_test: true
+          - name: ci-mpi
+          - name: ci-cov-mpi
+            coverage: true
 
     steps:
       - uses: actions/checkout@v2

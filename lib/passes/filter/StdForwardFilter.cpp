@@ -16,7 +16,7 @@
 #include "filter/FilterBase.h"
 #include "filter/FilterUtil.h"
 #include "filter/Matcher.h"
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Value.h"
@@ -58,13 +58,13 @@ FilterAnalysis filter::ForwardFilterImpl::precheck(Value* in, Function* start, c
   // These conditions (temp alloc and alloca reaches task)
   // are only interesting if filter just started (aka fpath is empty)
   if (isTempAlloc(in)) {
-    LOG_DEBUG("Alloca is a temporary " << *in);
+    LOG_DEBUG("Alloca is a temporary {}", *in);
     return FilterAnalysis::Filter;
   }
 
   if (llvm::AllocaInst* alloc = llvm::dyn_cast<AllocaInst>(in)) {
     if (alloc->getAllocatedType()->isStructTy() && omp::OmpContext::allocaReachesTask(alloc)) {
-      LOG_DEBUG("Alloca reaches task call " << *alloc)
+      LOG_DEBUG("Alloca reaches task call {}", *alloc);
       return FilterAnalysis::Filter;
     }
   }

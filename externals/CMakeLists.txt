@@ -8,6 +8,16 @@ mark_as_advanced(
   FETCHCONTENT_UPDATES_DISCONNECTED
 )
 
+if(TYPEART_MPI_INTERCEPT_LIB OR TYPEART_ABSEIL)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+if(TYPEART_MPI_INTERCEPT_LIB)
+  add_subdirectory(result)
+  add_subdirectory(fmt)
+  add_subdirectory(spdlog)
+endif()
+
 if(TYPEART_PHMAP)
   #set(CMAKE_POLICY_DEFAULT_CMP0076 NEW)
   add_subdirectory(phmap)

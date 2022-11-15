@@ -13,7 +13,7 @@
 #ifndef TYPEART_DEFUSECHAIN_H
 #define TYPEART_DEFUSECHAIN_H
 
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 #include "support/Util.h"
 
 #include "llvm/ADT/SmallPtrSet.h"
@@ -95,7 +95,7 @@ struct DefUseChain {
  public:
   template <typename CallBackF>
   void traverse(llvm::Value* start, CallBackF&& match) {
-    LOG_DEBUG("Start traversal for value: " << util::dump(*start));
+    LOG_DEBUG("Start traversal for value: {}", util::dump(*start));
     do_traverse<llvm::Value>([](auto val) -> llvm::Optional<decltype(val->users())> { return val->users(); }, start,
                              std::forward<CallBackF>(match));
     LOG_DEBUG("Finished traversal");
@@ -103,14 +103,14 @@ struct DefUseChain {
 
   template <typename Search, typename CallBackF>
   void traverse_custom(llvm::Value* start, Search&& s, CallBackF&& match) {
-    LOG_DEBUG("Start traversal for value: " << util::dump(*start));
+    LOG_DEBUG("Start traversal for value: {}", util::dump(*start));
     do_traverse<llvm::Value>(std::forward<Search>(s), start, std::forward<CallBackF>(match));
     LOG_DEBUG("Finished traversal");
   }
 
   template <typename CallBackF>
   void traverse_with_store(llvm::Value* start, CallBackF&& match) {
-    LOG_DEBUG("Start traversal for value: " << util::dump(*start));
+    LOG_DEBUG("Start traversal for value: {}", util::dump(*start));
     do_traverse<llvm::Value>(
         [](auto val) -> llvm::Optional<decltype(val->users())> {
           if (auto cinst = llvm::dyn_cast<llvm::StoreInst>(val)) {

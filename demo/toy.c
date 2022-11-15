@@ -1,7 +1,7 @@
-#include <RuntimeInterface.h>
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <typeart/TypeART.h>
 
 struct test {
   int a;
@@ -21,8 +21,7 @@ int main(int argc, char** argv) {
   struct test mystruct[5];
 #endif
 
-  int type     = 0;
-  size_t count = 0;
+  typeart_pointer_info pointer_info;
 
 #ifdef NOSTACK
   int* buffer = malloc(sizeof(int) * 50);
@@ -30,56 +29,57 @@ int main(int argc, char** argv) {
   int buffer[50];
 #endif
 
-  typeart_status status = typeart_get_type(mystruct, &type, &count);
+  typeart_status status = typeart_get_pointer_info(mystruct, &pointer_info);
 
   if (status == TYPEART_OK)
-    printf("type (id=%i), count=%lu\n", type, count);
+    printf("type (id=%i), count=%lu\n", pointer_info.type_id, pointer_info.count);
   else
     printf("[Demo] Toy Error: %i\n", status);
 
-  status = typeart_get_type(&(mystruct[2].e), &type, &count);
+  status = typeart_get_pointer_info(&(mystruct[2].e), &pointer_info);
 
   if (status == TYPEART_OK)
-    printf("(sub) type (id=%i), count=%lu\n", type, count);
+    printf("(sub) type (id=%i), count=%lu\n", pointer_info.type_id, pointer_info.count);
   else
     printf("[Demo] Toy Error: %i\n", status);
 
-  status = typeart_get_type(&(mystruct[2].e), &type, &count);
+  status = typeart_get_pointer_info(&(mystruct[2].e), &pointer_info);
 
   if (status == TYPEART_OK)
-    printf("type (id=%i), count=%lu\n", type, count);
+    printf("type (id=%i), count=%lu\n", pointer_info.type_id, pointer_info.count);
   else
     printf("[Demo] Toy Error: %i\n", status);
 
-  status = typeart_get_type(&(mystruct[2].c), &type, &count);
+  status = typeart_get_pointer_info(&(mystruct[2].c), &pointer_info);
 
   if (status == TYPEART_OK)
-    printf("(sub) type (id=%i), count=%lu\n", type, count);
+    printf("(sub) type (id=%i), count=%lu\n", pointer_info.type_id, pointer_info.count);
   else
     printf("[Demo] Toy Error: %i\n", status);
 
-  status = typeart_get_type(&(mystruct[2].c), &type, &count);
+  status = typeart_get_pointer_info(&(mystruct[2].c), &pointer_info);
 
   if (status == TYPEART_OK)
-    printf("type (id=%i), count=%lu\n", type, count);
+    printf("type (id=%i), count=%lu\n", pointer_info.type_id, pointer_info.count);
   else
     printf("[Demo] Toy Error: %i\n", status);
 
-  const void* base_address;
   size_t offset;
-  status = typeart_get_containing_type(&(mystruct[2].c), &type, &count, &base_address, &offset);
+  status = typeart_get_containing_info(&(mystruct[2].c), &pointer_info, &offset);
 
   if (status == TYPEART_OK)
-    printf("containing_type (id=%i), count=%lu, %p, %lu\n", type, count, base_address, offset);
+    printf("containing_type (id=%i), count=%lu, %p, %lu\n", pointer_info.type_id, pointer_info.count,
+           pointer_info.base_addr, offset);
   else
     printf("[Demo] Toy Error: %i\n", status);
 
   printf("buffer\n");
 
-  status = typeart_get_containing_type(&(buffer[20]), &type, &count, &base_address, &offset);
+  status = typeart_get_containing_info(&(buffer[20]), &pointer_info, &offset);
 
   if (status == TYPEART_OK)
-    printf("containing_type (id=%i), count=%lu, %p, %lu\n", type, count, base_address, offset);
+    printf("containing_type (id=%i), count=%lu, %p, %lu\n", pointer_info.type_id, pointer_info.count,
+           pointer_info.base_addr, offset);
   else
     printf("[Demo] Toy Error: %i\n", status);
 

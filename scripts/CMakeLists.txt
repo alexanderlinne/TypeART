@@ -19,22 +19,27 @@ function(typeart_configure_script input output)
     set(TYPEART_ANALYSIS_PASS_DIR
         ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}
     )
+    set(TYPEART_PRELOAD_DIR
+        ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}
+    )
     set(TYPEART_BINARY_DIR -I${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR})
     set(TYPEART_RELOCATABLE 1)
   else()
     set(TYPEART_INCLUDE_DIRS
-        "-I${PROJECT_SOURCE_DIR}/lib/typelib -I${PROJECT_SOURCE_DIR}/lib/runtime -I${PROJECT_SOURCE_DIR}/lib/passes/typegen"
+        "-I${PROJECT_SOURCE_DIR}/install/typeart/include"
     )
     if(LIBRARY_OUTPUT_PATH)
       set(TYPEART_MPI_INTERCEPT_DIR ${LIBRARY_OUTPUT_PATH})
       set(TYPEART_RT_DIR ${LIBRARY_OUTPUT_PATH})
       set(TYPEART_PASS_DIR ${LIBRARY_OUTPUT_PATH})
       set(TYPEART_ANALYSIS_PASS_DIR ${LIBRARY_OUTPUT_PATH})
+      set(TYPEART_PRELOAD_DIR ${LIBRARY_OUTPUT_PATH})
     else()
       set(TYPEART_MPI_INTERCEPT_DIR ${CMAKE_BINARY_DIR}/lib/mpi_interceptor)
       set(TYPEART_RT_DIR ${CMAKE_BINARY_DIR}/lib/runtime)
       set(TYPEART_PASS_DIR ${CMAKE_BINARY_DIR}/lib/passes)
       set(TYPEART_ANALYSIS_PASS_DIR ${TYPEART_PASS_DIR}/analysis)
+      set(TYPEART_PRELOAD_DIR ${CMAKE_BINARY_DIR}/lib/preload)
     endif()
 
     if(EXECUTABLE_OUTPUT_PATH)
@@ -47,12 +52,14 @@ function(typeart_configure_script input output)
   endif()
 
   # TODO use generator in the scripts, even if target does not exist. How?
-  set(TYPEART_MPI_TOOL "typeartMPITool.so")
+  set(TYPEART_MPI_TOOL "libtypeartMPITool${CMAKE_DEBUG_POSTFIX}.so")
   if(TARGET typeart::MPITool)
     set(TYPEART_HAS_MPI_TOOL 1)
   else()
     set(TYPEART_HAS_MPI_TOOL 0)
   endif()
+
+  set(TYPEART_PRELOAD_LIB "libtypeartPreload${CMAKE_DEBUG_POSTFIX}.so")
 
   if(ARG_COMPILER)
     set(TYPEART_COMPILER ${ARG_COMPILER})

@@ -30,16 +30,23 @@ list(
 
 include(typeartToolchainOptions)
 
+if(TYPEART_USE_ALLOCATOR OR TYPEART_USE_HYBRID)
+  if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64")
+    message(STATUS "Building for system architecture ${CMAKE_SYSTEM_PROCESSOR}")
+    enable_language(ASM)
+  else()
+    message(FATAL_ERROR "The allocator instrumentation currently only supports x86_64! (Current processor is ${CMAKE_SYSTEM_PROCESSOR})")
+  endif()
+endif()
+
 typeart_add_format_target(
   typeart-format-sources "Formats project source files"
-  TARGETS lib/passes/*.cpp
-          lib/passes/*.h
-          lib/runtime/*.cpp
-          lib/runtime/*.h
-          lib/typelib/*.cpp
-          lib/typelib/*.h
-          lib/support/*.cpp
-          lib/support/*.h
+  TARGETS lib/**/*.h
+          lib/**/*.hpp
+          lib/**/*.c
+          lib/**/*.cpp
+          "include/**/*.hpp"
+          "include/**/*.h"
           demo/*.c
           demo/*.h
 )
@@ -67,6 +74,10 @@ configure_package_config_file(
             LIBRARY_INSTALL_DIR
             BINARY_INSTALL_DIR
             CMAKE_INSTALL_DIR
+)
+
+install(DIRECTORY include/
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake

@@ -48,7 +48,7 @@ MPI_Send((void*) array, length, MPI_DOUBLE, ...)
 
 MUST and TypeART also handle MPI [derived datatypes](https://www.mpi-forum.org/docs/mpi-3.1/mpi31-report/node77.htm)
 with complex underlying data structures, see our [MPI Demo](#13-example-mpi-demo). For more details, see
-our [publications](#references), or download the current release of MUST (1.8 or higher has TypeART integrated) on
+our [publications](#references), view the [documentation of the MPI Interceptor Library](lib/mpi_interceptor/README.md), or download the current release of MUST (1.8 or higher has TypeART integrated) on
 its [project page](https://itc.rwth-aachen.de/must/).
 
 ## Table of Contents
@@ -356,7 +356,7 @@ $> cmake --build build --target install --parallel
 | `TYPEART_ABSEIL`       |  `ON`   | Enable usage of btree-backed map of the [Abseil project](https://abseil.io/) (LTS release) for storing allocation data. |
 | `TYPEART_PHMAP`        |  `OFF`  | Enable usage of a [btree-backed map](https://github.com/greg7mdp/parallel-hashmap) (alternative to Abseil).             |
 | `TYPEART_SOFTCOUNTERS` |  `OFF`  | Enable runtime tracking of #tracked addrs. / #distinct checks / etc.                                                    |
-| `TYPEART_LOG_LEVEL_RT` |   `0`   | Granularity of runtime logger. 3 is most verbose, 0 is least.                                                           |
+| `TYPEART_LOG_LEVEL_RT` |   `1`   | Granularity of runtime logger. 3 is most verbose, 0 is least.                                                           |
 
 <!--- @formatter:on --->
 

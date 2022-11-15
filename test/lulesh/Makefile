@@ -10,7 +10,7 @@ MPICXX = OMPI_CXX=clang++ mpic++ -DUSE_MPI=1
 CXX = $(MPICXX)
 
 TYPEART_LIBPATH = ${TYPEART_PATH}/lib
-LTYPEART_RT= -L$(TYPEART_LIBPATH)/runtime -ltypeart-rt
+LTYPEART_RT= -L$(TYPEART_LIBPATH)/runtime -ltypeartRuntime-d
 
 SOURCES2.0 = \
 	lulesh.cc \
@@ -24,7 +24,7 @@ OBJECTS2.0 = $(SOURCES2.0:.cc=.o)
 CXXFLAGS = -g -I. -Wall
 LDFLAGS = -g -O3
 
-PASSES=-load ${TYPEART_LIBPATH}/passes/analysis/meminstfinderpass.so -load ${TYPEART_LIBPATH}/passes/typeartpass.so -typeart-stats
+PASSES=-load ${TYPEART_LIBPATH}/passes/analysis/meminstfinderpass-d.so -load ${TYPEART_LIBPATH}/passes/typeartpass-d.so -typeart-stats
 CALL_FILTER=-typeart-call-filter -typeart-call-filter-impl=default
 
 ifeq ($(TSAN), yes)

@@ -1,4 +1,5 @@
 set(TYPEART_META_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/Version.cpp)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_custom_command(
   OUTPUT ${TYPEART_META_SOURCE}
@@ -15,19 +16,17 @@ add_custom_command(
   COMMENT "Generates TypeART meta data API."
 )
 
+set(RUNTIME_LIB_ALLOCATOR_SOURCES
+    allocator/Allocator.cpp
+    allocator/Allocator.S
+    allocator/CallbackInterface.cpp
+)
+
 set(RUNTIME_LIB_SOURCES
-    AccessCounter.h
-    CallbackInterface.h
-    RuntimeData.h
-    RuntimeInterface.h
-    TypeResolution.cpp
-    AllocationTracking.cpp
-    AllocationTracking.h
-    TypeResolution.h
     Runtime.cpp
-    Runtime.h
-    ${TYPEART_META_SOURCE}
-    $<$<BOOL:${TYPEART_MPI_LOGGER}>:../support/MPILogger.cpp>
+    tracker/CallbackInterface.cpp
+    tracker/Tracker.cpp
+    $<$<OR:$<BOOL:${TYPEART_USE_ALLOCATOR}>,$<BOOL:${TYPEART_USE_HYBRID}>>:${RUNTIME_LIB_ALLOCATOR_SOURCES}>
 )
 
 add_library(${TYPEART_PREFIX}_Runtime SHARED ${RUNTIME_LIB_SOURCES})
@@ -41,24 +40,24 @@ add_library(typeart::Runtime ALIAS ${TYPEART_PREFIX}_Runtime)
 
 target_link_libraries(
   ${TYPEART_PREFIX}_Runtime
-  PRIVATE typeart::TypesStatic
+  PRIVATE typeart::MetaStatic
           typeart::SystemStatic
           LLVMCore
           LLVMSupport
-          $<$<BOOL:${TYPEART_MPI_LOGGER}>:MPI::MPI_CXX>
           $<$<BOOL:${TYPEART_PHMAP}>:phpmap::phpmap>
           $<$<BOOL:${TYPEART_ABSEIL}>:absl::btree>
           $<$<BOOL:${TYPEART_SAFEPTR}>:sf::pointer>
           $<$<NOT:$<BOOL:${TYPEART_DISABLE_THREAD_SAFETY}>>:Threads::Threads>
+          fmt::fmt
+          result::result
 )
 
 target_include_directories(
-  ${TYPEART_PREFIX}_Runtime ${warning_guard}
-  PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}>
-         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/runtime>
-         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/typelib>
-  PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/passes/support>
-          $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
+  ${TYPEART_PREFIX}_Runtime
+  PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
+          $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/typeart>
 )
 
 target_include_directories(${TYPEART_PREFIX}_Runtime SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
@@ -66,8 +65,10 @@ target_include_directories(${TYPEART_PREFIX}_Runtime SYSTEM PRIVATE ${LLVM_INCLU
 target_compile_definitions(
   ${TYPEART_PREFIX}_Runtime
   PRIVATE TYPEART_LOG_LEVEL=${TYPEART_LOG_LEVEL_RT}
-          $<$<BOOL:${TYPEART_MPI_LOGGER}>:TYPEART_MPI_LOGGER=1>
-          $<$<BOOL:${TYPEART_SOFTCOUNTERS}>:ENABLE_SOFTCOUNTER=1>
+          $<$<BOOL:${TYPEART_USE_ALLOCATOR}>:TYPEART_USE_ALLOCATOR>
+          $<$<BOOL:${TYPEART_USE_TRACKER}>:TYPEART_USE_TRACKER>
+          $<$<BOOL:${TYPEART_USE_HYBRID}>:TYPEART_USE_HYBRID>
+          $<$<BOOL:${TYPEART_SOFTCOUNTERS}>:ENABLE_SOFTCOUNTER>
           $<$<BOOL:${TYPEART_PHMAP}>:TYPEART_PHMAP>
           $<$<BOOL:${TYPEART_ABSEIL}>:TYPEART_ABSEIL>
           $<$<BOOL:${TYPEART_SAFEPTR}>:USE_SAFEPTR>
@@ -94,10 +95,6 @@ make_tidy_check(${TYPEART_PREFIX}_Runtime "${RUNTIME_LIB_SOURCES}")
 
 set(CONFIG_NAME ${PROJECT_NAME}Runtime)
 set(TARGETS_EXPORT_NAME ${CONFIG_NAME}Targets)
-
-install(FILES RuntimeInterface.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
-)
 
 install(
   TARGETS ${TYPEART_PREFIX}_Runtime

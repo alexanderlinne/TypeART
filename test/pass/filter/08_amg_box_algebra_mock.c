@@ -1,7 +1,7 @@
 // This file tests for an specific endless recursion in the filter implementations w.r.t. following store targets
 // RUN: %c-to-llvm -fno-discard-value-names %s | %opt -O3 -S \
-// RUN: | %apply-typeart -typeart-stack -typeart-call-filter -S 2>&1 \
-// RUN: | %filecheck %s --check-prefix=CHECK-exp-default-opt
+// RUN: | %apply-typeart -typeart-stack -typeart-call-filter -S > %s.log 2>&1
+// RUN: cat %s.log | %filecheck %s --check-prefix=CHECK-exp-default-opt
 
 // CHECK-exp-default-opt: TypeArtPass [Heap & Stack]
 // CHECK-exp-default-opt-next: Malloc :   1

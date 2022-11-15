@@ -9,7 +9,14 @@ add_custom_command(
   COMMENT "Generate PMPI wrapper"
 )
 
-add_library(${TYPEART_PREFIX}_MPITool SHARED ${LIB_SOURCE})
+add_library(${TYPEART_PREFIX}_MPITool SHARED
+  ${LIB_SOURCE}
+  Config.cpp
+  InterceptorFunctions.cpp
+  Logger.cpp
+  TypeCheck.cpp
+  Util.cpp
+)
 set_property(TARGET ${TYPEART_PREFIX}_MPITool PROPERTY OUTPUT_NAME "${PROJECT_NAME}MPITool")
 add_library(typeart::MPITool ALIAS ${TYPEART_PREFIX}_MPITool)
 
@@ -18,10 +25,13 @@ set_property(TARGET ${TYPEART_PREFIX}_MPITool PROPERTY C_STANDARD_REQUIRED TRUE)
 
 typeart_target_define_file_basename(${TYPEART_PREFIX}_MPITool)
 
-target_include_directories(${TYPEART_PREFIX}_MPITool ${warning_guard}
-  PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}>
+target_include_directories(${TYPEART_PREFIX}_MPITool SYSTEM
+  PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+          $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
+target_include_directories(${TYPEART_PREFIX}_MPITool
+  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
 target_include_directories(${TYPEART_PREFIX}_MPITool
@@ -35,7 +45,16 @@ endif()
 
 target_link_libraries(${TYPEART_PREFIX}_MPITool
   PRIVATE typeart::Runtime
-          MPI::MPI_C
+          typeart::SystemStatic
+          MPI::MPI_CXX
+          result::result
+          fmt::fmt
+          spdlog::spdlog
+)
+
+target_compile_definitions(
+  ${TYPEART_PREFIX}_MPITool
+  PRIVATE TYPEART_LOG_LEVEL=${TYPEART_LOG_LEVEL_RT}
 )
 
 set(CONFIG_NAME ${PROJECT_NAME}${TYPEART_PREFIX}_MPITool)

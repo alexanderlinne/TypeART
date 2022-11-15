@@ -2,9 +2,9 @@
 // XFAIL: *
 
 #include <stddef.h>
-void __typeart_leave_scope(size_t alloca_count);
+void typeart_tracker_leave_scope(size_t alloca_count);
 
 int main(void) {
-  __typeart_leave_scope(0);
+  typeart_tracker_leave_scope(0);
   return 0;
 }

@@ -10,13 +10,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#ifndef TYPEART_MEMOPDATA_H
-#define TYPEART_MEMOPDATA_H
+#pragma once
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/IR/DebugInfo.h"
 
 namespace llvm {
 class CallBase;
@@ -132,6 +132,8 @@ struct MallocData {
   llvm::Optional<ArrayCookieData> array_cookie{llvm::None};
   llvm::BitCastInst* primary{nullptr};  // Non-null if non (void*) cast exists
   llvm::SmallPtrSet<llvm::BitCastInst*, 4> bitcasts;
+  llvm::DILocation* location = nullptr;
+  llvm::DIType* type         = nullptr;
   MemOpKind kind;
   bool is_invoke{false};
 };
@@ -147,11 +149,14 @@ struct AllocaData {
   llvm::AllocaInst* alloca{nullptr};
   size_t array_size;
   bool is_vla{false};
+  llvm::DILocation* location            = nullptr;
+  llvm::DILocalVariable* local_variable = nullptr;
   llvm::SmallPtrSet<llvm::IntrinsicInst*, 4> lifetime_start{};
 };
 
 struct GlobalData {
   llvm::GlobalVariable* global{nullptr};
+  llvm::DIGlobalVariable* global_variable = nullptr;
 };
 
 using GlobalDataList = llvm::SmallVector<GlobalData, 8>;
@@ -160,4 +165,3 @@ using FreeDataList   = llvm::SmallVector<FreeData, 8>;
 using AllocaDataList = llvm::SmallVector<AllocaData, 8>;
 
 }  // namespace typeart
-#endif  // TYPEART_MEMOPDATA_H

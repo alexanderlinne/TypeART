@@ -15,6 +15,7 @@ function clean_up() {
 
 clean_up "$1"
 
+export TYPEART_TYPE_FILE="$1.types.yaml"
 TYPEART_WRAPPER=OFF cmake -B "$1" -S "$2"/../../demo -DCMAKE_C_COMPILER="$3"
 cmake --build "$1" --target "$4"
 

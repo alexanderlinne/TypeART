@@ -2,7 +2,7 @@ name: TypeART-CI-ext
 
 on:
   push:
-    branches: [ master, devel ]
+    branches: [master, devel]
   pull_request:
 
 env:
@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm-version: [ 10, 12 ]
+        llvm-version: [10, 12]
         preset:
           - name: release-counter
           - name: release-safeptr-counter
@@ -61,7 +61,9 @@ jobs:
 
       - name: Setup tests
         working-directory: test-bench
-        run: cmake -B build -DLOG_PATH=${GITHUB_WORKSPACE}/test-bench/artifact-${{ matrix.llvm-version }} -DUSE_WRAPPER=ON
+        run: >
+          cmake -B build -DLOG_PATH=${GITHUB_WORKSPACE}/test-bench/artifact-${{ matrix.llvm-version }} -DUSE_WRAPPER=ON
+          -DLOG_FILTER="/R\[[0-9]\]\[Error\]T\[[0-9]\+\] at 0x[0-9a-f]\+: MPI_Allreduce: type error while checking recv-buffer 0x[0-9a-f]\+ of type \[1 x int64\] against 2 elements of MPI type \\\"MPI_FLOAT\\\": expected a type matching MPI type \\\"MPI_FLOAT\\\", but found type \\\"int64\\\"/d"
 
       - name: Run lulesh
         working-directory: test-bench/build
@@ -80,15 +82,17 @@ jobs:
         run: ctest -V -R amg2013 -O amg2013_${{ matrix.llvm-version }}_build.log
 
       - name: Prepare artifact
+        if: ${{ always() }}
         run: |
-          mkdir -p artifact/bench
-          mv test-bench/build/*_build.log artifact/bench
-          mv test-bench/artifact-${{ matrix.llvm-version }} artifact/bench
+          mkdir -p artifact/$GITHUB_JOB/${{ matrix.preset.name }}-llvm-${{ matrix.llvm-version }}/
+          mv -v test-bench/build/*_build.log artifact/$GITHUB_JOB/${{ matrix.preset.name }}-llvm-${{ matrix.llvm-version }}/
+          mv -v test-bench/artifact-${{ matrix.llvm-version }}/* artifact/$GITHUB_JOB/${{ matrix.preset.name }}-llvm-${{ matrix.llvm-version }}/
 
       - name: Upload test-bench artifact
+        if: ${{ always() }}
         uses: actions/upload-artifact@v2
         with:
-          name: typeart-ci-ext
+          name: typeart-ci-ext-logs
           path: artifact
 
   run-AD-testbench:
@@ -97,10 +101,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm-version: [ 10, 12 ]
+        llvm-version: [10, 12]
         preset:
           - name: release-counter
           - name: release-unsafe-counter
+        include:
+          - llvm-version: 12
+            preset:
+              name: release-safeptr-counter
 
     steps:
       - uses: actions/checkout@v2
@@ -149,15 +157,17 @@ jobs:
         run: ctest -V -R lulesh -O ad-lulesh2.0_${{ matrix.llvm-version }}_build.log
 
       - name: Prepare artifact
+        if: ${{ always() }}
         run: |
-          mkdir -p artifact/ad-bench
-          mv ad-test-bench/build/*_build.log artifact/ad-bench
-          mv ad-test-bench/artifact-${{ matrix.llvm-version }} artifact/ad-bench
+          mkdir -p artifact/$GITHUB_JOB/${{ matrix.preset.name }}-llvm-${{ matrix.llvm-version }}/
+          mv -v ad-test-bench/build/*_build.log artifact/$GITHUB_JOB/${{ matrix.preset.name }}-llvm-${{ matrix.llvm-version }}/
+          mv -v ad-test-bench/artifact-${{ matrix.llvm-version }}/* artifact/$GITHUB_JOB/${{ matrix.preset.name }}-llvm-${{ matrix.llvm-version }}/
 
       - name: Upload AD test-bench artifact
+        if: ${{ always() }}
         uses: actions/upload-artifact@v2
         with:
-          name: typeart-ci-ext-ad
+          name: typeart-ci-ext-logs
           path: artifact
 
   run-OMP-testbench:
@@ -169,7 +179,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm-version: [ 10, 12 ]
+        llvm-version: [10, 12]
         preset:
           - name: release-counter
           - name: release-safeptr-counter
@@ -228,13 +238,15 @@ jobs:
         run: ctest -V -R amg2013 -O amg2013_${{ matrix.llvm-version }}_build.log
 
       - name: Prepare artifact
+        if: ${{ always() }}
         run: |
-          mkdir -p artifact/bench
-          mv omp-test-bench/build/*_build.log artifact/bench
-          mv omp-test-bench/artifact-${{ matrix.llvm-version }} artifact/bench
+          mkdir -p artifact/$GITHUB_JOB/${{ matrix.preset.name }}-llvm-${{ matrix.llvm-version }}/
+          mv -v omp-test-bench/build/*_build.log artifact/$GITHUB_JOB/${{ matrix.preset.name }}-llvm-${{ matrix.llvm-version }}/
+          mv -v omp-test-bench/artifact-${{ matrix.llvm-version }}/* artifact/$GITHUB_JOB/${{ matrix.preset.name }}-llvm-${{ matrix.llvm-version }}/
 
       - name: Upload omp-test-bench artifact
+        if: ${{ always() }}
         uses: actions/upload-artifact@v2
         with:
-          name: typeart-ci-ext-omp
+          name: typeart-ci-ext-logs
           path: artifact

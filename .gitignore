@@ -33,8 +33,14 @@ CMakeLists.txt.user
 # bin folder
 bin/
 
+# install folder
+install/
+
 # Misc folder
 .settings/
+
+# VSCode files
+.vscode/
 
 # Eclipse files
 .cproject
@@ -45,10 +51,11 @@ bin/
 
 # llvm-lit related
 test/**/Output/
-test/*/*.ll
+test/**/*.ll
 test/*/*.s
 test/*/*.o
 test/**/*.log
+test/**/a.out
 test/**/*.exe
 test/**/*.yaml
 test/**/*.profraw

@@ -26,8 +26,28 @@ set_package_properties(OpenMP PROPERTIES
   "OpenMP is optionally used by the test suite to verify that the LLVM passes handle OpenMPk codes."
 )
 
-set(TYPEART_LOG_LEVEL 0 CACHE STRING "Granularity of LLVM pass logger. 3 is most verbose, 0 is least.")
-set(TYPEART_LOG_LEVEL_RT 0 CACHE STRING "Granularity of runtime logger. 3 is most verbose, 0 is least.")
+find_package(Boost 1.56.0 REQUIRED)
+
+set(TYPEART_INSTRUMENTATION "Allocator" CACHE STRING "The instrumentation implementation used for type tracking. ('Allocator', 'Tracker' or 'Hybrid')")
+if (NOT ("${TYPEART_INSTRUMENTATION}" STREQUAL "Allocator") AND NOT ("${TYPEART_INSTRUMENTATION}" STREQUAL "Tracker") AND NOT ("${TYPEART_INSTRUMENTATION}" STREQUAL "Hybrid"))
+  message(FATAL_ERROR "Unknown instrumentation implementation '${TYPEART_INSTRUMENTATION}'")
+endif()
+if ("${TYPEART_INSTRUMENTATION}" STREQUAL "Allocator")
+  set(TYPEART_USE_ALLOCATOR ON)
+  set(TYPEART_USE_TRACKER OFF)
+  set(TYPEART_USE_HYBRID OFF)
+elseif("${TYPEART_INSTRUMENTATION}" STREQUAL "Tracker")
+  set(TYPEART_USE_ALLOCATOR OFF)
+  set(TYPEART_USE_TRACKER ON)
+  set(TYPEART_USE_HYBRID OFF)
+else()
+  set(TYPEART_USE_ALLOCATOR OFF)
+  set(TYPEART_USE_TRACKER OFF)
+  set(TYPEART_USE_HYBRID ON)
+endif()
+
+set(TYPEART_LOG_LEVEL 1 CACHE STRING "Granularity of LLVM pass logger. 5 ist most verbose, 0 is least.")
+set(TYPEART_LOG_LEVEL_RT 1 CACHE STRING "Granularity of runtime logger. 5 ist most verbose, 0 is least.")
 
 option(TYPEART_SHOW_STATS "Passes show the statistics vars." ON)
 add_feature_info(SHOW_STATS TYPEART_SHOW_STATS "Show compile time statistics of TypeART's LLVM passes.")
@@ -115,8 +135,8 @@ include(modules/sanitizer-targets)
 include(modules/target-util)
 
 if(TYPEART_TEST_CONFIG)
-  set(TYPEART_LOG_LEVEL 2 CACHE STRING "" FORCE)
-  set(TYPEART_LOG_LEVEL_RT 3 CACHE STRING "" FORCE)
+  set(TYPEART_LOG_LEVEL 4 CACHE STRING "" FORCE)
+  set(TYPEART_LOG_LEVEL_RT 5 CACHE STRING "" FORCE)
 endif()
 
 set(THREADS_PREFER_PTHREAD_FLAG 1)

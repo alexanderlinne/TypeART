@@ -13,10 +13,11 @@
 #ifndef TYPEART_ACCESSCOUNTPRINTER_H
 #define TYPEART_ACCESSCOUNTPRINTER_H
 
-#include "AccessCounter.h"
-#include "support/Logger.h"
+#include "runtime/AccessCounter.hpp"
+#include "runtime/tracker/Types.hpp"
 #include "support/Table.h"
 
+#include <fmt/core.h>
 #include <fstream>
 #include <map>
 #include <set>
@@ -30,18 +31,18 @@
 namespace typeart::softcounter {
 namespace memory {
 struct MemOverhead {
-  static constexpr auto pointerMapSize = sizeof(RuntimeT::PointerMap);  // Map overhead
+  static constexpr auto pointerMapSize = sizeof(tracker::RuntimeT::PointerMap);  // Map overhead
   static constexpr auto perNodeSizeMap =
-      64U + sizeof(RuntimeT::MapEntry);  // rough estimate, not applicable to btree; 64U is internal node size
-  static constexpr auto stackVectorSize  = sizeof(RuntimeT::Stack);       // Stack overhead
-  static constexpr auto perNodeSizeStack = sizeof(RuntimeT::StackEntry);  // Stack allocs
+      64U + sizeof(tracker::RuntimeT::MapEntry);  // rough estimate, not applicable to btree; 64U is internal node size
+  static constexpr auto stackVectorSize  = sizeof(tracker::RuntimeT::Stack);       // Stack overhead
+  static constexpr auto perNodeSizeStack = sizeof(tracker::RuntimeT::StackEntry);  // Stack allocs
   double stack{0};
   double map{0};
 };
 inline MemOverhead estimate(Counter stack_max, Counter heap_max, Counter global_max, const double scale = 1024.0) {
   MemOverhead mem;
   mem.stack = double(MemOverhead::stackVectorSize +
-                     MemOverhead::perNodeSizeStack * std::max<size_t>(RuntimeT::StackReserve, stack_max)) /
+                     MemOverhead::perNodeSizeStack * std::max<size_t>(tracker::RuntimeT::StackReserve, stack_max)) /
               scale;
   mem.map =
       double(MemOverhead::pointerMapSize + MemOverhead::perNodeSizeMap * (stack_max + heap_max + global_max)) / scale;
@@ -72,17 +73,16 @@ void serialize(const Recorder& r, std::ostringstream& buf) {
     t.put(Row::make("Total free stack", r.getStackAllocsFree(), r.getStackArrayFree()));
     t.put(Row::make("OMP Stack/Heap/Free", r.getOmpStackCalls(), r.getOmpHeapCalls(), r.getOmpFreeCalls()));
     t.put(Row::make("Null/Zero/NullZero Addr", r.getNullAlloc(), r.getZeroAlloc(), r.getNullAndZeroAlloc()));
-    t.put(Row::make("User-def. types", r.getNumUDefTypes()));
     t.put(Row::make("Estimated memory use (KiB)", size_t(std::round(memory_use.map + memory_use.stack))));
     t.put(Row::make("Bytes per node map/stack", memory::MemOverhead::perNodeSizeMap,
                     memory::MemOverhead::perNodeSizeStack));
 
     t.print(buf);
 
-    std::set<int> type_id_set;
-    const auto fill_set = [&type_id_set](const auto& map) {
+    std::set<const meta::di::Type*> type_set;
+    const auto fill_set = [&type_set](const auto& map) {
       for (const auto& [key, val] : map) {
-        type_id_set.insert(key);
+        type_set.insert(key);
       }
     };
     fill_set(r.getHeapAlloc());
@@ -101,19 +101,24 @@ void serialize(const Recorder& r, std::ostringstream& buf) {
 
     Table type_table("Allocation type detail (heap, stack, global)");
     type_table.table_header = '#';
-    for (auto type_id : type_id_set) {
-      type_table.put(Row::make(std::to_string(type_id), count(r.getHeapAlloc(), type_id),
-                               count(r.getStackAlloc(), type_id), count(r.getGlobalAlloc(), type_id),
-                               typeart_get_type_name(type_id)));
+    for (auto type : type_set) {
+      if (type == nullptr) {
+        continue;
+      }
+      type_table.put(Row::make(type->get_pretty_name(), count(r.getHeapAlloc(), type), count(r.getStackAlloc(), type),
+                               count(r.getGlobalAlloc(), type)));
     }
 
     type_table.print(buf);
 
     Table type_table_free("Free allocation type detail (heap, stack)");
     type_table_free.table_header = '#';
-    for (auto type_id : type_id_set) {
-      type_table_free.put(Row::make(std::to_string(type_id), count(r.getHeapFree(), type_id),
-                                    count(r.getStackFree(), type_id), typeart_get_type_name(type_id)));
+    for (auto type : type_set) {
+      if (type == nullptr) {
+        continue;
+      }
+      type_table_free.put(
+          Row::make(type->get_pretty_name(), count(r.getHeapFree(), type), count(r.getStackFree(), type)));
     }
 
     type_table_free.print(buf);

@@ -10,9 +10,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "System.h"
+#include "support/System.hpp"
 
+#include <algorithm>
 #include <cstdio>
+#include <cxxabi.h>
+#include <dlfcn.h>
+#include <execinfo.h>
 #include <filesystem>
 #include <memory>
 #include <sstream>
@@ -127,7 +131,33 @@ class SourceLocHelper {
 
 }  // namespace system
 
+std::optional<BinaryLocation> BinaryLocation::create(const void* addr) {
+  if (addr == nullptr) {
+    return {};
+  }
+
+  const auto demangle = [](auto symbol_name) {
+    using demangle_result = std::unique_ptr<char, decltype(&std::free)>;
+    int status{0};
+    demangle_result result{abi::__cxa_demangle(symbol_name, NULL, NULL, &status), &std::free};
+
+    return result ? std::string{result.get()} : std::string{symbol_name};
+  };
+
+  Dl_info info;
+  if (dladdr(addr, &info) != 0) {
+    auto symbol_name = info.dli_sname != nullptr ? std::optional{demangle(info.dli_sname)} : std::nullopt;
+    return {BinaryLocation{std::string{info.dli_fname}, info.dli_fbase, symbol_name, info.dli_saddr}};
+  }
+
+  return {};
+}
+
 std::optional<SourceLocation> SourceLocation::create(const void* addr) {
+  if (addr == nullptr) {
+    return {};
+  }
+
   const auto pipe = [](const void* addr) -> std::optional<system::CommandPipe> {
     using namespace system;
     const auto& sloc_helper = SourceLocHelper::get();
@@ -135,7 +165,8 @@ std::optional<SourceLocation> SourceLocation::create(const void* addr) {
 
     if (sloc_helper.hasLLVMSymbolizer()) {
       std::ostringstream command;
-      command << "llvm-symbolizer --demangle --output-style=GNU -f -e " << proc.exe() << " " << addr;
+      command << "unset LD_PRELOAD && llvm-symbolizer --demangle --output-style=GNU -f -e " << proc.exe() << " "
+              << addr;
       auto llvm_symbolizer = system::CommandPipe::create(command.str());
       if (llvm_symbolizer) {
         return llvm_symbolizer;
@@ -144,7 +175,7 @@ std::optional<SourceLocation> SourceLocation::create(const void* addr) {
 
     if (sloc_helper.hasAddr2line()) {
       std::ostringstream command;
-      command << "addr2line --demangle=auto -f -e " << proc.exe() << " " << addr;
+      command << "unset LD_PRELOAD && addr2line --demangle=auto -f -e " << proc.exe() << " " << addr;
       auto addr2line = system::CommandPipe::create(command.str());
       if (addr2line) {
         return addr2line;
@@ -167,6 +198,57 @@ std::optional<SourceLocation> SourceLocation::create(const void* addr) {
   loc.file                 = file_and_line.substr(0, delimiter);
 
   return loc;
+}
+
+StacktraceEntry StacktraceEntry::create(void* addr) {
+  return StacktraceEntry{addr, BinaryLocation::create(addr), SourceLocation::create(addr)};
+}
+
+std::ostream& operator<<(std::ostream& os, const StacktraceEntry& entry) {
+  if (entry.binary.has_value()) {
+    const auto& binary = entry.binary.value();
+
+    os << binary.file << " (";
+
+    if (binary.function.has_value()) {
+      os << binary.function.value() << "+"
+         << (static_cast<char*>(entry.addr) - static_cast<char*>(binary.function_addr));
+    } else {
+      if (entry.source.has_value()) {
+        os << entry.source->function;
+      }
+    }
+  } else {
+    os << "?? (";
+    if (entry.source.has_value()) {
+      os << entry.source->function;
+    }
+  }
+
+  os << ") at ";
+
+  if (entry.source.has_value()) {
+    const auto& source = entry.source.value();
+    os << source.file << ":" << source.line;
+  } else {
+    os << "??:0";
+  }
+
+  return os;
+}
+
+Stacktrace::Stacktrace(std::vector<StacktraceEntry> entries) : entries(std::move(entries)) {
+}
+
+Stacktrace Stacktrace::current() {
+  // TODO Document dladdr needs -rdynamic as linker option.
+  void* buffer[MAX_STACKTRACE_SIZE];
+  const auto size = backtrace(buffer, MAX_STACKTRACE_SIZE);
+
+  std::vector<StacktraceEntry> entries;
+  std::transform(buffer, buffer + size, std::back_inserter(entries), &StacktraceEntry::create);
+
+  return {entries};
 }
 
 }  // namespace typeart

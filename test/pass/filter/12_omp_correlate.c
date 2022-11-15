@@ -7,6 +7,7 @@
 // RUN: %c-to-llvm -fno-discard-value-names %omp_c_flags %s | %opt -O2 -S | %apply-typeart -typeart-stack -typeart-call-filter -typeart-filter-pointer-alloca=false -S | %filecheck %s --check-prefix=check-inst
 // RUN: %c-to-llvm -fno-discard-value-names %omp_c_flags %s | %opt -O2 -S | %apply-typeart -typeart-stack -typeart-call-filter -typeart-call-filter-impl=cg -typeart-call-filter-cg-file=%p/05_cg.ipcg -typeart-filter-pointer-alloca=false -S | %filecheck %s --check-prefix=check-inst
 // REQUIRES: openmp
+// REQUIRES: tracker
 // clang-format on
 
 #include "omp.h"
@@ -21,8 +22,8 @@ void foo() {
   // check-inst: define {{.*}} @foo
   // check-inst: %d = alloca
   // check-inst: [[POINTER:%[0-9a-z]+]] = bitcast i32* %d to i8*
-  // check-inst: call void @__typeart_alloc_stack(i8* [[POINTER]], i32 2, i64 1)
-  // check-inst-not: __typeart_alloc_stack_omp
+  // check-inst: call void @typeart_tracker_alloc_stack(i8* [[POINTER]], i32 {{[0-9]*}}, i64 1)
+  // check-inst-not: typeart_tracker_alloc_stack_omp
   int d = 3;
   int e = 4;
 #pragma omp parallel
@@ -36,15 +37,15 @@ void foo() {
 
 // Standard filter
 // CHECK: > Stack Memory
-// CHECK-NEXT: Alloca                 :  12.00
-// CHECK-NEXT: Stack call filtered %  :  91.67
+// CHECK-NEXT: Alloca                 :  20.00
+// CHECK-NEXT: Stack call filtered %  :  95.00
 
 // with opt only "d" in foo is tracked
 // CHECK-opt: > Stack Memory
-// CHECK-opt-NEXT: Alloca                 :  5.00
-// CHECK-opt-NEXT: Stack call filtered %  :  80.00
+// CHECK-opt-NEXT: Alloca                 :  6.00
+// CHECK-opt-NEXT: Stack call filtered %  :  83.33
 
 // CG experimental filter
 // CHECK-exp-cg: > Stack Memory
-// CHECK-exp-cg-NEXT: Alloca                 :  5.00
-// CHECK-exp-cg-NEXT: Stack call filtered %  :  80.00
+// CHECK-exp-cg-NEXT: Alloca                 :  6.00
+// CHECK-exp-cg-NEXT: Stack call filtered %  :  83.33

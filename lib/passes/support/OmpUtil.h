@@ -14,7 +14,7 @@
 #define TYPEART_OMPUTIL_H
 
 #include "Util.h"
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 
 #include "llvm/IR/Function.h"
 

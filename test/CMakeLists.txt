@@ -120,7 +120,6 @@ endfunction()
 set(TYPEART_TEST_DEPENDS
   typeart::TransformPass
   typeart::Runtime
-  typeart::Types
 )
 
 set(TYPEART_SUITES
@@ -148,9 +147,14 @@ if(TYPEART_TEST_CONFIGURE_IDE)
     add_dependencies(${target} ${TYPEART_TEST_DEPENDS})
 
     target_include_directories(
-      ${target} PRIVATE ${PROJECT_SOURCE_DIR}/lib/typelib
+      ${target} PRIVATE ${PROJECT_SOURCE_DIR}/lib/db
                         ${PROJECT_SOURCE_DIR}/lib/runtime
                         ${PROJECT_SOURCE_DIR}
+    )
+
+    target_link_libraries(${target} PRIVATE
+      $<$<BOOL:${MPI_C_FOUND}>:MPI::MPI_C>
+      $<$<BOOL:${OpenMP_FOUND}>:OpenMP::OpenMP_C>
     )
   endfunction()
 

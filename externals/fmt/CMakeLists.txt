@@ -1,0 +1,44 @@
+FetchContent_Declare(
+  fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt
+  GIT_SHALLOW 1
+  GIT_TAG 8.0.1
+)
+
+FetchContent_MakeAvailable(fmt)
+
+mark_as_advanced(
+  FMT_CUDA_TEST
+  FMT_DEBUG_POSTFIX
+  FMT_DOC
+  FMT_FUZZ
+  FMT_INC_DIR
+  FMT_INSTALL
+  FMT_MODULE
+  FMT_OS
+  FMT_PEDANTIC
+  FMT_TEST
+  FMT_WERROR
+)
+
+mark_as_advanced(
+  FETCHCONTENT_SOURCE_DIR_FMT
+  FETCHCONTENT_UPDATES_DISCONNECTED_FMT
+)
+
+install(
+  TARGETS fmt
+  EXPORT ${TARGETS_EXPORT_NAME}
+)
+
+install(
+  EXPORT ${TARGETS_EXPORT_NAME}
+  NAMESPACE fmt::
+  DESTINATION ${TYPEART_INSTALL_CONFIGDIR}
+)
+
+export(
+  EXPORT ${TARGETS_EXPORT_NAME}
+  FILE ${CMAKE_BINARY_DIR}/${TARGETS_EXPORT_NAME}.cmake
+  NAMESPACE fmt::
+)

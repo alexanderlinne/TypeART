@@ -12,10 +12,11 @@
 
 #include "MemOpVisitor.h"
 
+#include "DebugInfoFinder.hpp"
 #include "analysis/MemOpData.h"
 #include "compat/CallSite.h"
 #include "support/Error.h"
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 #include "support/TypeUtil.h"
 
 #include "llvm/ADT/None.h"
@@ -63,7 +64,7 @@ void MemOpVisitor::collect(llvm::Function& function) {
 
   for (const auto& alloc : allocas) {
     if (alloc.lifetime_start.size() > 1) {
-      LOG_DEBUG("Lifetime: " << alloc.lifetime_start.size());
+      LOG_DEBUG("Lifetime: {}", alloc.lifetime_start.size());
       LOG_DEBUG(*alloc.alloca);
       for (auto* lifetime : alloc.lifetime_start) {
         LOG_DEBUG(*lifetime);
@@ -74,7 +75,7 @@ void MemOpVisitor::collect(llvm::Function& function) {
 
 void MemOpVisitor::collectGlobals(Module& module) {
   for (auto& g : module.globals()) {
-    globals.emplace_back(GlobalData{&g});
+    globals.emplace_back(GlobalData{&g, findDbgInfoFor(g)});
   }
 }
 
@@ -134,23 +135,30 @@ llvm::Expected<T*> getSingleUserAs(llvm::Value* value) {
 
 using MallocGeps   = SmallPtrSet<GetElementPtrInst*, 2>;
 using MallocBcasts = SmallPtrSet<BitCastInst*, 4>;
+using MallocStores = llvm::SmallPtrSet<llvm::StoreInst*, 4>;
 
-std::pair<MallocGeps, MallocBcasts> collectRelevantMallocUsers(llvm::CallBase& ci) {
+std::tuple<MallocGeps, MallocBcasts, MallocStores> collectRelevantMallocUsers(llvm::CallBase& ci) {
   auto geps   = MallocGeps{};
   auto bcasts = MallocBcasts{};
+  auto stores = MallocStores{};
   for (auto user : ci.users()) {
     // Simple case: Pointer is immediately casted
     if (auto inst = dyn_cast<BitCastInst>(user)) {
       bcasts.insert(inst);
+      for (auto bcastUser : inst->users()) {
+        if (auto storeInst = dyn_cast<llvm::StoreInst>(bcastUser)) {
+          stores.insert(storeInst);
+        }
+      }
     }
     // Pointer is first stored, then loaded and subsequently casted
     if (auto storeInst = dyn_cast<StoreInst>(user)) {
+      stores.insert(storeInst);
       auto storeAddr = storeInst->getPointerOperand();
       for (auto storeUser : storeAddr->users()) {  // TODO: Ensure that load occurs ofter store?
         if (auto loadInst = dyn_cast<LoadInst>(storeUser)) {
           for (auto loadUser : loadInst->users()) {
             if (auto bcastInst = dyn_cast<BitCastInst>(loadUser)) {
-              // LOG_MSG(*bcastInst)
               bcasts.insert(bcastInst);
             }
           }
@@ -162,7 +170,7 @@ std::pair<MallocGeps, MallocBcasts> collectRelevantMallocUsers(llvm::CallBase& c
       geps.insert(gep);
     }
   }
-  return {geps, bcasts};
+  return {geps, bcasts, stores};
 }
 
 llvm::Expected<ArrayCookieData> handleUnpaddedArrayCookie(const MallocGeps& geps, MallocBcasts& bcasts,
@@ -235,14 +243,39 @@ llvm::Optional<ArrayCookieData> handleArrayCookie(const MallocGeps& geps, Malloc
   return llvm::None;
 }
 
-void MemOpVisitor::visitMallocLike(llvm::CallBase& ci, MemOpKind k) {
-  auto [geps, bcasts] = collectRelevantMallocUsers(ci);
-  auto primary_cast   = bcasts.empty() ? nullptr : *bcasts.begin();
-  auto array_cookie   = handleArrayCookie(geps, bcasts, primary_cast);
-  if (primary_cast == nullptr) {
-    LOG_DEBUG("Primary bitcast null: " << ci)
+llvm::AllocaInst* findAllocaFor(llvm::Value* value) {
+  if (value == nullptr) {
+    return nullptr;
   }
-  mallocs.push_back(MallocData{&ci, array_cookie, primary_cast, bcasts, k, isa<InvokeInst>(ci)});
+#if LLVM_VERSION_MAJOR >= 12
+  return llvm::findAllocaForValue(value);
+#else
+  DenseMap<Value*, AllocaInst*> alloca_for_value;
+  return llvm::findAllocaForValue(value, alloca_for_value);
+#endif
+}
+
+void MemOpVisitor::visitMallocLike(llvm::CallBase& ci, MemOpKind k) {
+  auto [geps, bcasts, stores] = collectRelevantMallocUsers(ci);
+  auto primary_cast           = bcasts.empty() ? nullptr : *bcasts.begin();
+  auto array_cookie           = handleArrayCookie(geps, bcasts, primary_cast);
+  if (primary_cast == nullptr) {
+    LOG_DEBUG("Primary bitcast null: {}", ci);
+  }
+
+  auto location = ci.getDebugLoc().get();
+  auto types    = findDITypes(ci);
+  // TODO we just take the first type we find but we should check that all the types we find are compatible
+  auto ptr_type = types.size() >= 1 ? llvm::dyn_cast<llvm::DIDerivedType>(types.front()) : nullptr;
+  // TODO might be nullptr if the malloc is saved to an external global variable
+  if (ptr_type != nullptr) {
+    while (ptr_type->getTag() != llvm::dwarf::DW_TAG_pointer_type) {
+      ptr_type = llvm::dyn_cast<llvm::DIDerivedType>(ptr_type->getBaseType());
+      assert(ptr_type != nullptr);
+    }
+  }
+  mallocs.push_back(MallocData{&ci, array_cookie, primary_cast, bcasts, location,
+                               ptr_type != nullptr ? ptr_type->getBaseType() : nullptr, k, isa<InvokeInst>(ci)});
 }
 
 void MemOpVisitor::visitFreeLike(llvm::CallBase& ci, MemOpKind k) {
@@ -262,15 +295,10 @@ void MemOpVisitor::visitFreeLike(llvm::CallBase& ci, MemOpKind k) {
   frees.emplace_back(FreeData{&ci, array_cookie_gep, kind, isa<InvokeInst>(ci)});
 }
 
-// void MemOpVisitor::visitIntrinsicInst(llvm::IntrinsicInst& ii) {
-//
-//}
-
 void MemOpVisitor::visitAllocaInst(llvm::AllocaInst& ai) {
   if (!collect_allocas) {
     return;
   }
-  //  LOG_DEBUG("Found alloca " << ai);
   Value* arraySizeOperand = ai.getArraySize();
   size_t arraySize{0};
   bool is_vla{false};
@@ -279,9 +307,8 @@ void MemOpVisitor::visitAllocaInst(llvm::AllocaInst& ai) {
   } else {
     is_vla = true;
   }
-
-  allocas.push_back({&ai, arraySize, is_vla});
-  //  LOG_DEBUG("Alloca: " << util::dump(ai) << " -> lifetime marker: " << util::dump(lifetimes));
+  auto [local_var, location] = findDbgInfoFor(&ai);
+  allocas.push_back({&ai, arraySize, is_vla, location, local_var});
 }
 
 void MemOpVisitor::visitIntrinsicInst(llvm::IntrinsicInst& inst) {

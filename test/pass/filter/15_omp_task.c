@@ -4,15 +4,16 @@
 
 // RUN: %c-to-llvm -fno-discard-value-names %omp_c_flags %s | %apply-typeart -typeart-stack -typeart-call-filter -S | %filecheck %s --check-prefix=check-inst
 // REQUIRES: openmp
+// REQUIRES: tracker
 // clang-format on
 extern void MPI_call(void*);
 
 void foo() {
   // check-inst: define {{.*}} @foo
   // check-inst: %x = alloca
-  // check-inst: %0 = bitcast i32* %x to i8*
-  // check-inst: call void @__typeart_alloc_stack(i8* %0, i32 2, i64 1)
-  // check-inst-not: __typeart_alloc_stack_omp
+  // check-inst: %[[VALUE:[0-9]*]] = bitcast i32* %x to i8*
+  // check-inst: call void @typeart_tracker_alloc_stack(i8* %[[VALUE]], i32 {{[0-9]*}}, i64 1)
+  // check-inst-not: typeart_tracker_alloc_stack_omp
   int x;
 #pragma omp parallel
   {

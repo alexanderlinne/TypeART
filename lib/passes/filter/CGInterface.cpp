@@ -12,7 +12,7 @@
 
 #include "CGInterface.h"
 
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 #include "support/Util.h"
 
 #include "llvm/ADT/Optional.h"
@@ -187,7 +187,7 @@ std::unique_ptr<JSONCG> JSONCG::getJSON(const std::string& fileName) {
 
     return std::make_unique<JSONCG>(json.get());
   }
-  LOG_FATAL("No CG file provided / file cannot be found: " << fileName);
+  LOG_FATAL("No CG file provided / file cannot be found: {}", fileName);
   return nullptr;
 }
 

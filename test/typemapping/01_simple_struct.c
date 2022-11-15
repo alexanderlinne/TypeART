@@ -1,5 +1,6 @@
 // clang-format off
-// RUN: rm %type_file | %c-to-llvm %s | %apply-typeart -S 2>&1; cat %type_file | %filecheck %s
+// RUN: export TYPEART_TYPE_FILE="%s.types.yaml"
+// RUN: rm %s.types.yaml | %c-to-llvm %s | %apply-typeart -S 2>&1; cat %s.types.yaml | %filecheck %s
 // clang-format on
 
 // Note: This test assumes standard alignment on a 64bit system. Non-standard alignment may lead to failure.

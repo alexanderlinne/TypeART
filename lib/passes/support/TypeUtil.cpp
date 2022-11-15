@@ -12,7 +12,7 @@
 
 #include "TypeUtil.h"
 
-#include "support/Logger.h"
+#include "support/Logger.hpp"
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -126,7 +126,7 @@ unsigned getTypeSizeForArrayAlloc(llvm::AllocaInst* ai, const llvm::DataLayout& 
       // to have a small vector to store whether we already generated
       // instructions, to possibly refer to the results for further
       // calculations.
-      LOG_WARNING("We hit not yet determinable array size expression: " << *ai);
+      LOG_WARNING("We hit not yet determinable array size expression: {}", *ai);
     }
   }
   return bytes;

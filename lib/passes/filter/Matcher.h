@@ -82,7 +82,7 @@ class FunctionOracleMatcher final : public Matcher {
       if (skip_set.count(f_name) > 0) {
         return MatchResult::ShouldSkip;
       }
-      if (f_name_ref.startswith("__typeart_")) {
+      if (f_name_ref.startswith("typeart_")) {
         return MatchResult::ShouldSkip;
       }
       if (mem_operations.kind(f_name)) {

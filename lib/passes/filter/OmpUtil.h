@@ -198,13 +198,13 @@ struct OmpContext {
   template <typename Distance>
   static Distance getArgOffsetToMicrotask(const llvm::CallSite& c, Distance d) {
     if (d < 1) {
-      LOG_WARNING("OMP offset should be > 2 for non-omp-internal args to outlined region")
+      LOG_WARNING("OMP offset should be > 2 for non-omp-internal args to outlined region");
       return d;
     }
     if (isOmpExecutor(c)) {
       return d - Distance{1};
     }
-    LOG_WARNING("Unsupported OMP call.")
+    LOG_WARNING("Unsupported OMP call.");
     return d;
   }
 };

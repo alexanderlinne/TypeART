@@ -1,6 +1,6 @@
 ; RUN: cat %s | %apply-typeart -typeart-global -S 2>&1 | %filecheck %s
 
-; CHECK: call void @__typeart_alloc_global(i8* bitcast (%struct.params* @par_buf to i8*)
+; CHECK: call void @typeart_tracker_alloc_global(i8* bitcast (%struct.params* @par_buf to i8*)
 
 ; ModuleID = 'setup.c'
 source_filename = "setup.c"

@@ -5,6 +5,7 @@
 // RUN: %c-to-llvm -fno-discard-value-names %omp_c_flags %s | %apply-typeart -typeart-stack -typeart-call-filter -S | %filecheck %s --check-prefix=check-inst
 // RUN: %c-to-llvm -fno-discard-value-names %omp_c_flags %s | %opt -O2 -S | %apply-typeart -typeart-stack -typeart-call-filter -S | %filecheck %s --check-prefix=check-inst
 // REQUIRES: openmp
+// REQUIRES: tracker
 // clang-format on
 
 extern void MPI_send(void*);
@@ -24,8 +25,8 @@ void foo() {
   // check-inst: define {{.*}} @foo
   // check-inst: %loc = alloca
   // check-inst: [[POINTER:%[0-9a-z]+]] = bitcast float* %loc to i8*
-  // check-inst: call void @__typeart_alloc_stack(i8* [[POINTER]], i32 5, i64 1)
-  // check-inst-not: __typeart_alloc_stack_omp
+  // check-inst: call void @typeart_tracker_alloc_stack(i8* [[POINTER]], i32 {{[0-9]*}}, i64 1)
+  // check-inst-not: typeart_tracker_alloc_stack_omp
   float loc      = sum(array, n);
   MPI_send((void*)&loc);
 }

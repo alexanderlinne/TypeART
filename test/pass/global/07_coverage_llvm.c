@@ -11,8 +11,8 @@ void foo() {
   bar(&global_2);
 }
 
-// CHECK: void @__typeart_init_module_
+// CHECK: void @typeart_init_module_
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @__typeart_alloc_global(i8* bitcast (i32* @global_2 to i8*)
-// CHECK-NEXT: call void @__typeart_alloc_global(i8* bitcast (i32* @global to i8*)
+// CHECK-NEXT: call void @typeart_tracker_alloc_global(i8* bitcast (i32* @global_2 to i8*)
+// CHECK-NEXT: call void @typeart_tracker_alloc_global(i8* bitcast (i32* @global to i8*)
 // CHECK-NEXT: ret void
